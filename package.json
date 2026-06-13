@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "ugly-app dev --watch",
     "build": "ugly-app build",
+    "build:workers": "ugly-app build:workers",
     "publish:assets": "ugly-app publish:assets",
     "purge:assets": "ugly-app purge:assets",
     "db:migrate": "ugly-app db:migrate",
