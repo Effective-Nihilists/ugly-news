@@ -1,6 +1,5 @@
 import {
   createApp,
-  pgQuery,
   emailSend,
   flushPerf,
   pushSend,
@@ -13,7 +12,6 @@ import {
 } from 'ugly-app';
 import { enableConversations } from 'ugly-app/conversation/server';
 import { enableCollab } from 'ugly-app/collab/server';
-import type { CronHandlers } from 'ugly-app/shared';
 import { dbDefaults } from 'ugly-app/shared';
 import { messages, requests } from '../shared/api';
 import type { Todo } from '../shared/collections';
@@ -21,6 +19,7 @@ import { collections } from '../shared/collections';
 import * as feed from './news/feed';
 import * as podcast from './news/podcast';
 import { newsDb, setNewsDb } from './news/db';
+import { createCronHandlers } from './news/workers';
 import { cronTasks } from '../shared/cron';
 import { experiments } from '../shared/experiments';
 import en from '../shared/lang/en';
@@ -28,16 +27,7 @@ import es from '../shared/lang/es';
 import { pages } from '../shared/pages';
 import { stringsDef } from '../shared/strings';
 
-const cronHandlers: CronHandlers<typeof cronTasks> = {
-  dailyCleanup: async () => {
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const result = await pgQuery(
-      `DELETE FROM docs_todo WHERE (data->>'done')::boolean = true AND (data->'updated')::bigint < $1`,
-      [thirtyDaysAgo.getTime()],
-    );
-    console.log(`[Cron] dailyCleanup: deleted ${result.rowCount} old completed todos`);
-  },
-};
+const cronHandlers = createCronHandlers(newsDb);
 
 const app = createApp(
   { requests, messages },
@@ -162,7 +152,7 @@ const app = createApp(
       criticalKeys: stringsDef.criticalKeys,
       getTable: (lang) => tables[lang] ?? tables[stringsDef.defaultLang]!,
     });
-    configurator.setCronTasks(cronTasks, cronHandlers);
+    configurator.setWorkers(cronTasks, cronHandlers);
     configurator.setOnEmail(async (inbound: InboundEmail) => {
       await Promise.resolve();
       console.log('[Email] Received:', { from: inbound.from, id: inbound.id, subject: inbound.subject });
