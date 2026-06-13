@@ -768,7 +768,7 @@ export interface NewsSaveInput {
 
 export interface NewsSavedGetInput {
   limit: number;
-  beforeSavedAt?: number;
+  beforeSavedAt?: number | undefined;
 }
 
 export interface NewsSavedGetOutput {
@@ -796,7 +796,7 @@ export interface NewsFeedGetOutput {
 export interface NewsSearchInput {
   query: string;
   limit: number;
-  categories?: NewsCategory[];
+  categories?: NewsCategory[] | undefined;
 }
 
 export interface NewsSearchOutput {

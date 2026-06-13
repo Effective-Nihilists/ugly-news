@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-13T17:59:49.322Z",
+  "generatedAt": "2026-06-13T18:11:25.321Z",
   "source": "shared/collections.ts",
   "collections": {
     "errorLog": {
@@ -833,6 +833,41 @@
       "name": "userFilePreference",
       "schema": {
         "fields": {
+          "clusters": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "fields": {
+                "embedding": {
+                  "type": "array",
+                  "items": {
+                    "type": "number",
+                    "required": true
+                  },
+                  "required": true
+                },
+                "id": {
+                  "type": "string",
+                  "required": true
+                },
+                "lastUsed": {
+                  "type": "number",
+                  "required": true
+                },
+                "weight": {
+                  "type": "number",
+                  "required": true
+                }
+              },
+              "required": true
+            },
+            "required": true
+          },
+          "dislikeCount": {
+            "type": "number",
+            "required": true,
+            "default": 0
+          },
           "embedding": {
             "type": "array",
             "items": {

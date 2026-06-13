@@ -108,8 +108,8 @@ export type NewsPodcast = InferDocType<typeof NewsPodcastSchema>;
 // ============================================================================
 
 export interface NewsPodcastGetInput {
-  podcastId?: string;
-  date?: string;
+  podcastId?: string | undefined;
+  date?: string | undefined;
 }
 
 export interface NewsPodcastGetOutput {
@@ -118,7 +118,7 @@ export interface NewsPodcastGetOutput {
 
 export interface NewsPodcastListInput {
   limit: number;
-  beforeDate?: string;
+  beforeDate?: string | undefined;
 }
 
 export interface NewsPodcastListOutput {
@@ -133,8 +133,8 @@ export interface NewsPodcastInitOutput {
 }
 
 export interface NewsPodcastRegenerateInput {
-  date?: string;
-  replaceDefault?: boolean;
+  date?: string | undefined;
+  replaceDefault?: boolean | undefined;
 }
 
 export interface NewsPodcastRegenerateOutput {
@@ -147,7 +147,7 @@ export interface NewsPodcastRegenerateOutput {
 // ============================================================================
 
 export interface NewsPodcastGetDefaultInput {
-  date?: string;
+  date?: string | undefined;
 }
 
 export interface NewsPodcastGetDefaultOutput {

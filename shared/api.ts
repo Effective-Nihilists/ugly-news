@@ -1,6 +1,9 @@
 import { authReq, defineMessages, defineRequests, frameworkMessages, frameworkRequests, z } from 'ugly-app/shared';
+import { newsRequestDefs } from './news/requests';
 
 export const requests = defineRequests({
+  ...newsRequestDefs,
+
   // Todo demo — CRUD requests
   createTodo: authReq({
     input: z.object({ text: z.string().min(1).max(500) }),

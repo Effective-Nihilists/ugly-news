@@ -18,6 +18,9 @@ import { dbDefaults } from 'ugly-app/shared';
 import { messages, requests } from '../shared/api';
 import type { Todo } from '../shared/collections';
 import { collections } from '../shared/collections';
+import * as feed from './news/feed';
+import * as podcast from './news/podcast';
+import { newsDb, setNewsDb } from './news/db';
 import { cronTasks } from '../shared/cron';
 import { experiments } from '../shared/experiments';
 import en from '../shared/lang/en';
@@ -113,6 +116,37 @@ const app = createApp(
       await emailSend({ userId, subject, html, id });
       return { ok: true };
     },
+
+    // ─── News: read tracking ─────────────────────────────────────────────
+    newsMarkRead: (userId, input) => feed.newsMarkRead(newsDb(), userId, input),
+    newsMarkReadBulk: (userId, input) => feed.newsMarkReadBulk(newsDb(), userId, input),
+    newsMarkUnread: (userId, input) => feed.newsMarkUnread(newsDb(), userId, input),
+    newsReadGetAll: (userId) => feed.newsReadGetAll(newsDb(), userId),
+    newsReadResetAll: (userId) => feed.newsReadResetAll(newsDb(), userId),
+
+    // ─── News: save / bookmark ───────────────────────────────────────────
+    newsSave: (userId, input) => feed.newsSave(newsDb(), userId, input),
+    newsSavedGet: (userId, input) => feed.newsSavedGet(newsDb(), userId, input),
+    newsIsSaved: (userId, input) => feed.newsIsSaved(newsDb(), userId, input),
+    newsIsSavedBatch: (userId, input) => feed.newsIsSavedBatch(newsDb(), userId, input),
+
+    // ─── News: feed / search ─────────────────────────────────────────────
+    newsFeedGet: (userId, input) => feed.newsFeedGet(newsDb(), userId, input),
+    newsSearch: (_userId, input) => feed.newsSearch(newsDb(), input),
+
+    // ─── News: reactions / following ─────────────────────────────────────
+    newsReact: (userId, input) => feed.newsReact(newsDb(), userId, input),
+    newsSourceFollow: (userId, input) => feed.newsSourceFollow(newsDb(), userId, input),
+    newsSourceGetFollowed: (userId, input) => feed.newsSourceGetFollowed(newsDb(), userId, input),
+    newsReset: (userId) => feed.newsReset(newsDb(), userId),
+
+    // ─── News: podcast ───────────────────────────────────────────────────
+    newsPodcastGet: (_userId, input) => podcast.newsPodcastGet(newsDb(), input),
+    newsPodcastGetDefault: (_userId, input) => podcast.newsPodcastGetDefault(newsDb(), input),
+    newsPodcastList: (_userId, input) => podcast.newsPodcastList(newsDb(), input),
+    newsPodcastInit: () => Promise.resolve(podcast.newsPodcastInit()),
+    newsPodcastRegenerate: (_userId, input) =>
+      Promise.resolve(podcast.newsPodcastRegenerate(input)),
   } satisfies RequestHandlers<typeof requests>,
   collections,
   (configurator: AppConfigurator) => {
@@ -182,6 +216,7 @@ const app = createApp(
     configurator.setOnAfterStart(async (db) => {
       convDeps.db = db;
       convServer.setDb(db);
+      setNewsDb(db as unknown as Parameters<typeof setNewsDb>[0]);
     });
   },
 );
