@@ -5,6 +5,7 @@ import type { NewsDb } from './db';
 import { dispatchNewsFeedDownload, findFeed, newsRefreshAllFeeds } from './download';
 import { enqueueTask } from './queue';
 import { todayDateString } from './podcast';
+import { dispatchArticleScrape } from './scraper';
 
 // Build the worker handler map. Shared by the Node entry (server/index.ts) and
 // the Cloudflare Workers entry (server/workers.ts) so cron + queue behavior is
@@ -32,9 +33,8 @@ export function createCronHandlers(getDb: () => NewsDb): WorkerHandlers<typeof c
       if (feed) await dispatchNewsFeedDownload(getDb(), feed);
     },
     articleScrape: async ({ articleId }) => {
-      // Phase 2b: scrape + summarize + image + create file + bot comment.
-      // TODO(Phase 2b): const { dispatchArticleScrape } = await import('./scraper');
-      console.warn('[news] articleScrape not yet implemented', articleId);
+      await dispatchArticleScrape(getDb(), articleId);
+      // Phase 3 wires the newsBot conversation/comment for this article's file.
     },
     podcastGenerate: async ({ date, userId, replaceDefault }) => {
       // Phase 5: script + InWorld TTS + WAV + record.
