@@ -256,9 +256,20 @@ export const FileMarkdownSchema = z.object({
   conversationId: z.string().nullable().optional(),
 });
 
+// Interest cluster: a centroid of liked-article embeddings, weighted + time-decayed.
+export const InterestClusterSchema = z.object({
+  id: z.string(),
+  embedding: z.array(z.number()),
+  weight: z.number(),
+  lastUsed: z.number(),
+});
+export type InterestCluster = z.infer<typeof InterestClusterSchema>;
+
 export const UserFilePreferenceSchema = z.object({
   userId: z.string(),
+  clusters: z.array(InterestClusterSchema),
   embedding: z.array(z.number()).nullable(),
   likeCount: z.number().default(0),
+  dislikeCount: z.number().default(0),
   updatedAt: z.number(),
 });
