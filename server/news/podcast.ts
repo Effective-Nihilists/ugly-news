@@ -14,6 +14,7 @@ import type {
   NewsPodcastRegenerateOutput,
 } from '../../shared/news/NewsPodcast';
 import { uglyBotId } from '../../shared/news/Bot';
+import { enqueueTask } from './queue';
 
 type Db = TypedDB<Record<string, DBObject>>;
 
@@ -68,15 +69,19 @@ export async function newsPodcastList(
   return { items: podcasts.slice(0, input.limit), hasMore };
 }
 
-// init/regenerate drive the TTS generation pipeline (Phase 5). They enqueue a
-// `podcastGenerate` background job; wired in Phase 4's queue fan-out.
 export function newsPodcastInit(): NewsPodcastInitOutput {
   return { initialized: true };
 }
 
-export function newsPodcastRegenerate(
-  _input: NewsPodcastRegenerateInput,
-): NewsPodcastRegenerateOutput {
-  // TODO(Phase 5): enqueue podcastGenerate({ date, userId }) and return its id.
-  throw new Error('newsPodcastRegenerate not yet implemented (Phase 5)');
+/** Enqueue a (re)generation of a user's podcast for a date. */
+export async function newsPodcastRegenerate(
+  userId: string,
+  input: NewsPodcastRegenerateInput,
+): Promise<NewsPodcastRegenerateOutput> {
+  const date = input.date ?? todayDateString(Date.now());
+  const replaceDefault = input.replaceDefault ?? false;
+  const targetUserId = replaceDefault ? null : userId;
+  const podcastId = targetUserId ? `${date}_${targetUserId}` : `${date}_default`;
+  await enqueueTask('podcastGenerate', { date, userId: targetUserId, replaceDefault });
+  return { success: true, podcastId };
 }

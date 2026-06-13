@@ -135,8 +135,7 @@ const app = createApp(
     newsPodcastGetDefault: (_userId, input) => podcast.newsPodcastGetDefault(newsDb(), input),
     newsPodcastList: (_userId, input) => podcast.newsPodcastList(newsDb(), input),
     newsPodcastInit: () => Promise.resolve(podcast.newsPodcastInit()),
-    newsPodcastRegenerate: (_userId, input) =>
-      Promise.resolve(podcast.newsPodcastRegenerate(input)),
+    newsPodcastRegenerate: (userId, input) => podcast.newsPodcastRegenerate(userId, input),
   } satisfies RequestHandlers<typeof requests>,
   collections,
   (configurator: AppConfigurator) => {

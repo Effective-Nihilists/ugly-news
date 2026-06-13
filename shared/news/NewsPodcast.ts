@@ -19,7 +19,7 @@ export interface PodcastSubtitle {
   speakerId: string;
   startTimeMs: number;
   endTimeMs: number;
-  words?: PodcastSubtitleWord[];
+  words?: PodcastSubtitleWord[] | undefined;
 }
 
 /** Gesture hint for avatar animation during segment */
@@ -70,13 +70,13 @@ export interface PodcastSegment {
   text: string;
   startTimeMs: number;
   endTimeMs: number;
-  articleRef?: string;
-  gestureHint?: PodcastGestureHint;
-  cameraShot?: PodcastCameraShot;
-  cameraEnergy?: PodcastCameraEnergy;
-  listenerReaction?: PodcastListenerReaction;
-  speakerEmotion?: PodcastSpeakerEmotion;
-  nonVerbalCue?: PodcastNonVerbalCue;
+  articleRef?: string | undefined;
+  gestureHint?: PodcastGestureHint | undefined;
+  cameraShot?: PodcastCameraShot | undefined;
+  cameraEnergy?: PodcastCameraEnergy | undefined;
+  listenerReaction?: PodcastListenerReaction | undefined;
+  speakerEmotion?: PodcastSpeakerEmotion | undefined;
+  nonVerbalCue?: PodcastNonVerbalCue | undefined;
 }
 
 /** Reference to an article discussed in the podcast */

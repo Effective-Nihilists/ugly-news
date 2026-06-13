@@ -156,3 +156,65 @@ function readString(view: DataView, offset: number, length: number): string {
   }
   return result;
 }
+
+/**
+ * Build a WAV file (44-byte header + raw PCM) from raw little-endian PCM bytes.
+ * Pure JS / Uint8Array — Workers-safe (no Buffer, no ffmpeg). This is the
+ * replacement for ugly.bot's ffmpeg PCM→WebM step.
+ */
+export function createWAVFromPCM(
+  pcm: Uint8Array,
+  sampleRate: number,
+  numChannels = 1,
+  bitsPerSample = 16,
+): Uint8Array {
+  const byteRate = (sampleRate * numChannels * bitsPerSample) / 8;
+  const blockAlign = (numChannels * bitsPerSample) / 8;
+  const out = new Uint8Array(44 + pcm.length);
+  const view = new DataView(out.buffer);
+  writeString(view, 0, 'RIFF');
+  view.setUint32(4, 36 + pcm.length, true);
+  writeString(view, 8, 'WAVE');
+  writeString(view, 12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, byteRate, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, bitsPerSample, true);
+  writeString(view, 36, 'data');
+  view.setUint32(40, pcm.length, true);
+  out.set(pcm, 44);
+  return out;
+}
+
+/** Decode a base64 string to bytes (Workers-safe via atob). */
+export function base64ToBytes(b64: string): Uint8Array {
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+/** Encode bytes to base64 (Workers-safe via btoa, chunked for large inputs). */
+export function bytesToBase64(bytes: Uint8Array): string {
+  let bin = '';
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(bin);
+}
+
+/** Concatenate Uint8Arrays. */
+export function concatBytes(parts: Uint8Array[]): Uint8Array {
+  const total = parts.reduce((n, p) => n + p.length, 0);
+  const out = new Uint8Array(total);
+  let off = 0;
+  for (const p of parts) {
+    out.set(p, off);
+    off += p.length;
+  }
+  return out;
+}

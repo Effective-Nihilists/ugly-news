@@ -47,7 +47,7 @@ const requestHandlers: Partial<RequestHandlers<typeof requests>> = {
   newsPodcastGetDefault: (_userId, input) => podcast.newsPodcastGetDefault(wdb(), input),
   newsPodcastList: (_userId, input) => podcast.newsPodcastList(wdb(), input),
   newsPodcastInit: () => Promise.resolve(podcast.newsPodcastInit()),
-  newsPodcastRegenerate: (_userId, input) => Promise.resolve(podcast.newsPodcastRegenerate(input)),
+  newsPodcastRegenerate: (userId, input) => podcast.newsPodcastRegenerate(userId, input),
 };
 
 const app = createWorkersApp(
