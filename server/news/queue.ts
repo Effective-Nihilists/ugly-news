@@ -1,4 +1,8 @@
-import { getAdapter } from 'ugly-app/server';
+// Import the adapter-singleton accessor from the Workers-safe adapter path
+// (NOT 'ugly-app/server', which is the heavy Node barrel and drags pg + http
+// agents + build tooling into the Workers bundle). getAdapter reads the same
+// module-level singleton on both runtimes.
+import { getAdapter } from 'ugly-app/server/adapter/workers';
 import type { cronTasks } from '../../shared/cron';
 
 // Names of the queue-only (fan-out) workers.
