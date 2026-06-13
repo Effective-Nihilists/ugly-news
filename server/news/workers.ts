@@ -7,6 +7,7 @@ import { enqueueTask } from './queue';
 import { todayDateString } from './podcast';
 import { dispatchArticleScrape } from './scraper';
 import { dispatchPodcastGenerate } from './podcast-generate';
+import { dispatchUserPrivateNewsEmail, userEmailHourly } from './email';
 
 // Build the worker handler map. Shared by the Node entry (server/index.ts) and
 // the Cloudflare Workers entry (server/workers.ts) so cron + queue behavior is
@@ -24,8 +25,7 @@ export function createCronHandlers(getDb: () => NewsDb): WorkerHandlers<typeof c
       await enqueueTask('podcastGenerate', { date, userId: null, replaceDefault: true });
     },
     userEmailHourly: async () => {
-      // Phase 7: query users at 8am-local and enqueue userPrivateNewsEmail jobs.
-      // TODO(Phase 7): implement timezone-aware fan-out.
+      await userEmailHourly(getDb(), Date.now());
     },
 
     // ── Queue-only jobs ──────────────────────────────────────────────────
@@ -41,8 +41,7 @@ export function createCronHandlers(getDb: () => NewsDb): WorkerHandlers<typeof c
       await dispatchPodcastGenerate(getDb(), { date, userId, replaceDefault });
     },
     userPrivateNewsEmail: async ({ userId, now }) => {
-      // Phase 7: render + send the daily email.
-      console.warn('[news] userPrivateNewsEmail not yet implemented', { userId, now });
+      await dispatchUserPrivateNewsEmail(getDb(), { userId, now });
     },
   };
 }

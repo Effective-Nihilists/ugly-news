@@ -104,6 +104,14 @@ export const UserNewsSourceFollowSchema = z.object({
   followedAt: z.number(),
 });
 
+// Per-user daily-email preferences (drives the 8am-local email cron).
+export const UserNewsEmailPrefSchema = z.object({
+  userId: z.string(),
+  timezone: z.string(),
+  emailAllowed: z.boolean(),
+  lang: z.string().default('en'),
+});
+
 // ─── Podcast viseme / gesture / camera enums ───────────────────────────────
 
 export const GestureHintSchema = z.object({

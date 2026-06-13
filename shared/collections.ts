@@ -7,6 +7,7 @@ import {
   NewsFeedDocSchema,
   NewsPodcastSchema,
   UserFilePreferenceSchema,
+  UserNewsEmailPrefSchema,
   UserNewsPreferenceSchema,
   UserNewsReactionSchema,
   UserNewsReadSchema,
@@ -125,6 +126,11 @@ export const collections = defineCollections({
     schema: UserNewsPreferenceSchema,
     meta: { cache: false, trackable: false, public: false, cascadeFrom: null, trackKeys: ['userId'] },
   },
+  userNewsEmailPref: {
+    schema: UserNewsEmailPrefSchema,
+    meta: { cache: false, trackable: false, public: false, cascadeFrom: null, trackKeys: ['userId'] },
+    indexes: [{ fields: { timezone: 1 } }],
+  },
 });
 
 export type AppCollections = typeof collections;
@@ -140,3 +146,4 @@ export type UserNewsSaved = InferDocType<typeof UserNewsSavedSchema>;
 export type UserNewsReaction = InferDocType<typeof UserNewsReactionSchema>;
 export type UserNewsSourceFollow = InferDocType<typeof UserNewsSourceFollowSchema>;
 export type UserNewsPreference = InferDocType<typeof UserNewsPreferenceSchema>;
+export type UserNewsEmailPref = InferDocType<typeof UserNewsEmailPrefSchema>;

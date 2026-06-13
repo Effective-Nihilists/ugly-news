@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-13T18:11:25.321Z",
+  "generatedAt": "2026-06-13T19:22:15.287Z",
   "source": "shared/collections.ts",
   "collections": {
     "errorLog": {
@@ -1472,6 +1472,46 @@
             "required": true
           }
         }
+      },
+      "meta": {
+        "cache": false,
+        "trackable": false,
+        "public": false,
+        "cascadeFrom": null,
+        "trackKeys": [
+          "userId"
+        ]
+      }
+    },
+    "userNewsEmailPref": {
+      "name": "userNewsEmailPref",
+      "schema": {
+        "fields": {
+          "emailAllowed": {
+            "type": "boolean",
+            "required": true
+          },
+          "lang": {
+            "type": "string",
+            "required": true,
+            "default": "en"
+          },
+          "timezone": {
+            "type": "string",
+            "required": true
+          },
+          "userId": {
+            "type": "string",
+            "required": true
+          }
+        },
+        "indexes": [
+          {
+            "fields": {
+              "timezone": 1
+            }
+          }
+        ]
       },
       "meta": {
         "cache": false,
