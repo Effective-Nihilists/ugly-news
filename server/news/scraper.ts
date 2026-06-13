@@ -22,6 +22,23 @@ const SUMMARY_PROMPT = `Rewrite this article as a complete news article in your 
 - Preserve all facts, names, numbers, and quotes exactly.
 - Use markdown: **bold** key terms, > blockquotes for quotes, lists where useful.`;
 
+const BOT_COMMENT_PROMPT = `You are Ugly Bot, a brutally honest and sardonic AI commentator. Write a 1-2 sentence opening comment for a news article discussion thread that makes an insightful observation (not a summary), points out an angle or irony readers might miss, and invites discussion without being generic. Output only the comment text, no quotes.`;
+
+/** Generate the newsBot's opening comment for an article (or null). */
+export async function generateBotComment(title: string, content: string): Promise<string | null> {
+  const truncated = truncateToApproximateTokens(content, 1500);
+  const comment = await genText(
+    [
+      { role: 'system', content: BOT_COMMENT_PROMPT },
+      { role: 'user', content: `Title: ${title}\n\nArticle content:\n${truncated}` },
+    ],
+    { model: 'llama_4_scout', temperature: 0.7, maxTokens: 150 },
+  );
+  if (!comment) return null;
+  const trimmed = comment.trim();
+  return trimmed.length >= 20 && trimmed.length <= 500 ? trimmed : null;
+}
+
 // ── Crawlbase fetch (Workers-safe: global fetch + env token) ─────────────────
 
 const SCRAPE_TIMEOUT_MS = 10_000;
@@ -222,4 +239,25 @@ export async function dispatchArticleScrape(db: NewsDb, articleId: string): Prom
     scrapedAt: now,
     updated: new Date(now),
   } satisfies NewsArticle);
+
+  // newsBot opening comment → conversation thread (id === fileId), best-effort.
+  try {
+    const comment = await generateBotComment(article.title, summary);
+    if (comment) {
+      await db.setDoc(
+        collections.conversation,
+        { _id: fileId, type: 'news', title: article.title, ...dbDefaults() },
+        { skipIfExists: true },
+      );
+      await db.setDoc(collections.message, {
+        _id: `msg_${fileId}_0`,
+        conversationId: fileId,
+        userId: uglyBotId,
+        text: comment,
+        ...dbDefaults(),
+      });
+    }
+  } catch (error) {
+    console.warn('[scrape] bot comment failed', error);
+  }
 }
