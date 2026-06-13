@@ -1,0 +1,1452 @@
+{
+  "generatedAt": "2026-06-13T17:59:49.322Z",
+  "source": "shared/collections.ts",
+  "collections": {
+    "errorLog": {
+      "name": "errorLog",
+      "schema": {
+        "fields": {
+          "context": {
+            "type": "record",
+            "valueType": {
+              "type": "unknown",
+              "required": true
+            },
+            "required": false,
+            "nullable": true
+          },
+          "message": {
+            "type": "string",
+            "required": true
+          },
+          "meta": {
+            "type": "object",
+            "fields": {
+              "buildId": {
+                "type": "string",
+                "required": false
+              },
+              "hash": {
+                "type": "string",
+                "required": false
+              },
+              "isExpected": {
+                "type": "boolean",
+                "required": false
+              },
+              "level": {
+                "type": "enum",
+                "values": [
+                  "log",
+                  "info",
+                  "warn",
+                  "error",
+                  "debug"
+                ],
+                "required": true
+              },
+              "projectId": {
+                "type": "string",
+                "required": false
+              },
+              "sessionId": {
+                "type": "string",
+                "required": false
+              },
+              "source": {
+                "type": "enum",
+                "values": [
+                  "browser",
+                  "server",
+                  "client",
+                  "lazyview",
+                  "perf"
+                ],
+                "required": true
+              },
+              "type": {
+                "type": "enum",
+                "values": [
+                  "console",
+                  "exception",
+                  "unhandled"
+                ],
+                "required": true
+              },
+              "userId": {
+                "type": "string",
+                "required": true,
+                "nullable": true
+              }
+            },
+            "required": true
+          },
+          "previousLogs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "fields": {
+                "args": {
+                  "type": "array",
+                  "items": {
+                    "type": "unknown",
+                    "required": true
+                  },
+                  "required": true
+                },
+                "level": {
+                  "type": "enum",
+                  "values": [
+                    "log",
+                    "info",
+                    "warn",
+                    "error",
+                    "debug"
+                  ],
+                  "required": true
+                },
+                "message": {
+                  "type": "string",
+                  "required": true
+                },
+                "timestamp": {
+                  "type": "number",
+                  "required": true
+                }
+              },
+              "required": true
+            },
+            "required": false
+          },
+          "stack": {
+            "type": "string",
+            "required": false,
+            "nullable": true
+          },
+          "url": {
+            "type": "string",
+            "required": false,
+            "nullable": true
+          }
+        },
+        "indexes": [
+          {
+            "fields": {
+              "meta.level": 1
+            }
+          },
+          {
+            "fields": {
+              "meta.userId": 1
+            }
+          }
+        ]
+      },
+      "meta": {
+        "cache": false,
+        "trackable": false,
+        "public": false,
+        "cascadeFrom": null
+      }
+    },
+    "perfLog": {
+      "name": "perfLog",
+      "schema": {
+        "fields": {
+          "durationMs": {
+            "type": "number",
+            "required": true
+          },
+          "operation": {
+            "type": "string",
+            "required": true
+          },
+          "userId": {
+            "type": "string",
+            "required": true
+          }
+        },
+        "indexes": [
+          {
+            "fields": {
+              "operation": 1
+            }
+          },
+          {
+            "fields": {
+              "userId": 1
+            }
+          }
+        ]
+      },
+      "meta": {
+        "cache": false,
+        "trackable": false,
+        "public": false,
+        "cascadeFrom": null
+      }
+    },
+    "feedbackReport": {
+      "name": "feedbackReport",
+      "schema": {
+        "fields": {
+          "context": {
+            "type": "string",
+            "required": false
+          },
+          "message": {
+            "type": "string",
+            "required": true
+          },
+          "previousLogs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "fields": {
+                "level": {
+                  "type": "string",
+                  "required": true
+                },
+                "message": {
+                  "type": "string",
+                  "required": true
+                },
+                "timestamp": {
+                  "type": "number",
+                  "required": true
+                }
+              },
+              "required": true
+            },
+            "required": false
+          },
+          "resolution": {
+            "type": "string",
+            "required": false
+          },
+          "resolvedAt": {
+            "type": "number",
+            "required": false
+          },
+          "screenshotUri": {
+            "type": "string",
+            "required": false
+          },
+          "status": {
+            "type": "enum",
+            "values": [
+              "pending",
+              "captured",
+              "resolved",
+              "declined"
+            ],
+            "required": true
+          },
+          "type": {
+            "type": "enum",
+            "values": [
+              "bug",
+              "feature",
+              "design"
+            ],
+            "required": true
+          },
+          "url": {
+            "type": "string",
+            "required": true
+          },
+          "userId": {
+            "type": "string",
+            "required": true
+          }
+        },
+        "indexes": [
+          {
+            "fields": {
+              "userId": 1
+            }
+          },
+          {
+            "fields": {
+              "status": 1
+            }
+          }
+        ]
+      },
+      "meta": {
+        "cache": false,
+        "trackable": false,
+        "public": false,
+        "cascadeFrom": null
+      }
+    },
+    "authMagicLink": {
+      "name": "authMagicLink",
+      "schema": {
+        "fields": {
+          "consumedAt": {
+            "type": "number",
+            "required": true,
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "required": true
+          },
+          "expiresAt": {
+            "type": "number",
+            "required": true
+          },
+          "requestIp": {
+            "type": "string",
+            "required": true,
+            "nullable": true
+          },
+          "requestedAt": {
+            "type": "number",
+            "required": true
+          },
+          "tokenHash": {
+            "type": "string",
+            "required": true
+          }
+        },
+        "indexes": [
+          {
+            "fields": {
+              "email": 1
+            }
+          },
+          {
+            "fields": {
+              "expiresAt": 1
+            },
+            "ttl": 86400
+          }
+        ]
+      },
+      "meta": {
+        "cache": false,
+        "trackable": false,
+        "public": false,
+        "cascadeFrom": null
+      }
+    },
+    "authIdentity": {
+      "name": "authIdentity",
+      "schema": {
+        "fields": {
+          "createdAt": {
+            "type": "number",
+            "required": true
+          },
+          "email": {
+            "type": "string",
+            "required": true,
+            "nullable": true
+          },
+          "lastLoginAt": {
+            "type": "number",
+            "required": true
+          },
+          "name": {
+            "type": "string",
+            "required": true,
+            "nullable": true
+          },
+          "provider": {
+            "type": "enum",
+            "values": [
+              "magic-link",
+              "google",
+              "uglybot"
+            ],
+            "required": true
+          },
+          "providerKey": {
+            "type": "string",
+            "required": true
+          },
+          "userId": {
+            "type": "string",
+            "required": true
+          }
+        },
+        "indexes": [
+          {
+            "fields": {
+              "providerKey": 1
+            }
+          },
+          {
+            "fields": {
+              "userId": 1
+            }
+          }
+        ]
+      },
+      "meta": {
+        "cache": false,
+        "trackable": false,
+        "public": false,
+        "cascadeFrom": null
+      }
+    },
+    "todo": {
+      "name": "todo",
+      "schema": {
+        "fields": {
+          "done": {
+            "type": "boolean",
+            "required": true
+          },
+          "text": {
+            "type": "string",
+            "required": true
+          },
+          "userId": {
+            "type": "string",
+            "required": true
+          }
+        }
+      },
+      "meta": {
+        "cache": false,
+        "trackable": true,
+        "public": false,
+        "cascadeFrom": null,
+        "trackKeys": [
+          "userId"
+        ]
+      }
+    },
+    "conversation": {
+      "name": "conversation",
+      "schema": {
+        "fields": {
+          "title": {
+            "type": "string",
+            "required": true,
+            "default": ""
+          },
+          "type": {
+            "type": "string",
+            "required": true,
+            "default": "ai-chat"
+          }
+        }
+      },
+      "meta": {
+        "cache": false,
+        "trackable": false,
+        "public": false,
+        "cascadeFrom": null
+      }
+    },
+    "message": {
+      "name": "message",
+      "schema": {
+        "fields": {
+          "conversationId": {
+            "type": "string",
+            "required": true
+          },
+          "text": {
+            "type": "string",
+            "required": true
+          },
+          "userId": {
+            "type": "string",
+            "required": true
+          }
+        }
+      },
+      "meta": {
+        "cache": false,
+        "trackable": false,
+        "public": false,
+        "cascadeFrom": "conversation",
+        "trackKeys": [
+          "conversationId"
+        ]
+      }
+    },
+    "collabDoc": {
+      "name": "collabDoc",
+      "schema": {
+        "fields": {
+          "lastSyncedAt": {
+            "type": "number",
+            "required": true
+          },
+          "serialized": {
+            "type": "string",
+            "required": true,
+            "nullable": true
+          },
+          "yjsState": {
+            "type": "string",
+            "required": true
+          }
+        }
+      },
+      "meta": {
+        "cache": false,
+        "trackable": false,
+        "public": false,
+        "cascadeFrom": null
+      }
+    },
+    "newsFeed": {
+      "name": "newsFeed",
+      "schema": {
+        "fields": {
+          "category": {
+            "type": "enum",
+            "values": [
+              "fashion",
+              "tech",
+              "sports",
+              "food",
+              "music",
+              "auto",
+              "news",
+              "home",
+              "entertainment",
+              "science",
+              "gaming",
+              "health"
+            ],
+            "required": true
+          },
+          "imageStyle": {
+            "type": "object",
+            "fields": {
+              "additionalKeywords": {
+                "type": "string",
+                "required": false
+              },
+              "colorPalette": {
+                "type": "string",
+                "required": false
+              },
+              "mood": {
+                "type": "string",
+                "required": false
+              },
+              "negativePrompt": {
+                "type": "string",
+                "required": false
+              },
+              "photographyStyle": {
+                "type": "string",
+                "required": false
+              },
+              "style": {
+                "type": "string",
+                "required": true
+              }
+            },
+            "required": false
+          },
+          "name": {
+            "type": "string",
+            "required": true
+          },
+          "url": {
+            "type": "string",
+            "required": true
+          }
+        }
+      },
+      "meta": {
+        "cache": true,
+        "trackable": false,
+        "public": true,
+        "cascadeFrom": null
+      }
+    },
+    "newsArticle": {
+      "name": "newsArticle",
+      "schema": {
+        "fields": {
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "required": true
+            },
+            "required": true
+          },
+          "contentHtml": {
+            "type": "string",
+            "required": true
+          },
+          "contentMarkdown": {
+            "type": "string",
+            "required": true
+          },
+          "feedId": {
+            "type": "string",
+            "required": true
+          },
+          "fileId": {
+            "type": "string",
+            "required": true,
+            "nullable": true
+          },
+          "imageUri": {
+            "type": "string",
+            "required": true,
+            "nullable": true
+          },
+          "scrapeError": {
+            "type": "string",
+            "required": true,
+            "nullable": true
+          },
+          "scrapeStatus": {
+            "type": "enum",
+            "values": [
+              "pending",
+              "success",
+              "failed",
+              "skipped",
+              "ad"
+            ],
+            "required": true,
+            "nullable": true
+          },
+          "scrapedAt": {
+            "type": "number",
+            "required": true,
+            "nullable": true
+          },
+          "summary": {
+            "type": "string",
+            "required": true,
+            "nullable": true
+          },
+          "summaryGeneratedAt": {
+            "type": "number",
+            "required": true,
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "required": true
+          },
+          "uri": {
+            "type": "string",
+            "required": true,
+            "nullable": true
+          }
+        },
+        "indexes": [
+          {
+            "fields": {
+              "feedId": 1
+            }
+          },
+          {
+            "fields": {
+              "scrapedAt": -1
+            }
+          }
+        ]
+      },
+      "meta": {
+        "cache": false,
+        "trackable": false,
+        "public": false,
+        "cascadeFrom": null
+      }
+    },
+    "file": {
+      "name": "file",
+      "schema": {
+        "fields": {
+          "category": {
+            "type": "string",
+            "required": false,
+            "nullable": true
+          },
+          "conversationId": {
+            "type": "string",
+            "required": false,
+            "nullable": true
+          },
+          "dislikeCount": {
+            "type": "number",
+            "required": true,
+            "default": 0
+          },
+          "embedding": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "required": true
+            },
+            "required": false,
+            "nullable": true
+          },
+          "feedId": {
+            "type": "string",
+            "required": false,
+            "nullable": true
+          },
+          "indexable": {
+            "type": "boolean",
+            "required": true,
+            "default": true
+          },
+          "indexed": {
+            "type": "boolean",
+            "required": true,
+            "default": false
+          },
+          "likeCount": {
+            "type": "number",
+            "required": true,
+            "default": 0
+          },
+          "markdown": {
+            "type": "string",
+            "required": true
+          },
+          "public": {
+            "type": "boolean",
+            "required": true,
+            "default": true
+          },
+          "sourceUri": {
+            "type": "string",
+            "required": false,
+            "nullable": true
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "required": true
+            },
+            "required": false
+          },
+          "text": {
+            "type": "string",
+            "required": false,
+            "nullable": true
+          },
+          "thumbnail": {
+            "type": "object",
+            "fields": {
+              "blurhash": {
+                "type": "string",
+                "required": false
+              },
+              "description": {
+                "type": "string",
+                "required": false
+              },
+              "height": {
+                "type": "number",
+                "required": true
+              },
+              "sizes": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "required": true
+                },
+                "required": false
+              },
+              "type": {
+                "type": "literal",
+                "values": [
+                  "public"
+                ],
+                "required": true
+              },
+              "uri": {
+                "type": "string",
+                "required": true
+              },
+              "width": {
+                "type": "number",
+                "required": true
+              }
+            },
+            "required": false,
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "required": false,
+            "nullable": true
+          },
+          "type": {
+            "type": "literal",
+            "values": [
+              "markdown"
+            ],
+            "required": true
+          },
+          "uris": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "required": true
+            },
+            "required": false
+          },
+          "userId": {
+            "type": "string",
+            "required": true
+          },
+          "viewCount": {
+            "type": "number",
+            "required": true,
+            "default": 0
+          }
+        },
+        "indexes": [
+          {
+            "fields": {
+              "type": 1
+            }
+          },
+          {
+            "fields": {
+              "feedId": 1
+            }
+          }
+        ]
+      },
+      "meta": {
+        "cache": false,
+        "trackable": true,
+        "public": true,
+        "cascadeFrom": null
+      }
+    },
+    "userFilePreference": {
+      "name": "userFilePreference",
+      "schema": {
+        "fields": {
+          "embedding": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "required": true
+            },
+            "required": true,
+            "nullable": true
+          },
+          "likeCount": {
+            "type": "number",
+            "required": true,
+            "default": 0
+          },
+          "updatedAt": {
+            "type": "number",
+            "required": true
+          },
+          "userId": {
+            "type": "string",
+            "required": true
+          }
+        }
+      },
+      "meta": {
+        "cache": false,
+        "trackable": false,
+        "public": false,
+        "cascadeFrom": null,
+        "trackKeys": [
+          "userId"
+        ]
+      }
+    },
+    "newsPodcast": {
+      "name": "newsPodcast",
+      "schema": {
+        "fields": {
+          "articles": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "fields": {
+                "endTimeMs": {
+                  "type": "number",
+                  "required": true
+                },
+                "fileId": {
+                  "type": "string",
+                  "required": true
+                },
+                "image": {
+                  "type": "object",
+                  "fields": {
+                    "blurhash": {
+                      "type": "string",
+                      "required": false
+                    },
+                    "description": {
+                      "type": "string",
+                      "required": false
+                    },
+                    "height": {
+                      "type": "number",
+                      "required": true
+                    },
+                    "sizes": {
+                      "type": "array",
+                      "items": {
+                        "type": "number",
+                        "required": true
+                      },
+                      "required": false
+                    },
+                    "type": {
+                      "type": "literal",
+                      "values": [
+                        "public"
+                      ],
+                      "required": true
+                    },
+                    "uri": {
+                      "type": "string",
+                      "required": true
+                    },
+                    "width": {
+                      "type": "number",
+                      "required": true
+                    }
+                  },
+                  "required": true,
+                  "nullable": true
+                },
+                "imageUri": {
+                  "type": "string",
+                  "required": true,
+                  "nullable": true
+                },
+                "startTimeMs": {
+                  "type": "number",
+                  "required": true
+                },
+                "title": {
+                  "type": "string",
+                  "required": true
+                }
+              },
+              "required": true
+            },
+            "required": true
+          },
+          "audioUri": {
+            "type": "string",
+            "required": true
+          },
+          "date": {
+            "type": "string",
+            "required": true
+          },
+          "description": {
+            "type": "string",
+            "required": true
+          },
+          "durationMs": {
+            "type": "number",
+            "required": true
+          },
+          "generatedAt": {
+            "type": "number",
+            "required": true
+          },
+          "generationError": {
+            "type": "string",
+            "required": true,
+            "nullable": true
+          },
+          "generationStatus": {
+            "type": "enum",
+            "values": [
+              "pending",
+              "generating",
+              "complete",
+              "failed"
+            ],
+            "required": true
+          },
+          "host1BotId": {
+            "type": "string",
+            "required": true
+          },
+          "host2BotId": {
+            "type": "string",
+            "required": true
+          },
+          "segments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "fields": {
+                "articleRef": {
+                  "type": "string",
+                  "required": false
+                },
+                "cameraEnergy": {
+                  "type": "enum",
+                  "values": [
+                    "fast",
+                    "normal",
+                    "slow"
+                  ],
+                  "required": false
+                },
+                "cameraShot": {
+                  "type": "enum",
+                  "values": [
+                    "normal",
+                    "closeup"
+                  ],
+                  "required": false
+                },
+                "endTimeMs": {
+                  "type": "number",
+                  "required": true
+                },
+                "gestureHint": {
+                  "type": "object",
+                  "fields": {
+                    "gesture": {
+                      "type": "enum",
+                      "values": [
+                        "handup",
+                        "index",
+                        "thumbup",
+                        "shrug",
+                        "side",
+                        "ok",
+                        "thumbdown",
+                        "namaste"
+                      ],
+                      "required": true
+                    },
+                    "timing": {
+                      "type": "enum",
+                      "values": [
+                        "start",
+                        "mid",
+                        "end"
+                      ],
+                      "required": true
+                    }
+                  },
+                  "required": false
+                },
+                "listenerReaction": {
+                  "type": "enum",
+                  "values": [
+                    "nod",
+                    "laugh",
+                    "shocked",
+                    "agree",
+                    "empathize",
+                    "bored"
+                  ],
+                  "required": false
+                },
+                "nonVerbalCue": {
+                  "type": "enum",
+                  "values": [
+                    "breathe",
+                    "sigh",
+                    "laugh",
+                    "chuckle"
+                  ],
+                  "required": false
+                },
+                "speakerEmotion": {
+                  "type": "enum",
+                  "values": [
+                    "happy",
+                    "sad",
+                    "angry",
+                    "surprised",
+                    "fearful",
+                    "disgusted",
+                    "laughing",
+                    "whispering",
+                    "neutral"
+                  ],
+                  "required": false
+                },
+                "speakerId": {
+                  "type": "string",
+                  "required": true
+                },
+                "speakerName": {
+                  "type": "string",
+                  "required": true
+                },
+                "startTimeMs": {
+                  "type": "number",
+                  "required": true
+                },
+                "text": {
+                  "type": "string",
+                  "required": true
+                }
+              },
+              "required": true
+            },
+            "required": true
+          },
+          "subtitles": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "fields": {
+                "endTimeMs": {
+                  "type": "number",
+                  "required": true
+                },
+                "speakerId": {
+                  "type": "string",
+                  "required": true
+                },
+                "startTimeMs": {
+                  "type": "number",
+                  "required": true
+                },
+                "text": {
+                  "type": "string",
+                  "required": true
+                },
+                "words": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "fields": {
+                      "endTimeMs": {
+                        "type": "number",
+                        "required": true
+                      },
+                      "startTimeMs": {
+                        "type": "number",
+                        "required": true
+                      },
+                      "text": {
+                        "type": "string",
+                        "required": true
+                      }
+                    },
+                    "required": true
+                  },
+                  "required": false
+                }
+              },
+              "required": true
+            },
+            "required": true
+          },
+          "title": {
+            "type": "string",
+            "required": true
+          },
+          "userId": {
+            "type": "string",
+            "required": true,
+            "nullable": true
+          },
+          "visemes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "fields": {
+                "arkit": {
+                  "type": "object",
+                  "fields": {
+                    "jawForward": {
+                      "type": "number",
+                      "required": true
+                    },
+                    "jawOpen": {
+                      "type": "number",
+                      "required": true
+                    },
+                    "mouthClose": {
+                      "type": "number",
+                      "required": true
+                    },
+                    "mouthFunnel": {
+                      "type": "number",
+                      "required": true
+                    },
+                    "mouthPressLeft": {
+                      "type": "number",
+                      "required": true
+                    },
+                    "mouthPressRight": {
+                      "type": "number",
+                      "required": true
+                    },
+                    "mouthPucker": {
+                      "type": "number",
+                      "required": true
+                    },
+                    "mouthStretchLeft": {
+                      "type": "number",
+                      "required": true
+                    },
+                    "mouthStretchRight": {
+                      "type": "number",
+                      "required": true
+                    }
+                  },
+                  "required": false
+                },
+                "durationMs": {
+                  "type": "number",
+                  "required": true
+                },
+                "intensity": {
+                  "type": "number",
+                  "required": true
+                },
+                "name": {
+                  "type": "enum",
+                  "values": [
+                    "aei",
+                    "o",
+                    "bmp",
+                    "fv",
+                    "l",
+                    "r",
+                    "th",
+                    "qw",
+                    "ee",
+                    "cdgknstxyz",
+                    "sil"
+                  ],
+                  "required": true
+                },
+                "speakerId": {
+                  "type": "string",
+                  "required": true
+                },
+                "startMs": {
+                  "type": "number",
+                  "required": true
+                }
+              },
+              "required": true
+            },
+            "required": true
+          }
+        },
+        "indexes": [
+          {
+            "fields": {
+              "date": -1
+            }
+          }
+        ]
+      },
+      "meta": {
+        "cache": false,
+        "trackable": true,
+        "public": true,
+        "cascadeFrom": null
+      }
+    },
+    "userNewsRead": {
+      "name": "userNewsRead",
+      "schema": {
+        "fields": {
+          "fileId": {
+            "type": "string",
+            "required": true
+          },
+          "readAt": {
+            "type": "number",
+            "required": true
+          },
+          "userId": {
+            "type": "string",
+            "required": true
+          }
+        },
+        "indexes": [
+          {
+            "fields": {
+              "userId": 1
+            }
+          }
+        ]
+      },
+      "meta": {
+        "cache": false,
+        "trackable": false,
+        "public": false,
+        "cascadeFrom": null,
+        "trackKeys": [
+          "userId"
+        ]
+      }
+    },
+    "userNewsSaved": {
+      "name": "userNewsSaved",
+      "schema": {
+        "fields": {
+          "fileId": {
+            "type": "string",
+            "required": true
+          },
+          "savedAt": {
+            "type": "number",
+            "required": true
+          },
+          "userId": {
+            "type": "string",
+            "required": true
+          }
+        },
+        "indexes": [
+          {
+            "fields": {
+              "userId": 1,
+              "savedAt": -1
+            }
+          }
+        ]
+      },
+      "meta": {
+        "cache": false,
+        "trackable": true,
+        "public": false,
+        "cascadeFrom": null,
+        "trackKeys": [
+          "userId"
+        ]
+      }
+    },
+    "userNewsReaction": {
+      "name": "userNewsReaction",
+      "schema": {
+        "fields": {
+          "articleId": {
+            "type": "string",
+            "required": true
+          },
+          "reactedAt": {
+            "type": "number",
+            "required": true
+          },
+          "reaction": {
+            "type": "enum",
+            "values": [
+              "like",
+              "dislike"
+            ],
+            "required": true
+          },
+          "userId": {
+            "type": "string",
+            "required": true
+          }
+        },
+        "indexes": [
+          {
+            "fields": {
+              "userId": 1
+            }
+          }
+        ]
+      },
+      "meta": {
+        "cache": false,
+        "trackable": false,
+        "public": false,
+        "cascadeFrom": null,
+        "trackKeys": [
+          "userId"
+        ]
+      }
+    },
+    "userNewsSourceFollow": {
+      "name": "userNewsSourceFollow",
+      "schema": {
+        "fields": {
+          "followedAt": {
+            "type": "number",
+            "required": true
+          },
+          "sourceId": {
+            "type": "string",
+            "required": true
+          },
+          "userId": {
+            "type": "string",
+            "required": true
+          }
+        },
+        "indexes": [
+          {
+            "fields": {
+              "userId": 1
+            }
+          }
+        ]
+      },
+      "meta": {
+        "cache": false,
+        "trackable": false,
+        "public": false,
+        "cascadeFrom": null,
+        "trackKeys": [
+          "userId"
+        ]
+      }
+    },
+    "userNewsPreference": {
+      "name": "userNewsPreference",
+      "schema": {
+        "fields": {
+          "embedding": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "required": true
+            },
+            "required": true,
+            "nullable": true
+          },
+          "likeCount": {
+            "type": "number",
+            "required": true
+          },
+          "updatedAt": {
+            "type": "number",
+            "required": true
+          },
+          "userId": {
+            "type": "string",
+            "required": true
+          }
+        }
+      },
+      "meta": {
+        "cache": false,
+        "trackable": false,
+        "public": false,
+        "cascadeFrom": null,
+        "trackKeys": [
+          "userId"
+        ]
+      }
+    }
+  }
+}
