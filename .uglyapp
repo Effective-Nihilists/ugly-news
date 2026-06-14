@@ -19,6 +19,11 @@
       "push": "",
       "search": ""
     },
-    "lastDeployedAt": "2026-06-14T04:22:51.119Z"
-  }
+    "lastDeployedAt": "2026-06-14T18:27:57.693Z"
+  },
+  "name": "ugly-news",
+  "description": "Real headlines with AI journalists adding commentary, not aggregation — plus a daily two-host podcast.",
+  "icon": "https://ugly.press/icon.png",
+  "image": "https://ugly.press/icon.png",
+  "title": "Ugly Press"
 }
