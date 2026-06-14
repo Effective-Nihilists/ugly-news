@@ -1,4 +1,24 @@
 {
   "projectId": "ad0eu8yee9",
-  "localPort": 4321
+  "localPort": 4321,
+  "deployTarget": {
+    "provider": "cloudflare-workers",
+    "workerName": "ugly-news",
+    "workerUrl": "https://ugly-news.justin-mann.workers.dev",
+    "cloudflareSubdomain": "justin-mann",
+    "neonProjectId": "square-glitter-40136037",
+    "cloudflareAccountId": "9edc7fbe4a55b0b6489df8e7a120526c",
+    "r2BucketName": "ugly-news",
+    "appDomain": "ugly.press",
+    "appDomainZoneId": "45af936c07cc02a1ba53f4970739d295",
+    "customDomainUrl": "https://ugly.press",
+    "sendingDomain": "ugly.press",
+    "proxyTokenIds": {
+      "ai": "",
+      "email": "",
+      "push": "",
+      "search": ""
+    },
+    "lastDeployedAt": "2026-06-14T04:22:51.119Z"
+  }
 }

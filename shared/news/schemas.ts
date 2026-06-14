@@ -230,6 +230,15 @@ export const NewsPodcastSchema = z.object({
   durationMs: z.number(),
   visemes: z.array(PodcastVisemeSchema),
   subtitles: z.array(PodcastSubtitleSchema),
+  // Optional "song mode" fields. Server-side song/AvatarScript generation was
+  // dropped in the migration, but the client podcast player still references
+  // these (they stay undefined for normal news podcasts → the standard
+  // talking/dancing path runs).
+  songMode: z.boolean().optional(),
+  songBpm: z.number().optional(),
+  beatOffsetMs: z.number().optional(),
+  danceGroup: z.enum(['chill', 'groove', 'hype', 'silly']).optional(),
+  backgroundUri: z.string().nullable().optional(),
   generationStatus: z.enum(['pending', 'generating', 'complete', 'failed']),
   generationError: z.string().nullable(),
   generatedAt: z.number(),

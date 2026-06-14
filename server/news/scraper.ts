@@ -139,21 +139,20 @@ export async function generateArticleSummary(title: string, content: string): Pr
 }
 
 async function generateArticleImage(title: string, category: NewsCategory, feedId: string): Promise<string | null> {
-  const feed = newsFeeds.find((f) => f.id === feedId);
-  const style = feed?.imageStyle ?? newsCategoryImageStyles[category];
-  const parts = [
-    `News article illustration for "${title}".`,
-    'Do not include any text, words, letters, or numbers.',
-    style.style,
-    style.photographyStyle,
-    style.colorPalette ? `Color palette: ${style.colorPalette}.` : '',
-    style.mood ? `Mood: ${style.mood}.` : '',
-    style.additionalKeywords ?? '',
-  ].filter(Boolean);
-  const negative = ['text, words, letters, watermark, low quality, cartoon, anime', style.negativePrompt ?? '']
-    .filter(Boolean)
-    .join(', ');
-  return genImage(parts.join(' '), { model: 'flux_1_dev', negative });
+  // "The Ugly Press" house illustration style — every generated article image
+  // shares the paper's editorial newspaper-brutalist look so the feed reads as
+  // one publication, not a grab-bag of stock photography.
+  void feedId;
+  const prompt = [
+    `Editorial illustration for a satirical newspaper, "The Ugly Press", depicting: ${title}.`,
+    'Style: bold mid-century editorial newspaper illustration, screen-printed / risograph look, heavy ink linework, visible halftone dot texture, slightly distressed newsprint grain.',
+    'Limited palette: warm cream newsprint background, deep ink black, and a single vermilion red accent.',
+    `Conceptual and a little wry, fitting the ${category} desk. Strong composition, high contrast, flat shapes.`,
+    'Absolutely no text, words, letters, numbers, captions, or logos.',
+  ].join(' ');
+  const negative =
+    'text, words, letters, numbers, captions, watermark, signature, logo, photorealistic, 3d render, glossy, low quality, blurry';
+  return genImage(prompt, { model: 'flux_1_dev', negative });
 }
 
 // ── Main dispatch ──────────────────────────────────────────────────────────

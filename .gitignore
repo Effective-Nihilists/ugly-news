@@ -4,3 +4,7 @@ dist/
 local/
 logs/
 coverage/
+# Secrets
+.env
+.env.*
+!.env.example

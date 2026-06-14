@@ -18,6 +18,14 @@ import { enqueueTask } from './queue';
 
 type Db = TypedDB<Record<string, DBObject>>;
 
+// Fixed host avatar GLB models (full-body, ARKit blendshapes + skeleton) the
+// client podcast stage loads + animates. Hosts are a fixed cast (podcastHost1 +
+// uglyBot). Re-hosted in this app's own R2 bucket and served same-origin via
+// the worker's /public route — blob.ugly.bot has no CORS (403s cross-origin),
+// which would break the browser GLTFLoader fetch.
+const HOST1_AVATAR_GLB = '/public/avatars/host1.glb';
+const HOST2_AVATAR_GLB = '/public/avatars/host2.glb';
+
 /** Today's date string in UTC (YYYY-MM-DD) — the default-podcast key. */
 export function todayDateString(now: number): string {
   return new Date(now).toISOString().slice(0, 10);
@@ -43,14 +51,12 @@ export async function newsPodcastGetDefault(
   const date = input.date ?? todayDateString(Date.now());
   const podcast = await db.getDoc(collections.newsPodcast, `${date}_default`);
 
-  // Host avatar URLs come from the seeded host rows (Phase 8 seed/initSeed).
-  // Until that lands, the client falls back to default avatars.
   void podcastHost1BotId;
   void uglyBotId;
   return {
     podcast: podcast ?? null,
-    host1AvatarUrl: null,
-    host2AvatarUrl: null,
+    host1AvatarUrl: HOST1_AVATAR_GLB,
+    host2AvatarUrl: HOST2_AVATAR_GLB,
   };
 }
 

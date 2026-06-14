@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-13T19:22:15.287Z",
+  "generatedAt": "2026-06-14T02:18:31.730Z",
   "source": "shared/collections.ts",
   "collections": {
     "errorLog": {
@@ -983,6 +983,25 @@
             "type": "string",
             "required": true
           },
+          "backgroundUri": {
+            "type": "string",
+            "required": false,
+            "nullable": true
+          },
+          "beatOffsetMs": {
+            "type": "number",
+            "required": false
+          },
+          "danceGroup": {
+            "type": "enum",
+            "values": [
+              "chill",
+              "groove",
+              "hype",
+              "silly"
+            ],
+            "required": false
+          },
           "date": {
             "type": "string",
             "required": true
@@ -1138,6 +1157,14 @@
               "required": true
             },
             "required": true
+          },
+          "songBpm": {
+            "type": "number",
+            "required": false
+          },
+          "songMode": {
+            "type": "boolean",
+            "required": false
           },
           "subtitles": {
             "type": "array",

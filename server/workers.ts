@@ -17,8 +17,10 @@ import { messages, requests } from '../shared/api';
 import { collections } from '../shared/collections';
 import { cronTasks } from '../shared/cron';
 import type { NewsDb } from './news/db';
+import * as emailPref from './news/emailPref';
 import * as feed from './news/feed';
 import * as podcast from './news/podcast';
+import * as pub from './news/public';
 import { createCronHandlers } from './news/workers';
 
 function wdb(): NewsDb {
@@ -28,6 +30,8 @@ function wdb(): NewsDb {
 }
 
 const requestHandlers: Partial<RequestHandlers<typeof requests>> = {
+  newsLatest: (_userId, input) => pub.newsLatest(wdb(), input),
+  newsArticleGet: (_userId, input) => pub.newsArticleGet(wdb(), input),
   newsMarkRead: (userId, input) => feed.newsMarkRead(wdb(), userId, input),
   newsMarkReadBulk: (userId, input) => feed.newsMarkReadBulk(wdb(), userId, input),
   newsMarkUnread: (userId, input) => feed.newsMarkUnread(wdb(), userId, input),
@@ -48,6 +52,8 @@ const requestHandlers: Partial<RequestHandlers<typeof requests>> = {
   newsPodcastList: (_userId, input) => podcast.newsPodcastList(wdb(), input),
   newsPodcastInit: () => Promise.resolve(podcast.newsPodcastInit()),
   newsPodcastRegenerate: (userId, input) => podcast.newsPodcastRegenerate(userId, input),
+  newsEmailPrefGet: (userId) => emailPref.newsEmailPrefGet(wdb(), userId),
+  newsEmailPrefSet: (userId, input) => emailPref.newsEmailPrefSet(wdb(), userId, input),
 };
 
 const app = createWorkersApp(

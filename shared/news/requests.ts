@@ -25,8 +25,36 @@ const PodcastDocSchema = NewsPodcastSchema.extend(dbObjectFields);
 
 const empty = z.object({});
 
+// ── Public article shapes (no auth — power the public landing/feed) ────────
+export const NewsCardSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  summary: z.string(),
+  thumbnailUri: z.string().nullable(),
+  category: z.string().nullable(),
+  feedId: z.string().nullable(),
+  createdMs: z.number(),
+});
+export const NewsArticleFullSchema = NewsCardSchema.extend({
+  markdown: z.string(),
+  sourceUri: z.string().nullable(),
+});
+
 // News request definitions. Spread into the app's defineRequests() registry.
 export const newsRequestDefs = {
+  // ─── Public (no auth) — the landing/feed + article view ──────────────────
+  newsLatest: req({
+    input: z.object({
+      limit: z.number().min(1).max(60).default(24),
+      category: z.enum(newsCategoryValues).optional(),
+    }),
+    output: z.object({ items: z.array(NewsCardSchema) }),
+  }),
+  newsArticleGet: req({
+    input: z.object({ id: z.string() }),
+    output: z.object({ article: NewsArticleFullSchema.nullable() }),
+  }),
+
   // ─── Read tracking ───────────────────────────────────────────────────────
   newsMarkRead: authReq({
     input: z.object({ fileId: z.string() }),
@@ -138,5 +166,27 @@ export const newsRequestDefs = {
     input: z.object({ date: z.string().optional(), replaceDefault: z.boolean().optional() }),
     output: z.object({ success: z.boolean(), podcastId: z.string() }),
     rateLimit: { max: 5, window: 300 },
+  }),
+
+  // ─── Daily-email subscription ───────────────────────────────────────────
+  newsEmailPrefGet: authReq({
+    input: empty,
+    output: z.object({
+      emailAllowed: z.boolean(),
+      timezone: z.string(),
+      lang: z.string(),
+    }),
+  }),
+  newsEmailPrefSet: authReq({
+    input: z.object({
+      emailAllowed: z.boolean(),
+      timezone: z.string(),
+      lang: z.string().optional(),
+    }),
+    output: z.object({
+      emailAllowed: z.boolean(),
+      timezone: z.string(),
+      lang: z.string(),
+    }),
   }),
 };

@@ -16,8 +16,10 @@ import { dbDefaults } from 'ugly-app/shared';
 import { messages, requests } from '../shared/api';
 import type { Todo } from '../shared/collections';
 import { collections } from '../shared/collections';
+import * as emailPref from './news/emailPref';
 import * as feed from './news/feed';
 import * as podcast from './news/podcast';
+import * as pub from './news/public';
 import { newsDb, setNewsDb } from './news/db';
 import { createCronHandlers } from './news/workers';
 import { cronTasks } from '../shared/cron';
@@ -107,6 +109,10 @@ const app = createApp(
       return { ok: true };
     },
 
+    // ─── News: public (no auth) ──────────────────────────────────────────
+    newsLatest: (_userId, input) => pub.newsLatest(newsDb(), input),
+    newsArticleGet: (_userId, input) => pub.newsArticleGet(newsDb(), input),
+
     // ─── News: read tracking ─────────────────────────────────────────────
     newsMarkRead: (userId, input) => feed.newsMarkRead(newsDb(), userId, input),
     newsMarkReadBulk: (userId, input) => feed.newsMarkReadBulk(newsDb(), userId, input),
@@ -136,6 +142,10 @@ const app = createApp(
     newsPodcastList: (_userId, input) => podcast.newsPodcastList(newsDb(), input),
     newsPodcastInit: () => Promise.resolve(podcast.newsPodcastInit()),
     newsPodcastRegenerate: (userId, input) => podcast.newsPodcastRegenerate(userId, input),
+
+    // ─── News: daily-email subscription ──────────────────────────────────
+    newsEmailPrefGet: (userId) => emailPref.newsEmailPrefGet(newsDb(), userId),
+    newsEmailPrefSet: (userId, input) => emailPref.newsEmailPrefSet(newsDb(), userId, input),
   } satisfies RequestHandlers<typeof requests>,
   collections,
   (configurator: AppConfigurator) => {

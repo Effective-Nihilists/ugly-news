@@ -5,7 +5,7 @@ import type {
   PodcastNonVerbalCue,
   PodcastSpeakerEmotion,
 } from '../../shared/news/NewsPodcast';
-import { base64ToBytes, bytesToBase64, concatBytes, createWAVFromPCM, parseWAVHeader } from '../../shared/news/WAV';
+import { base64ToBytes, concatBytes, parseWAVHeader } from '../../shared/news/WAV';
 
 const INWORLD_DEFAULT_VOICE = 'Alex';
 
@@ -130,7 +130,8 @@ interface InworldChunkResult {
   timestampInfo?: { wordAlignment?: WordAlignment | undefined } | undefined;
 }
 export interface InworldCollectedResponse {
-  audioContent: string; // base64 WAV (combined)
+  audioContent: string; // base64 WAV (combined) — kept for API-shape parity
+  pcm: Uint8Array; // raw 24kHz/16-bit mono PCM (combined) — use this directly
   timestampInfo?: { wordAlignment?: WordAlignment | undefined } | undefined;
 }
 
@@ -150,9 +151,17 @@ export async function collectInworldStreamResponse(response: Response): Promise<
     if (parsed.error) throw new Error(`InWorld error: ${parsed.error.code} ${parsed.error.message}`);
     if (!parsed.result) return;
     if (parsed.result.audioContent) {
-      const wav = base64ToBytes(parsed.result.audioContent);
-      const info = parseWAVHeader(wav);
-      audioChunks.push(wav.subarray(info.dataOffset, info.dataOffset + info.dataSize));
+      // Each InWorld stream chunk is its own complete RIFF/WAVE file; pull out
+      // the PCM data chunk. Be defensive — skip a chunk we can't parse rather
+      // than failing the whole segment (one odd chunk shouldn't kill a podcast).
+      try {
+        const wav = base64ToBytes(parsed.result.audioContent);
+        const info = parseWAVHeader(wav);
+        const data = wav.subarray(info.dataOffset, info.dataOffset + info.dataSize);
+        if (data.length > 0) audioChunks.push(data);
+      } catch {
+        /* skip unparseable chunk */
+      }
     }
     const wa = parsed.result.timestampInfo?.wordAlignment;
     if (wa) {
@@ -176,10 +185,16 @@ export async function collectInworldStreamResponse(response: Response): Promise<
   if (lineBuffer.trim()) processLine(lineBuffer);
   if (audioChunks.length === 0) throw new Error('InWorld TTS returned no audio content');
 
+  // Return raw PCM only. We deliberately do NOT rebuild+base64-encode a WAV
+  // here: that `audioContent` field is unused downstream (the caller consumes
+  // `.pcm` directly) and base64-encoding megabytes per segment is heavy CPU
+  // work that pushed the Workers queue invocation past its CPU limit → kill +
+  // retry → flaky "stuck generating". The final podcast WAV is built once, at
+  // the end, from the concatenated PCM.
   const combinedPcm = concatBytes(audioChunks);
-  const wav = createWAVFromPCM(combinedPcm, 24000);
   return {
-    audioContent: bytesToBase64(wav),
+    audioContent: '',
+    pcm: combinedPcm,
     timestampInfo: words.length > 0
       ? { wordAlignment: { words, wordStartTimeSeconds: wordStarts, wordEndTimeSeconds: wordEnds, phoneticDetails: phoneticDetails.length > 0 ? phoneticDetails : undefined } }
       : undefined,

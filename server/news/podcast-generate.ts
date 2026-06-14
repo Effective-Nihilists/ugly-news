@@ -12,7 +12,7 @@ import {
   type PodcastSubtitleWord,
   type PodcastViseme,
 } from '../../shared/news/NewsPodcast';
-import { base64ToBytes, concatBytes, createWAVFromPCM, parseWAVHeader } from '../../shared/news/WAV';
+import { concatBytes, createWAVFromPCM } from '../../shared/news/WAV';
 import { genText } from './ai';
 import type { NewsDb } from './db';
 import { todayDateString } from './podcast';
@@ -27,9 +27,10 @@ interface HostConfig {
   name: string;
   voiceId: string;
 }
-// Default host identities. Phase 8's initSeed can override these (name/voiceId).
+// Default host identities (mirrors ugly.bot's podcastHost1 + uglyBot configs).
+// HOST1 Sarah = female news anchor; HOST2 Ugly Bot = male snarky commentator.
 const HOST1: HostConfig = { name: 'Sarah', voiceId: 'inworld-Sarah' };
-const HOST2: HostConfig = { name: 'Ugly Bot', voiceId: 'inworld-Ashley' };
+const HOST2: HostConfig = { name: 'Ugly Bot', voiceId: 'inworld-Theodore' };
 
 // ── Article selection ────────────────────────────────────────────────────
 
@@ -106,6 +107,7 @@ OUTPUT JSON ONLY (no markdown fences):
   const responseText = await genText([{ role: 'user', content: prompt }], {
     model: 'gpt_4o',
     temperature: 0.9,
+    maxTokens: 4000,
   });
   if (!responseText) throw new Error('No response from script model');
   const jsonMatch = /\{[\s\S]*\}/.exec(responseText);
@@ -156,19 +158,17 @@ async function generatePodcastAudio(
       const r = await generateSegmentTTS(inworldBasicAuth, seg.text, voiceId, seg.speakerEmotion, seg.nonVerbalCue ?? undefined);
       result = r.result;
       mapping = r.mapping;
-      const wav = base64ToBytes(result.audioContent);
-      const info = parseWAVHeader(wav);
-      pcm = wav.subarray(info.dataOffset, info.dataOffset + info.dataSize);
+      pcm = result.pcm;
       if (pcm.length === 0) throw new Error('Empty audio data');
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       if (msg.includes('Empty audio data') || msg.includes('no audio content') || msg.includes('missing data chunk')) {
+        // Retry once with the plain (un-marked-up) text — emotion/cue markup
+        // occasionally yields an empty render.
         const r = await generateSegmentTTS(inworldBasicAuth, seg.text, voiceId);
         result = r.result;
         mapping = r.mapping;
-        const wav = base64ToBytes(result.audioContent);
-        const info = parseWAVHeader(wav);
-        pcm = wav.subarray(info.dataOffset, info.dataOffset + info.dataSize);
+        pcm = result.pcm;
       } else {
         throw error;
       }

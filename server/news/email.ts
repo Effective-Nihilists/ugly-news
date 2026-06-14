@@ -30,7 +30,7 @@ function fileToEmailArticle(file: FileMarkdown & { _id: string }): NewsEmailArti
     title: file.title ?? '',
     summary: (file.text ?? '').slice(0, 200),
     thumbnailUri: file.thumbnail?.uri ?? null,
-    uri: `${PUBLIC_URL}/news/article?id=${encodeURIComponent(file._id)}`,
+    uri: `${PUBLIC_URL}/article/${encodeURIComponent(file._id)}`,
     engagementCount: (file.likeCount ?? 0) + (file.dislikeCount ?? 0),
   };
 }
@@ -191,7 +191,7 @@ export async function dispatchUserPrivateNewsEmail(
       ? {
           title: podcast.title,
           duration: `${Math.round(podcast.durationMs / 60000)} min`,
-          uri: `${PUBLIC_URL}/news/podcast?id=${encodeURIComponent(podcast._id)}`,
+          uri: `${PUBLIC_URL}/podcast`,
           imageUri: podcast.articles[0]?.imageUri ?? undefined,
         }
       : null;
