@@ -10,8 +10,7 @@
 //
 // (Playback was already a static `<audio>` file generated once per episode, so
 // popularity never multiplies cost; this additionally dedupes repeated text.)
-import { getAdapter } from 'ugly-app/server/adapter/workers';
-import { uglyBotRequest } from 'ugly-app/server';
+import { getAdapter, uglyBotRequest } from 'ugly-app/server/adapter/workers';
 
 export interface TtsViseme {
   name: string;
