@@ -39,24 +39,17 @@ export async function generateBotComment(title: string, content: string): Promis
   return trimmed.length >= 20 && trimmed.length <= 500 ? trimmed : null;
 }
 
-// ── Crawlbase fetch (Workers-safe: global fetch + env token) ─────────────────
+// ── Article fetch (Workers-safe: direct global fetch) ────────────────────────
+// Crawlbase was removed — articles are fetched directly. Only Cloudflare,
+// Neon/Postgres, and ugly.bot are permitted external connections.
 
 const SCRAPE_TIMEOUT_MS = 10_000;
-const CRAWLBASE_BASE_URL = 'https://api.crawlbase.com/';
 
 async function crawlbaseFetch(url: string): Promise<string | null> {
-  // eslint-disable-next-line @typescript-eslint/dot-notation
-  const apiKey = process.env['CRAWLBASE_API_KEY'];
-  if (!isDefined(apiKey)) {
-    console.warn('[scrape] CRAWLBASE_API_KEY not set — falling back to direct fetch');
-  }
-  const target = apiKey
-    ? `${CRAWLBASE_BASE_URL}?${new URLSearchParams({ token: apiKey, url, country: 'US' }).toString()}`
-    : url;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), SCRAPE_TIMEOUT_MS);
   try {
-    const res = await fetch(target, {
+    const res = await fetch(url, {
       signal: controller.signal,
       headers: { 'user-agent': 'Mozilla/5.0 (compatible; UglyNews/1.0; +https://ugly.press)' },
     });
