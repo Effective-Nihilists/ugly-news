@@ -1,5 +1,5 @@
 import React from 'react';
-import { useApp } from 'ugly-app/client';
+import { useAppOptional } from 'ugly-app/client';
 
 /**
  * Ugly News landing page (the `''` route).
@@ -26,6 +26,14 @@ const STYLE = `
 @keyframes un-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes un-ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 @keyframes un-stamp { 0% { transform: rotate(-9deg) scale(0.6); opacity: 0; } 60% { transform: rotate(-9deg) scale(1.06); opacity: 1; } 100% { transform: rotate(-9deg) scale(1); opacity: 1; } }
+@keyframes un-eq { 0%,100% { transform: scaleY(0.35); } 50% { transform: scaleY(1); } }
+@keyframes un-onair { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+.un-eq-bar { width: 4px; background: ${'#d6261d'}; transform-origin: bottom; animation: un-eq 0.9s ease-in-out infinite; }
+.un-pod-cta { transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease; }
+.un-pod-cta:hover { transform: translate(-2px,-2px); box-shadow: 5px 5px 0 #d6261d; }
+.un-pod-play { transition: transform 0.18s ease, background 0.2s ease; }
+.un-pod-band:hover .un-pod-play { transform: scale(1.06); }
 
 .un-rise { opacity: 0; animation: un-rise 0.7s cubic-bezier(0.2,0.7,0.2,1) forwards; }
 .un-fade { opacity: 0; animation: un-fade 0.9s ease forwards; }
@@ -126,7 +134,14 @@ function FrontPage(): React.ReactElement | null {
   // intact on a cold cache, shows the real paper once articles exist.
   if (failed || (items && items.length === 0)) return null;
 
-  const [lead, ...rest] = items ?? [];
+  // A front-page lead should be visual — pick the first image-bearing story as
+  // the lead (fall back to the newest) so the hero never renders imageless.
+  const all = items ?? [];
+  const leadIdx = Math.max(0, all.findIndex((c) => c.thumbnailUri));
+  const lead = all[leadIdx];
+  // Cap the secondary column so it doesn't tower over the lead (which would
+  // stretch the hero image to an ungainly height). 8 keeps the columns balanced.
+  const rest = all.filter((_, i) => i !== leadIdx).slice(0, 8);
   const fmt = (ms: number) =>
     new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
 
@@ -150,7 +165,7 @@ function FrontPage(): React.ReactElement | null {
         }}
       >
         <span>Off the wire — latest</span>
-        <span style={{ color: C.accent }}>{items ? `${items.length} stories` : 'loading…'}</span>
+        <a href="/archive" className="un-link" style={{ color: C.accent, textDecoration: 'none' }}>Full archive →</a>
       </div>
 
       {!items && (
@@ -162,13 +177,43 @@ function FrontPage(): React.ReactElement | null {
           className="un-front-grid"
           style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 'clamp(20px,3vw,44px)' }}
         >
-          {/* Lead story */}
-          <a href={`/article/${lead.id}`} className="un-card un-lead un-fade" style={{ textDecoration: 'none', color: C.ink }}>
-            {lead.thumbnailUri && (
-              <div style={{ overflow: 'hidden', marginBottom: 14, border: `1px solid rgba(26,23,20,0.18)` }}>
-                <img src={lead.thumbnailUri} alt="" className="un-card-img" style={{ width: '100%', display: 'block', aspectRatio: '16/9', objectFit: 'cover' }} />
-              </div>
-            )}
+          {/* Lead story — flex column whose image fills the cell the grid
+              stretches to the secondary column's height (kills the empty gap). */}
+          <a href={`/article/${lead.id}`} className="un-card un-lead un-fade" style={{ textDecoration: 'none', color: C.ink, display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <div
+              style={{
+                position: 'relative',
+                flex: 1,
+                minHeight: 'clamp(220px, 32vw, 440px)',
+                overflow: 'hidden',
+                marginBottom: 14,
+                border: `1px solid rgba(26,23,20,0.18)`,
+                background: C.ink,
+              }}
+            >
+              {lead.thumbnailUri ? (
+                <img
+                  src={lead.thumbnailUri}
+                  alt=""
+                  className="un-card-img"
+                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                />
+              ) : (
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'grid',
+                    placeItems: 'center',
+                    background: `repeating-linear-gradient(45deg, ${C.ink}, ${C.ink} 11px, #241f1b 11px, #241f1b 22px)`,
+                  }}
+                >
+                  <span style={{ fontFamily: 'Anton, sans-serif', fontSize: 'clamp(36px,6vw,76px)', color: 'rgba(241,236,224,0.16)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Ugly Press
+                  </span>
+                </div>
+              )}
+            </div>
             {lead.category && (
               <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: C.accent, marginBottom: 8 }}>
                 {lead.category}
@@ -226,6 +271,197 @@ function FrontPage(): React.ReactElement | null {
           </div>
         </div>
       )}
+    </section>
+  );
+}
+
+interface PodcastSummary {
+  title: string;
+  description: string;
+  durationMs: number;
+  generationStatus: 'pending' | 'generating' | 'complete' | 'failed';
+  audioUri: string | null;
+  articles: { title: string; imageUri: string | null }[];
+}
+
+/** Daily-podcast spotlight — a full-bleed band that pulls the real default
+ *  episode and gives the podcast top billing high on the page. Falls back to a
+ *  teaser when today's episode is still recording or absent. */
+function PodcastSpotlight(): React.ReactElement {
+  const [pod, setPod] = React.useState<PodcastSummary | null>(null);
+  const [loaded, setLoaded] = React.useState(false);
+
+  React.useEffect(() => {
+    let alive = true;
+    rpc<{ podcast: PodcastSummary | null }>('newsPodcastGetDefault', {})
+      .then((r) => { if (alive) { setPod(r.podcast); setLoaded(true); } })
+      .catch(() => { if (alive) setLoaded(true); });
+    return () => { alive = false; };
+  }, []);
+
+  const ready = !!pod && pod.generationStatus === 'complete' && !!pod.audioUri;
+  const mins = pod ? Math.max(1, Math.round(pod.durationMs / 60000)) : 0;
+  const thumbs = (pod?.articles ?? []).filter((a) => a.imageUri).slice(0, 4);
+  const title = ready ? pod!.title : 'Two hosts. No sympathy.';
+  const statusLabel = ready
+    ? `${mins} min · ${pod!.articles.length} stories`
+    : pod
+      ? 'Today’s episode is recording…'
+      : 'A fresh episode every morning';
+
+  const eq = (
+    <div aria-hidden style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 18 }}>
+      {[0, 1, 2, 3, 4].map((i) => (
+        <span key={i} className="un-eq-bar" style={{ height: '100%', animationDelay: `${i * 0.12}s` }} />
+      ))}
+    </div>
+  );
+
+  return (
+    <section
+      id="podcast"
+      className="un-pod-band un-fade"
+      style={{
+        background: C.ink,
+        color: C.paper,
+        padding: 'clamp(28px,5vw,52px) clamp(20px,5vw,64px)',
+        borderBottom: `3px double ${C.ink}`,
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 'clamp(18px,3vw,40px)',
+          flexWrap: 'wrap',
+        }}
+      >
+        {/* Play button → podcast page */}
+        <a
+          href="/podcast"
+          aria-label="Play today’s podcast"
+          style={{
+            flexShrink: 0,
+            width: 'clamp(76px,12vw,104px)',
+            height: 'clamp(76px,12vw,104px)',
+            borderRadius: '50%',
+            background: C.accent,
+            color: C.paper,
+            display: 'grid',
+            placeItems: 'center',
+            textDecoration: 'none',
+            boxShadow: `0 0 0 4px ${C.ink}, 0 0 0 6px ${C.accent}`,
+          }}
+          className="un-pod-play"
+        >
+          <span style={{ fontSize: 'clamp(26px,4vw,38px)', marginLeft: 6, lineHeight: 1 }}>▶</span>
+        </a>
+
+        {/* Episode meta */}
+        <div style={{ flex: 1, minWidth: 240 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              fontFamily: 'IBM Plex Mono, monospace',
+              fontSize: 12,
+              letterSpacing: '0.2em',
+              textTransform: 'uppercase',
+              color: C.accent,
+              marginBottom: 10,
+            }}
+          >
+            {eq}
+            <span style={{ animation: 'un-onair 1.8s ease-in-out infinite' }}>
+              ● The Daily Podcast
+            </span>
+          </div>
+          <h2
+            style={{
+              fontFamily: 'Anton, sans-serif',
+              fontWeight: 400,
+              fontSize: 'clamp(28px,4.4vw,52px)',
+              lineHeight: 0.96,
+              textTransform: 'uppercase',
+              margin: '0 0 10px',
+            }}
+          >
+            {title}
+          </h2>
+          <div
+            style={{
+              fontFamily: 'IBM Plex Mono, monospace',
+              fontSize: 12.5,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: 'rgba(241,236,224,0.6)',
+              marginBottom: 18,
+              minHeight: 15,
+            }}
+          >
+            {loaded ? statusLabel : 'Tuning in…'}
+          </div>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+            <a
+              href="/podcast"
+              className="un-pod-cta"
+              style={{
+                fontFamily: 'IBM Plex Mono, monospace',
+                fontWeight: 600,
+                letterSpacing: '0.14em',
+                textTransform: 'uppercase',
+                fontSize: 13,
+                background: C.paper,
+                color: C.ink,
+                padding: '15px 24px',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 10,
+              }}
+            >
+              {ready ? 'Listen now' : 'Open the podcast'} →
+            </a>
+            {thumbs.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                {thumbs.map((a, i) => (
+                  <img
+                    key={i}
+                    src={a.imageUri!}
+                    alt=""
+                    title={a.title}
+                    style={{
+                      width: 40,
+                      height: 40,
+                      objectFit: 'cover',
+                      borderRadius: '50%',
+                      border: `2px solid ${C.ink}`,
+                      boxShadow: `0 0 0 1px rgba(241,236,224,0.4)`,
+                      marginLeft: i === 0 ? 0 : -12,
+                      filter: 'grayscale(0.3)',
+                    }}
+                  />
+                ))}
+                <span
+                  style={{
+                    marginLeft: 12,
+                    fontFamily: 'IBM Plex Mono, monospace',
+                    fontSize: 11,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    color: 'rgba(241,236,224,0.55)',
+                  }}
+                >
+                  In this episode
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </section>
   );
 }
@@ -525,6 +761,9 @@ function Hero({ name }: { name?: string | undefined }): React.ReactElement {
           <a href="#front" className="un-cta">
             Read today →
           </a>
+          <a href="/podcast" className="un-cta ghost">
+            ▶ Today’s podcast
+          </a>
           <a href="#daily" className="un-cta ghost">
             Get the 8 a.m.
           </a>
@@ -725,15 +964,16 @@ function FinalCTA(): React.ReactElement {
         <br />
         <span style={{ color: C.accent }}>ugly</span> truth.
       </h2>
-      <a href="#top" className="un-cta">
-        Open the newsroom →
-      </a>
     </section>
   );
 }
 
 export default function HomePage(): React.ReactElement {
-  const app = useApp() as { user?: { name?: string } | null } | undefined;
+  // useAppOptional() (not useApp()) — the home route is public (auth: false),
+  // so logged-out users render WITHOUT <AppProvider>. useApp() throws there and
+  // blanks the page; the optional variant returns null and we degrade the
+  // personalized greeting gracefully.
+  const app = useAppOptional() as { user?: { name?: string } | null } | null;
   const name = app?.user?.name ?? undefined;
   const dateStr = new Date()
     .toLocaleDateString('en-US', {
@@ -753,6 +993,14 @@ export default function HomePage(): React.ReactElement {
         background: C.paper,
         color: C.ink,
         overflowX: 'hidden',
+        // Honor the device safe area (notch / status bar / landscape notch).
+        // index.html sets viewport-fit=cover, so without these insets the
+        // masthead renders under the status bar and edge content under a notch.
+        // Bottom inset is applied on the footer so the scroll area still fills.
+        boxSizing: 'border-box',
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingLeft: 'env(safe-area-inset-left)',
+        paddingRight: 'env(safe-area-inset-right)',
         backgroundImage:
           'radial-gradient(rgba(26,23,20,0.05) 1px, transparent 1px)',
         backgroundSize: '3px 3px',
@@ -762,13 +1010,14 @@ export default function HomePage(): React.ReactElement {
       <Masthead dateStr={dateStr} />
       <Ticker />
       <Hero name={name} />
+      <PodcastSpotlight />
       <FrontPage />
       <Sections />
       <Manifesto />
       <FinalCTA />
       <footer
         style={{
-          padding: '26px clamp(20px,5vw,64px)',
+          padding: '26px clamp(20px,5vw,64px) calc(26px + env(safe-area-inset-bottom))',
           display: 'flex',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
@@ -780,7 +1029,9 @@ export default function HomePage(): React.ReactElement {
           color: C.muted,
         }}
       >
-        <span>The Ugly Press · ugly.press</span>
+        <span>
+          The Ugly Press · <a className="un-link" href="/archive" style={{ color: C.ink }}>Archive</a> · <a className="un-link" href="/podcast" style={{ color: C.ink }}>Podcast</a>
+        </span>
         <span>
           Printed by{' '}
           <a className="un-link" href="https://ugly.bot" style={{ color: C.ink }}>

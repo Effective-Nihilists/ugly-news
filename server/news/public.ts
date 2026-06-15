@@ -1,7 +1,8 @@
 import type { DBObject, TypedDB } from 'ugly-app/shared';
 import { collections } from '../../shared/collections';
-import type { FileMarkdown, NewsArticle } from '../../shared/collections';
+import type { FileMarkdown, NewsArticle, NewsPodcast } from '../../shared/collections';
 import { uglyBotId } from '../../shared/news/Bot';
+import { decodeHtmlEntities } from './download';
 
 type Db = TypedDB<Record<string, DBObject>>;
 
@@ -17,6 +18,15 @@ export interface NewsCard {
 export interface NewsArticleFull extends NewsCard {
   markdown: string;
   sourceUri: string | null;
+}
+export interface PodcastCard {
+  id: string;
+  date: string;
+  title: string;
+  description: string;
+  durationMs: number;
+  articleCount: number;
+  coverImageUri: string | null;
 }
 
 function ms(created: unknown): number {
@@ -37,8 +47,8 @@ function snippet(s: string, n = 220): string {
 function fileToCard(f: FileMarkdown & { _id: string; created?: unknown }): NewsCard {
   return {
     id: f._id,
-    title: f.title ?? 'Untitled',
-    summary: f.text ? snippet(f.text) : snippet(f.markdown ?? ''),
+    title: decodeHtmlEntities(f.title ?? 'Untitled'),
+    summary: decodeHtmlEntities(f.text ? snippet(f.text) : snippet(f.markdown ?? '')),
     thumbnailUri: f.thumbnail?.uri ?? null,
     category: f.category ?? f.tags?.[0] ?? null,
     feedId: f.feedId ?? null,
@@ -49,8 +59,8 @@ function fileToCard(f: FileMarkdown & { _id: string; created?: unknown }): NewsC
 function articleToCard(a: NewsArticle & { _id: string; created?: unknown }): NewsCard {
   return {
     id: a._id,
-    title: a.title,
-    summary: snippet(a.summary ?? a.contentMarkdown ?? ''),
+    title: decodeHtmlEntities(a.title),
+    summary: decodeHtmlEntities(snippet(a.summary ?? a.contentMarkdown ?? '')),
     thumbnailUri: a.imageUri ?? null,
     category: a.categories?.[0] ?? null,
     feedId: a.feedId,
@@ -132,6 +142,82 @@ export async function newsLatest(
   return { items: articles.map(articleToCard) };
 }
 
+/**
+ * Public archive: all published stories newest-first, with an optional keyword
+ * filter over title/summary. Offset-paginated (skip) so the client can render
+ * history grouped by date and "load more". Unlike `newsLatest` this is NOT
+ * diversified — the archive wants true reverse-chronological order.
+ */
+export async function newsArchive(
+  db: Db,
+  input: { query?: string | undefined; limit?: number | undefined; skip?: number | undefined; category?: string | undefined },
+): Promise<{ items: NewsCard[]; hasMore: boolean }> {
+  const limit = Math.min(Math.max(input.limit ?? 30, 1), 60);
+  const skip = Math.max(input.skip ?? 0, 0);
+  const filter: Record<string, unknown> = { public: true, userId: uglyBotId, type: 'markdown' };
+  if (input.category) filter['category'] = input.category;
+  const q = input.query?.trim();
+
+  if (q) {
+    // Keyword search. The framework's getQuery filter supports only equality
+    // operators (no $regex/$ilike) and the `file` FTS column isn't provisioned
+    // on prod, so we scan a recent window in JS: pull the newest SEARCH_WINDOW
+    // stories and substring-match title/summary. Covers the live archive at
+    // current scale; for the full back-catalogue, provision the `file` search
+    // index and switch to db.searchDocs().
+    const SEARCH_WINDOW = 1000;
+    const rows = await db.getQuery<FileMarkdown & { _id: string; created?: unknown }>(
+      'file',
+      [{ $match: filter }, { $sort: { created: -1 } }],
+      { limit: SEARCH_WINDOW },
+    );
+    const needle = q.toLowerCase();
+    const matched = rows
+      .map(fileToCard)
+      .filter((c) => c.title.toLowerCase().includes(needle) || c.summary.toLowerCase().includes(needle));
+    const page = matched.slice(skip, skip + limit);
+    return { items: page, hasMore: matched.length > skip + limit };
+  }
+
+  // Browse: true reverse-chronological with offset pagination.
+  const rows = await db.getQuery<FileMarkdown & { _id: string; created?: unknown }>(
+    'file',
+    [{ $match: filter }, { $sort: { created: -1 } }],
+    { limit: limit + 1, skip },
+  );
+  const hasMore = rows.length > limit;
+  return { items: rows.slice(0, limit).map(fileToCard), hasMore };
+}
+
+/**
+ * Public archive: every past daily podcast newest-first as lightweight cards
+ * (no heavy segments/visemes payload). Offset-paginated.
+ */
+export async function newsPodcastArchive(
+  db: Db,
+  input: { limit?: number | undefined; skip?: number | undefined },
+): Promise<{ items: PodcastCard[]; hasMore: boolean }> {
+  const limit = Math.min(Math.max(input.limit ?? 30, 1), 60);
+  const skip = Math.max(input.skip ?? 0, 0);
+  // Only the default (public) episodes exist in this app; list newest-first.
+  const rows = await db.getQuery<NewsPodcast & { _id: string }>(
+    'newsPodcast',
+    [{ $match: {} }, { $sort: { date: -1 } }],
+    { limit: limit + 1, skip },
+  );
+  const hasMore = rows.length > limit;
+  const items: PodcastCard[] = rows.slice(0, limit).map((p) => ({
+    id: p._id,
+    date: p.date,
+    title: p.title,
+    description: p.description,
+    durationMs: p.durationMs,
+    articleCount: p.articles?.length ?? 0,
+    coverImageUri: p.articles?.find((a) => a.imageUri)?.imageUri ?? null,
+  }));
+  return { items, hasMore };
+}
+
 /** A single article for the public article page (file first, else raw article). */
 export async function newsArticleGet(
   db: Db,
@@ -143,7 +229,7 @@ export async function newsArticleGet(
     return {
       article: {
         ...card,
-        markdown: (file as FileMarkdown).markdown ?? '',
+        markdown: decodeHtmlEntities((file as FileMarkdown).markdown ?? ''),
         sourceUri: (file as FileMarkdown).sourceUri ?? null,
       },
     };
@@ -155,7 +241,7 @@ export async function newsArticleGet(
     return {
       article: {
         ...card,
-        markdown: art.summary ?? art.contentMarkdown ?? '',
+        markdown: decodeHtmlEntities(art.summary ?? art.contentMarkdown ?? ''),
         sourceUri: art.uri ?? null,
       },
     };

@@ -81,6 +81,12 @@ Every endpoint is accessible via both WebSocket (`socket.request(name, input)`) 
 - Navigate: `useRouter().push('route-key', params)`
 - Popups: always use `useRouter().openPopup(<Component />, { mode: 'transient' })` — never custom fixed overlays
 
+### Home page is the primary surface
+- The home route is `''` in `shared/pages.ts`, rendered by `client/pages/HomePage.tsx`.
+- When building or customizing the app's main functionality, **edit `HomePage.tsx`** — replace its body with the requested UI. Do not add a new route just to land the user on it.
+- Only add new pages for secondary navigation the user explicitly asks for (settings, detail views, multi-screen flows). One screen ⇒ home page edit. Multiple screens ⇒ home page + extra routes.
+- Demo/test pages under `client/pages/` (`AuthDemoPage`, `TodoDemoPage`, `*TestPage`, etc.) are scaffolding — delete the ones you don't need as you build the real app.
+
 ## Critical rules
 - **Never** change a collection schema without running `npm run db:schema-gen` and fixing the generated migration
 - **Always** include a `schema: ZodSchema` when defining a collection — it's required
@@ -99,6 +105,22 @@ Every endpoint is accessible via both WebSocket (`socket.request(name, input)`) 
 - **Never** build custom tab, carousel, scroll, or modal components — use the framework
   versions which include accessibility attributes and element map support
 - **Always** set `aria-label` on icon-only buttons and non-text interactive elements
+
+## UX inspection (`window.__uglyInspect()`)
+
+Every page exposes a runtime inspection API installed by `bootstrapApp` at boot. It reports objective UX defects: layout shift (CLS), animation jank, overlapping interactive controls, safe-area violations, mobile keyboard coverage, popup mount cost, SPA route transitions. Observers run continuously from page load and keep a rolling 500-entry ring buffer per signal.
+
+**Call from:**
+- **Playwright tests / bots** — `import { inspectWindow, expectClean, setDevice, simulateKeyboard, waitForApp } from 'ugly-app/playwright'`
+- **Browser console during dev** — `window.__uglyInspect({ since?: number })` returns a `UglyInspectReport` JSON; `window.__uglyInspectMark()` returns a timestamp for windowed reads
+- **Studio coding agent** — call the `inspect_ux` tool with optional `actions[]` to drive navigation/clicks/keyboard before reading
+
+`UglyInspectReport` type and all entry types are exported from `ugly-app/client` and re-exported from `ugly-app/playwright` so tests don't have to reach into client code.
+
+**Rules:**
+- **Never** call `page.evaluate('window.__uglyInspect(...)')` directly — use `ugly-app/playwright` so renames and shape changes propagate
+- **Treat as build failures** in test code: any `safeAreaViolations`, `overlaps`, `keyboard.coveredInputs`, or `animations[].droppedFrames > 2`
+- The expensive scans (overlap, safe-area) only run when `__uglyInspect()` is called — observers themselves are essentially free
 
 ## Feedback system
 Feedback button is always at `[data-id="feedback-button"]` (bottom-right).

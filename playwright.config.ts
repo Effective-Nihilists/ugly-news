@@ -1,4 +1,3 @@
-import fs from 'fs';
 import { defineConfig, devices } from '@playwright/test';
 
 const DEFAULT_PORT = 4321;
@@ -7,12 +6,7 @@ const DEFAULT_PORT = 4321;
  * Resolve the local dev-server port. Priority:
  *   1. PLAYWRIGHT_BASE_URL env (full URL — port extracted from it)
  *   2. PORT env
- *   3. `.uglyapp` config: `localPort` (current) or `portStart` (legacy)
- *   4. DEFAULT_PORT (matches ugly-app's DEFAULT_LOCAL_PORT)
- *
- * Returning a number (not a URL) lets us inject the same port into
- * `webServer.env.PORT` so the spawned `npm run dev` binds where
- * Playwright is polling.
+ *   3. DEFAULT_PORT (matches ugly-app's DEFAULT_LOCAL_PORT)
  */
 function getLocalPort(): number {
   const envUrl = process.env['PLAYWRIGHT_BASE_URL'];
@@ -24,14 +18,6 @@ function getLocalPort(): number {
     const n = Number(process.env['PORT']);
     if (Number.isInteger(n) && n > 0) return n;
   }
-  try {
-    const config = JSON.parse(fs.readFileSync('.uglyapp', 'utf-8')) as {
-      localPort?: number;
-      portStart?: number;
-    };
-    if (config.localPort) return config.localPort;
-    if (config.portStart) return config.portStart;
-  } catch { /* fallback */ }
   return DEFAULT_PORT;
 }
 

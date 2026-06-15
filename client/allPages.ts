@@ -17,6 +17,7 @@ export const allPages = {
   ['']: lazyPage(() => import('./pages/HomePage')),
   ['article/:id']: lazyPage(() => import('./pages/ArticlePage')),
   ['podcast']: lazyPage(() => import('./pages/PodcastPage')),
+  ['archive']: lazyPage(() => import('./pages/ArchivePage')),
   ['auth-demo']: lazyPage(() => import('./pages/AuthDemoPage')),
   ['user/:userId']: lazyPage(() => import('./pages/UserPage')),
   ['search']: lazyPage(() => import('./pages/SearchPage')),

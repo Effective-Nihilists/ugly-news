@@ -8,3 +8,13 @@ coverage/
 .env
 .env.*
 !.env.example
+
+
+# ── Added by ugly-app upgrade ──
+.ugly-studio/codebase-index.db*
+.ugly-studio/session-index.db*
+.ugly-studio/layout.json
+.ugly-studio/sandbox-state.json
+.ugly-studio/tmp/
+.ugly-studio/users/
+.ugly-studio/home/

@@ -9,7 +9,7 @@
     "publish:assets": "ugly-app publish:assets",
     "purge:assets": "ugly-app purge:assets",
     "db:migrate": "ugly-app db:migrate",
-    "deploy": "ugly-app deploy",
+    "publish": "ugly-app publish",
     "prod": "ugly-app prod",
     "versions": "ugly-app versions",
     "versions:prune": "ugly-app versions:prune",
@@ -28,7 +28,9 @@
     "test:e2e": "playwright test",
     "textGen": "ugly-app textGen",
     "imageGen": "ugly-app imageGen",
-    "upgrade": "node -e \"const e=require('child_process').execSync,x=require('fs').existsSync,g=require('fs').readdirSync;g('node_modules').filter(f=>f.startsWith('.ugly-app-')).forEach(f=>require('fs').rmSync('node_modules/'+f,{recursive:true,force:true}));e(x('yarn.lock')?'yarn add ugly-app@latest':x('pnpm-lock.yaml')?'pnpm add ugly-app@latest':'npm install ugly-app@latest',{stdio:'inherit'});e('node node_modules/ugly-app/dist/cli/index.js upgrade',{stdio:'inherit'})\""
+    "upgrade": "node -e \"const e=require('child_process').execSync,x=require('fs').existsSync,g=require('fs').readdirSync;g('node_modules').filter(f=>f.startsWith('.ugly-app-')).forEach(f=>require('fs').rmSync('node_modules/'+f,{recursive:true,force:true}));e(x('yarn.lock')?'yarn add ugly-app@latest':x('pnpm-lock.yaml')?'pnpm add ugly-app@latest':'npm install ugly-app@latest',{stdio:'inherit'});e('node node_modules/ugly-app/dist/cli/index.js upgrade',{stdio:'inherit'})\"",
+    "db:schema-gen": "ugly-app db:schema-gen",
+    "db:schema-status": "ugly-app db:schema-status"
   },
   "dependencies": {
     "cheerio": "^1.2.0",
@@ -37,7 +39,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "three": "^0.183.2",
-    "ugly-app": "^0.1.536",
+    "ugly-app": "^0.1.579",
     "yjs": "^13.6.30",
     "zod": "^4.3.6"
   },
@@ -60,6 +62,7 @@
     "eslint-plugin-react": "^7.37.0",
     "eslint-plugin-react-hooks": "^5.0.0",
     "html2canvas": "^1.4.1",
+    "playwright": "^1.58.2",
     "tsx": "^4.19.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.0.0",

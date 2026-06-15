@@ -108,6 +108,12 @@ export default function PodcastPage(): React.ReactElement {
         overflowY: 'auto',
         background: C.paper,
         color: C.ink,
+        // Honor the device safe area (viewport-fit=cover is set in index.html).
+        boxSizing: 'border-box',
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+        paddingLeft: 'env(safe-area-inset-left)',
+        paddingRight: 'env(safe-area-inset-right)',
         backgroundImage: 'radial-gradient(rgba(26,23,20,0.05) 1px, transparent 1px)',
         backgroundSize: '3px 3px',
       }}
@@ -132,7 +138,10 @@ export default function PodcastPage(): React.ReactElement {
 
       <div style={{ maxWidth: 860, margin: '0 auto', padding: 'clamp(20px,5vw,48px)' }}>
         <div style={{ height: 6, background: C.ink, marginBottom: 16 }} />
-        <a href="/" className="pp-back">← The Ugly Press</a>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+          <a href="/" className="pp-back">← The Ugly Press</a>
+          <a href="/archive?tab=podcasts" className="pp-back">All episodes →</a>
+        </div>
 
         <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, letterSpacing: '0.22em', textTransform: 'uppercase', color: C.accent, margin: '22px 0 6px' }}>
           The Daily Podcast

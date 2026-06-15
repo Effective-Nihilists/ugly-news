@@ -40,6 +40,17 @@ export const NewsArticleFullSchema = NewsCardSchema.extend({
   sourceUri: z.string().nullable(),
 });
 
+// Lightweight podcast row for the public archive (no segments/visemes payload).
+export const PodcastCardSchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  title: z.string(),
+  description: z.string(),
+  durationMs: z.number(),
+  articleCount: z.number(),
+  coverImageUri: z.string().nullable(),
+});
+
 // News request definitions. Spread into the app's defineRequests() registry.
 export const newsRequestDefs = {
   // ─── Public (no auth) — the landing/feed + article view ──────────────────
@@ -53,6 +64,27 @@ export const newsRequestDefs = {
   newsArticleGet: req({
     input: z.object({ id: z.string() }),
     output: z.object({ article: NewsArticleFullSchema.nullable() }),
+  }),
+  // Public archive: browse every published story newest-first, with optional
+  // keyword filter (title/summary). Paginated via skip; client groups by date.
+  newsArchive: req({
+    input: z.object({
+      query: z.string().optional(),
+      limit: z.number().min(1).max(60).default(30),
+      skip: z.number().min(0).default(0),
+      category: z.enum(newsCategoryValues).optional(),
+    }),
+    output: z.object({ items: z.array(NewsCardSchema), hasMore: z.boolean() }),
+    rateLimit: { max: 60, window: 60 },
+  }),
+  // Public archive: every past daily podcast newest-first (lightweight cards).
+  newsPodcastArchive: req({
+    input: z.object({
+      limit: z.number().min(1).max(60).default(30),
+      skip: z.number().min(0).default(0),
+    }),
+    output: z.object({ items: z.array(PodcastCardSchema), hasMore: z.boolean() }),
+    rateLimit: { max: 60, window: 60 },
   }),
 
   // ─── Read tracking ───────────────────────────────────────────────────────

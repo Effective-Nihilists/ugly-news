@@ -16,6 +16,7 @@ export const pages = definePages({
   '': definePage<{}>({ auth: false }),
   'article/:id': definePage<{ id: string }>({ auth: false }),
   'podcast': definePage<{}>({ auth: false }),
+  'archive': definePage<{ q?: string; tab?: string }>({ auth: false }),
   'auth-demo': definePage<{}>({ auth: false }),
   'user/:userId': definePage<{ userId: string }>(),
   'search': definePage<{ q?: string }>({ auth: false }),

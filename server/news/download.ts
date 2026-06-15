@@ -85,19 +85,45 @@ function stableHash(input: string): string {
 /** Lightweight HTML → plain markdown-ish text (Workers-safe; no DOM/turndown).
  * The full article body is produced later by the scraper; this is just the
  * RSS-provided fallback content. */
+// RSS titles/descriptions arrive with HTML entities (e.g. `&#8217;`, `&amp;`,
+// `&mdash;`) that React would render literally. Decode numeric (decimal + hex)
+// and the common named entities. Worker-safe (no DOM / deps).
+const NAMED_ENTITIES: Record<string, string> = {
+  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ',
+  hellip: '…', mdash: '—', ndash: '–', rsquo: '’', lsquo: '‘',
+  rdquo: '”', ldquo: '“', laquo: '«', raquo: '»', copy: '©',
+  reg: '®', trade: '™', deg: '°', middot: '·', bull: '•', euro: '€',
+  pound: '£', cent: '¢', frac12: '½', frac14: '¼', frac34: '¾',
+};
+
+export function decodeHtmlEntities(input: string): string {
+  if (!input || input.indexOf('&') === -1) return input;
+  return input
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => codePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => codePoint(parseInt(dec, 10)))
+    .replace(/&([a-zA-Z][a-zA-Z0-9]+);/g, (m, name) =>
+      Object.prototype.hasOwnProperty.call(NAMED_ENTITIES, name) ? NAMED_ENTITIES[name]! : m,
+    );
+}
+
+function codePoint(cp: number): string {
+  if (!Number.isFinite(cp) || cp <= 0 || cp > 0x10ffff) return '';
+  try {
+    return String.fromCodePoint(cp);
+  } catch {
+    return '';
+  }
+}
+
 export function htmlToMarkdown(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<\/(p|div|h[1-6]|li|br)>/gi, '\n')
-    .replace(/<li[^>]*>/gi, '- ')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&#39;|&apos;/g, "'")
-    .replace(/&quot;/g, '"')
+  return decodeHtmlEntities(
+    html
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[\s\S]*?<\/style>/gi, '')
+      .replace(/<\/(p|div|h[1-6]|li|br)>/gi, '\n')
+      .replace(/<li[^>]*>/gi, '- ')
+      .replace(/<[^>]+>/g, ''),
+  )
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
@@ -162,7 +188,7 @@ export async function dispatchNewsFeedDownload(
       const contentMarkdown = htmlToMarkdown(contentHtml);
       if (isStringEmpty(contentMarkdown)) continue;
 
-      const title = (textOf(item.title) ?? '').trim();
+      const title = decodeHtmlEntities((textOf(item.title) ?? '').trim());
       if (isStringEmpty(title)) continue;
 
       const uri = linkOf(item);

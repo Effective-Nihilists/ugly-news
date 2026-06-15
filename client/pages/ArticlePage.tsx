@@ -94,6 +94,12 @@ export default function ArticlePage({ id }: { id: string }): React.ReactElement 
         overflowY: 'auto',
         background: C.paper,
         color: C.ink,
+        // Honor the device safe area (viewport-fit=cover is set in index.html).
+        boxSizing: 'border-box',
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+        paddingLeft: 'env(safe-area-inset-left)',
+        paddingRight: 'env(safe-area-inset-right)',
         backgroundImage: 'radial-gradient(rgba(26,23,20,0.05) 1px, transparent 1px)',
         backgroundSize: '3px 3px',
       }}

@@ -36,6 +36,28 @@ The only valid reason to decline feedback is if it contradicts a Critical Rule i
 
 If you're unsure how to implement something, read the existing code, read the ugly-app API reference, and figure it out. Do not skip it. Do not defer it. Do not say "this would require significant refactoring" — just do the refactoring.
 
+## Using screenshots
+
+Bot-submitted feedback (and any feedback from the studio's bug-report flow) includes `context.screenshotPath` — an absolute path to the PNG the user/persona saw when they wrote the feedback. **Look at it before proposing a fix.** The written message alone is insufficient context for layout, contrast, spacing, image-rendering, or overlap work — the user is reacting to what they SAW.
+
+- If `analyze_image` is available (ugly-studio coding-agent):
+
+  ```
+  analyze_image(
+    path=context.screenshotPath,
+    query="describe the area the user is reacting to; list any visible
+           defects in layout, contrast, copy, or image rendering"
+  )
+  ```
+
+  Run multiple targeted queries when the feedback is non-trivial — one for the affected region, one to OCR any visible text the user references, one for colors/contrast if the complaint is design-related. `analyze_image` is Haiku-cheap; vague one-shots waste tokens.
+
+- If the active model is vision-capable (Claude Code CLI, Claude/GPT/Gemini framework models): `Read(context.screenshotPath)` inlines the image directly.
+
+Cross-reference what you see with `context.elementMap` (next section) to translate visual descriptions into source-file references.
+
+**Do NOT propose a visual fix without inspecting the screenshot.** Element maps describe DOM state; the screenshot is the only record of what the user perceived.
+
 ## Using element maps
 
 Feedback may include an `elementMap` field — a JSON snapshot of every interactive element on the page with:

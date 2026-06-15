@@ -1,11 +1,14 @@
-// InWorld streaming TTS — faithful port from ugly.bot, made Workers-safe:
-// Uint8Array instead of Buffer, atob/btoa instead of Buffer base64, and the
-// final PCM is wrapped in a WAV container (createWAVFromPCM) instead of ffmpeg.
+// Podcast TTS. The InWorld upstream call + its API key now live ONLY in
+// ugly.bot (the `ttsRender` op); this module keeps the podcast-specific text
+// preprocessing + word-index mapping and renders each segment through the
+// owner-billed, app-cached op (see ./tts-cache). The text preprocessing +
+// emotion/temperature logic is unchanged from the original direct port.
 import type {
   PodcastNonVerbalCue,
   PodcastSpeakerEmotion,
 } from '../../shared/news/NewsPodcast';
-import { base64ToBytes, concatBytes, parseWAVHeader } from '../../shared/news/WAV';
+import { base64ToBytes } from '../../shared/news/WAV';
+import { renderSegmentCached } from './tts-cache';
 
 const INWORLD_DEFAULT_VOICE = 'Alex';
 
@@ -31,18 +34,6 @@ const AUDIO_MARKUP_SET = new Set<string>([
   '[laughing]', '[whispering]', '[breathe]', '[sigh]',
 ]);
 const FILLER_WORDS = new Set<string>(['Well,', 'You', 'know,', 'So,']);
-
-/** Basic-auth header value for InWorld, from env. Empty if unconfigured. */
-export function getInworldBasicAuth(): string {
-  /* eslint-disable @typescript-eslint/dot-notation */
-  const precomputed = process.env['INWORLD_BASIC_AUTH'];
-  if (precomputed) return precomputed;
-  const key = process.env['INWORLD_API_KEY'];
-  const secret = process.env['INWORLD_API_SECRET'];
-  /* eslint-enable @typescript-eslint/dot-notation */
-  if (!key || !secret) return '';
-  return btoa(`${key}:${secret}`);
-}
 
 export function preprocessTextForTTS(
   text: string,
@@ -125,84 +116,13 @@ interface WordAlignment {
   wordEndTimeSeconds: number[];
   phoneticDetails?: { phones: InworldPhoneDetail[] }[] | undefined;
 }
-interface InworldChunkResult {
-  audioContent?: string;
-  timestampInfo?: { wordAlignment?: WordAlignment | undefined } | undefined;
-}
 export interface InworldCollectedResponse {
   audioContent: string; // base64 WAV (combined) — kept for API-shape parity
   pcm: Uint8Array; // raw 24kHz/16-bit mono PCM (combined) — use this directly
   timestampInfo?: { wordAlignment?: WordAlignment | undefined } | undefined;
 }
 
-export async function collectInworldStreamResponse(response: Response): Promise<InworldCollectedResponse> {
-  const reader = response.body!.getReader();
-  const decoder = new TextDecoder();
-  let lineBuffer = '';
-  const audioChunks: Uint8Array[] = [];
-  const words: string[] = [];
-  const wordStarts: number[] = [];
-  const wordEnds: number[] = [];
-  const phoneticDetails: { phones: InworldPhoneDetail[] }[] = [];
-
-  const processLine = (line: string): void => {
-    if (!line.trim()) return;
-    const parsed = JSON.parse(line) as { result?: InworldChunkResult; error?: { code: number; message: string } };
-    if (parsed.error) throw new Error(`InWorld error: ${parsed.error.code} ${parsed.error.message}`);
-    if (!parsed.result) return;
-    if (parsed.result.audioContent) {
-      // Each InWorld stream chunk is its own complete RIFF/WAVE file; pull out
-      // the PCM data chunk. Be defensive — skip a chunk we can't parse rather
-      // than failing the whole segment (one odd chunk shouldn't kill a podcast).
-      try {
-        const wav = base64ToBytes(parsed.result.audioContent);
-        const info = parseWAVHeader(wav);
-        const data = wav.subarray(info.dataOffset, info.dataOffset + info.dataSize);
-        if (data.length > 0) audioChunks.push(data);
-      } catch {
-        /* skip unparseable chunk */
-      }
-    }
-    const wa = parsed.result.timestampInfo?.wordAlignment;
-    if (wa) {
-      words.push(...wa.words);
-      wordStarts.push(...wa.wordStartTimeSeconds);
-      wordEnds.push(...wa.wordEndTimeSeconds);
-      if (wa.phoneticDetails) phoneticDetails.push(...wa.phoneticDetails);
-    }
-  };
-
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    lineBuffer += decoder.decode(value, { stream: true });
-    let nl: number;
-    while ((nl = lineBuffer.indexOf('\n')) !== -1) {
-      processLine(lineBuffer.slice(0, nl));
-      lineBuffer = lineBuffer.slice(nl + 1);
-    }
-  }
-  if (lineBuffer.trim()) processLine(lineBuffer);
-  if (audioChunks.length === 0) throw new Error('InWorld TTS returned no audio content');
-
-  // Return raw PCM only. We deliberately do NOT rebuild+base64-encode a WAV
-  // here: that `audioContent` field is unused downstream (the caller consumes
-  // `.pcm` directly) and base64-encoding megabytes per segment is heavy CPU
-  // work that pushed the Workers queue invocation past its CPU limit → kill +
-  // retry → flaky "stuck generating". The final podcast WAV is built once, at
-  // the end, from the concatenated PCM.
-  const combinedPcm = concatBytes(audioChunks);
-  return {
-    audioContent: '',
-    pcm: combinedPcm,
-    timestampInfo: words.length > 0
-      ? { wordAlignment: { words, wordStartTimeSeconds: wordStarts, wordEndTimeSeconds: wordEnds, phoneticDetails: phoneticDetails.length > 0 ? phoneticDetails : undefined } }
-      : undefined,
-  };
-}
-
 export async function generateSegmentTTS(
-  inworldBasicAuth: string,
   text: string,
   voiceId: string,
   emotionHint?: PodcastSpeakerEmotion,
@@ -213,27 +133,52 @@ export async function generateSegmentTTS(
   const mapping = createWordIndexMapping(text, processedText);
   const temperature = emotionHint ? EMOTION_TEMPERATURES[emotionHint] : DEFAULT_TTS_TEMPERATURE;
 
-  const response = await fetch('https://api.inworld.ai/tts/v1/voice:stream', {
-    method: 'POST',
-    headers: { 'Authorization': `Basic ${inworldBasicAuth}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      text: processedText,
-      voiceId,
-      modelId: 'inworld-tts-1.5-max',
-      temperature,
-      audioConfig: { audioEncoding: 'LINEAR16', sampleRateHertz: 24000 },
-      timestampType: 'WORD',
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    if (response.status === 404 && errorText.includes('Unknown voice') && !isRetry) {
-      return generateSegmentTTS(inworldBasicAuth, text, INWORLD_DEFAULT_VOICE, emotionHint, nonVerbalCue, true);
+  // Render through ugly.bot's owner-billed, app-cached `ttsRender` op (the
+  // InWorld key lives only in ugly.bot now). Unknown-voice → retry once with the
+  // default voice, mirroring the old direct-fetch behavior.
+  let rendered;
+  try {
+    rendered = await renderSegmentCached({ text: processedText, voiceId, temperature });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (/unknown voice|\b404\b/i.test(msg) && !isRetry) {
+      return generateSegmentTTS(text, INWORLD_DEFAULT_VOICE, emotionHint, nonVerbalCue, true);
     }
-    throw new Error(`InWorld TTS failed: ${response.status} ${errorText}`);
+    throw error;
   }
-  if (!response.body) throw new Error('InWorld TTS returned no body');
-  const result = await collectInworldStreamResponse(response);
+
+  const pcm = base64ToBytes(rendered.audio);
+  if (pcm.length === 0) throw new Error('InWorld TTS returned no audio content');
+  const words = rendered.words ?? [];
+  const visemes = rendered.visemes ?? [];
+
+  // Reshape the op result into the InworldCollectedResponse the podcast
+  // generator already consumes (raw PCM + parallel-array word alignment +
+  // flattened phonetic/viseme details).
+  const result: InworldCollectedResponse = {
+    audioContent: '',
+    pcm,
+    timestampInfo: words.length
+      ? {
+          wordAlignment: {
+            words: words.map((w) => w.word),
+            wordStartTimeSeconds: words.map((w) => w.startMs / 1000),
+            wordEndTimeSeconds: words.map((w) => (w.startMs + w.durationMs) / 1000),
+            phoneticDetails: visemes.length
+              ? [
+                  {
+                    phones: visemes.map((v) => ({
+                      phoneSymbol: '',
+                      visemeSymbol: v.name,
+                      startTimeSeconds: v.startMs / 1000,
+                      durationSeconds: v.durationMs / 1000,
+                    })),
+                  },
+                ]
+              : undefined,
+          },
+        }
+      : undefined,
+  };
   return { result, mapping };
 }

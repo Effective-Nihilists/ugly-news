@@ -7,7 +7,7 @@ import {
   parseWAVHeader,
 } from '../../../shared/news/WAV';
 import { getTimezonesAtLocalHour } from '../../../shared/news/Timezone';
-import { extractImageFromRSSItem, htmlToMarkdown } from '../../../server/news/download';
+import { decodeHtmlEntities, extractImageFromRSSItem, htmlToMarkdown } from '../../../server/news/download';
 import { createWordIndexMapping, preprocessTextForTTS } from '../../../server/news/tts';
 
 // ── WAV (replaces ffmpeg; must round-trip for podcast audio) ────────────────
@@ -31,6 +31,28 @@ describe('WAV', () => {
   it('concatBytes concatenates in order', () => {
     expect(concatBytes([new Uint8Array([1, 2]), new Uint8Array([3]), new Uint8Array([4, 5])]))
       .toEqual(new Uint8Array([1, 2, 3, 4, 5]));
+  });
+});
+
+// ── HTML entity decoding (RSS titles arrive encoded) ────────────────────────
+describe('decodeHtmlEntities', () => {
+  it('decodes the real-world title regression (&#8217; → ’)', () => {
+    expect(decodeHtmlEntities('Anthropic&#8217;s safety warnings')).toBe('Anthropic’s safety warnings');
+  });
+  it('decodes decimal, hex, and named entities', () => {
+    expect(decodeHtmlEntities('A &amp; B')).toBe('A & B');
+    expect(decodeHtmlEntities('caf&#233;')).toBe('café');
+    expect(decodeHtmlEntities('caf&#xe9;')).toBe('café');
+    expect(decodeHtmlEntities('em&mdash;dash')).toBe('em—dash');
+    expect(decodeHtmlEntities('&lt;tag&gt;')).toBe('<tag>');
+  });
+  it('leaves unknown entities and plain text untouched', () => {
+    expect(decodeHtmlEntities('plain text')).toBe('plain text');
+    expect(decodeHtmlEntities('&bogus; stays')).toBe('&bogus; stays');
+    expect(decodeHtmlEntities('5 < 10 & ok')).toBe('5 < 10 & ok');
+  });
+  it('rejects out-of-range code points without throwing', () => {
+    expect(decodeHtmlEntities('&#99999999999;')).toBe('');
   });
 });
 

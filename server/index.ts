@@ -112,6 +112,8 @@ const app = createApp(
     // ─── News: public (no auth) ──────────────────────────────────────────
     newsLatest: (_userId, input) => pub.newsLatest(newsDb(), input),
     newsArticleGet: (_userId, input) => pub.newsArticleGet(newsDb(), input),
+    newsArchive: (_userId, input) => pub.newsArchive(newsDb(), input),
+    newsPodcastArchive: (_userId, input) => pub.newsPodcastArchive(newsDb(), input),
 
     // ─── News: read tracking ─────────────────────────────────────────────
     newsMarkRead: (userId, input) => feed.newsMarkRead(newsDb(), userId, input),
@@ -177,15 +179,19 @@ const app = createApp(
       messageCollection: 'message',
       aiChat: {
         async *onMessage(session, userMessage) {
-          const data = await uglyBotRequest<{ message: { content: string } }>('textGen', {
+          const data = await uglyBotRequest('textGen', {
             model: 'gemini_2_5_flash',
             messages: [
-              ...session.messages.map((m) => ({ role: m.role, content: m.text })),
-              { role: 'user', content: userMessage },
+              ...session.messages.map((m) => ({
+                role: m.role as 'user' | 'assistant' | 'system',
+                content: m.text,
+              })),
+              { role: 'user' as const, content: userMessage },
             ],
             options: { maxTokens: 512 },
           });
-          yield data.message.content;
+          const content = data?.message.content;
+          yield typeof content === 'string' ? content : '';
         },
       },
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument

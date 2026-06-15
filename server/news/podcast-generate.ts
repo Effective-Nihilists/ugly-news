@@ -18,7 +18,6 @@ import type { NewsDb } from './db';
 import { todayDateString } from './podcast';
 import {
   generateSegmentTTS,
-  getInworldBasicAuth,
   type InworldCollectedResponse,
   type WordMapping,
 } from './tts';
@@ -134,9 +133,6 @@ async function generatePodcastAudio(
   host1: HostConfig,
   host2: HostConfig,
 ): Promise<AudioResult> {
-  const inworldBasicAuth = getInworldBasicAuth();
-  if (!inworldBasicAuth) throw new Error('InWorld API key not configured');
-
   const allVisemes: PodcastViseme[] = [];
   const allSubtitles: PodcastSubtitle[] = [];
   const allSegments: PodcastSegment[] = [];
@@ -155,7 +151,7 @@ async function generatePodcastAudio(
     let mapping: WordMapping[];
     let pcm: Uint8Array;
     try {
-      const r = await generateSegmentTTS(inworldBasicAuth, seg.text, voiceId, seg.speakerEmotion, seg.nonVerbalCue ?? undefined);
+      const r = await generateSegmentTTS(seg.text, voiceId, seg.speakerEmotion, seg.nonVerbalCue ?? undefined);
       result = r.result;
       mapping = r.mapping;
       pcm = result.pcm;
@@ -165,7 +161,7 @@ async function generatePodcastAudio(
       if (msg.includes('Empty audio data') || msg.includes('no audio content') || msg.includes('missing data chunk')) {
         // Retry once with the plain (un-marked-up) text — emotion/cue markup
         // occasionally yields an empty render.
-        const r = await generateSegmentTTS(inworldBasicAuth, seg.text, voiceId);
+        const r = await generateSegmentTTS(seg.text, voiceId);
         result = r.result;
         mapping = r.mapping;
         pcm = result.pcm;
