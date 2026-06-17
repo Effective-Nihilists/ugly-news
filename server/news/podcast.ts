@@ -58,12 +58,18 @@ export async function newsPodcastGetDefault(
   // complete episode so there's always something to play.
   let podcast = today;
   if (!podcast || podcast.generationStatus !== 'complete') {
-    const latest = await db.getQuery<NewsPodcast & { _id: string }>(
+    // Only default (public) episodes exist, so an empty match + newest-first is
+    // the proven query shape — matching null JSONB fields (e.g. `userId: null`)
+    // in $match is unreliable in the framework's filter layer. Filter to the
+    // latest *complete* episode in code, skipping today's still-generating/
+    // failed doc.
+    const recent = await db.getQuery<NewsPodcast & { _id: string }>(
       'newsPodcast',
-      [{ $match: { userId: null, generationStatus: 'complete' } }, { $sort: { date: -1 } }],
-      { limit: 1 },
+      [{ $match: {} }, { $sort: { date: -1 } }],
+      { limit: 10 },
     );
-    podcast = latest[0] ?? podcast;
+    const latestComplete = recent.find((p) => p.generationStatus === 'complete' && !!p.audioUri);
+    if (latestComplete) podcast = latestComplete;
   }
 
   void podcastHost1BotId;

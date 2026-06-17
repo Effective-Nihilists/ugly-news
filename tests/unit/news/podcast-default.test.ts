@@ -53,9 +53,20 @@ describe('newsPodcastGetDefault', () => {
     expect(calls.getQuery).toHaveLength(1);
     const q = calls.getQuery[0]!;
     expect(q.coll).toBe('newsPodcast');
-    expect(q.pipeline[0]).toEqual({ $match: { userId: null, generationStatus: 'complete' } });
+    // Empty match (matching `userId: null` in JSONB is unreliable) + newest-first.
+    expect(q.pipeline[0]).toEqual({ $match: {} });
     expect(q.pipeline[1]).toEqual({ $sort: { date: -1 } });
-    expect(q.opts.limit).toBe(1);
+  });
+
+  it('skips today\'s still-generating doc and picks the latest *complete* one in code', async () => {
+    const todayGenerating = pod('2026-06-17', 'generating');
+    const yesterday = pod('2026-06-16', 'complete');
+    // newest-first query returns today's generating doc ahead of yesterday's.
+    const { db } = fakeDb({ '2026-06-17_default': todayGenerating }, [todayGenerating, yesterday]);
+
+    const out = await newsPodcastGetDefault(db, { date: '2026-06-17' });
+
+    expect(out.podcast?._id).toBe('2026-06-16_default');
   });
 
   it("falls back when today's episode exists but is still generating", async () => {
