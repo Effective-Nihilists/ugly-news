@@ -1,6 +1,9 @@
 import React from 'react';
 import type { NewsPodcast } from '../../shared/news/NewsPodcast';
 import { PodcastStage } from '../podcast/PodcastStage';
+import { useRouter } from '../router';
+import { navClick } from '../nav';
+import { PlayIcon, PauseIcon } from '../components/Icon';
 
 /**
  * The Ugly Press — Daily Podcast (route `podcast`).
@@ -42,6 +45,7 @@ function fmtTime(ms: number): string {
 type Status = 'loading' | 'none' | 'recording' | 'failed' | 'ready';
 
 export default function PodcastPage(): React.ReactElement {
+  const router = useRouter();
   const [podcast, setPodcast] = React.useState<Podcast | null>(null);
   const [avatars, setAvatars] = React.useState<{ h1: string | null; h2: string | null }>({ h1: null, h2: null });
   const [status, setStatus] = React.useState<Status>('loading');
@@ -139,8 +143,8 @@ export default function PodcastPage(): React.ReactElement {
       <div style={{ maxWidth: 860, margin: '0 auto', padding: 'clamp(20px,5vw,48px)' }}>
         <div style={{ height: 6, background: C.ink, marginBottom: 16 }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-          <a href="/" className="pp-back">← The Ugly Press</a>
-          <a href="/archive?tab=podcasts" className="pp-back">All episodes →</a>
+          <a href="/" onClick={navClick(() => router.push('', {}))} className="pp-back">← The Ugly Press</a>
+          <a href="/archive?tab=podcasts" onClick={navClick(() => router.push('archive', { tab: 'podcasts' }))} className="pp-back">All episodes →</a>
         </div>
 
         <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, letterSpacing: '0.22em', textTransform: 'uppercase', color: C.accent, margin: '22px 0 6px' }}>
@@ -165,7 +169,7 @@ export default function PodcastPage(): React.ReactElement {
               Today’s broadcast hasn’t been recorded yet. The hosts run every morning — check back shortly,
               or read the front page in the meantime.
             </p>
-            <a href="/#front" className="pp-back" style={{ display: 'inline-block', marginTop: 14, color: C.accent }}>
+            <a href="/#front" onClick={navClick(() => router.push('', {}))} className="pp-back" style={{ display: 'inline-block', marginTop: 14, color: C.accent }}>
               ← Back to the headlines
             </a>
           </div>
@@ -206,7 +210,7 @@ export default function PodcastPage(): React.ReactElement {
             <div style={{ borderTop: `4px solid ${C.ink}`, borderBottom: `1px solid rgba(26,23,20,0.2)`, padding: '20px 0', marginBottom: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
                 <button className="pp-play" onClick={toggle} aria-label={playing ? 'Pause' : 'Play'}>
-                  {playing ? '❙❙' : '▶'}
+                  {playing ? <PauseIcon size={24} /> : <PlayIcon size={24} style={{ marginLeft: 3 }} />}
                 </button>
                 <div style={{ flex: 1 }}>
                   <input
@@ -269,6 +273,7 @@ export default function PodcastPage(): React.ReactElement {
                     <a
                       key={a.fileId}
                       href={`/article/${a.fileId}`}
+                      onClick={navClick(() => router.push('article/:id', { id: a.fileId }))}
                       className="pp-art"
                       style={active ? { background: 'rgba(214,38,29,0.06)' } : undefined}
                     >
@@ -281,7 +286,7 @@ export default function PodcastPage(): React.ReactElement {
                           onClick={(e) => { e.preventDefault(); seekMs(a.startTimeMs); }}
                           style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10.5, letterSpacing: '0.08em', textTransform: 'uppercase', color: C.muted, background: 'none', border: 'none', padding: '4px 0 0', cursor: 'pointer' }}
                         >
-                          ▶ Jump to {fmtTime(a.startTimeMs)}
+                          <PlayIcon size={11} style={{ verticalAlign: '-1px', marginRight: 4 }} /> Jump to {fmtTime(a.startTimeMs)}
                         </button>
                       </div>
                     </a>

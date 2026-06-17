@@ -1,4 +1,7 @@
 import React from 'react';
+import { useRouter } from '../router';
+import { navClick } from '../nav';
+import { PlayIcon } from '../components/Icon';
 
 /**
  * The Archive (`archive` route) — browse every past story and podcast, with a
@@ -119,6 +122,7 @@ function fmtMin(ms: number): string {
 }
 
 export default function ArchivePage(): React.ReactElement {
+  const router = useRouter();
   const params = new URLSearchParams(window.location.search);
   const [tab, setTab] = React.useState<'stories' | 'podcasts'>(
     params.get('tab') === 'podcasts' ? 'podcasts' : 'stories',
@@ -209,6 +213,7 @@ export default function ArchivePage(): React.ReactElement {
     <a
       key={a.id}
       href={`/article/${a.id}`}
+      onClick={navClick(() => router.push('article/:id', { id: a.id }))}
       className="ar-card ar-link"
       style={{
         display: 'grid',
@@ -264,7 +269,7 @@ export default function ArchivePage(): React.ReactElement {
       <div style={{ maxWidth: 1040, margin: '0 auto', padding: 'clamp(18px,4vw,40px) clamp(18px,5vw,56px) 80px' }}>
         {/* Masthead */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-          <a href="/" className="ar-link" style={mono(12, C.ink)}>← The Ugly Press</a>
+          <a href="/" onClick={navClick(() => router.push('', {}))} className="ar-link" style={mono(12, C.ink)}>← The Ugly Press</a>
           <span style={mono(11)}>The Archive</span>
         </div>
         <div style={{ height: 6, background: C.ink, marginBottom: 6 }} />
@@ -343,6 +348,7 @@ export default function ArchivePage(): React.ReactElement {
                   <a
                     key={p.id}
                     href="/podcast"
+                    onClick={navClick(() => router.push('podcast', {}))}
                     className="ar-card ar-link"
                     style={{
                       display: 'grid',
@@ -354,7 +360,7 @@ export default function ArchivePage(): React.ReactElement {
                     }}
                   >
                     <div style={{ width: 54, height: 54, borderRadius: '50%', background: C.accent, color: C.paper, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-                      <span style={{ fontSize: 20, marginLeft: 3 }}>▶</span>
+                      <PlayIcon size={18} style={{ marginLeft: 2 }} />
                     </div>
                     <div>
                       <div style={{ ...mono(10.5, C.accent), letterSpacing: '0.16em', marginBottom: 5 }}>The Daily Podcast</div>

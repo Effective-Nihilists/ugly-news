@@ -1,5 +1,8 @@
 import React from 'react';
 import { useAppOptional } from 'ugly-app/client';
+import { useRouter } from '../router';
+import { navClick } from '../nav';
+import { PlayIcon } from '../components/Icon';
 
 /**
  * Ugly News landing page (the `''` route).
@@ -119,6 +122,7 @@ async function rpc<T>(name: string, input: unknown): Promise<T> {
 
 /** Live front page — the real, clickable headlines pulled from newsLatest. */
 function FrontPage(): React.ReactElement | null {
+  const router = useRouter();
   const [items, setItems] = React.useState<NewsCard[] | null>(null);
   const [failed, setFailed] = React.useState(false);
 
@@ -165,7 +169,7 @@ function FrontPage(): React.ReactElement | null {
         }}
       >
         <span>Off the wire — latest</span>
-        <a href="/archive" className="un-link" style={{ color: C.accent, textDecoration: 'none' }}>Full archive →</a>
+        <a href="/archive" onClick={navClick(() => router.push('archive', {}))} className="un-link" style={{ color: C.accent, textDecoration: 'none' }}>Full archive →</a>
       </div>
 
       {!items && (
@@ -179,7 +183,7 @@ function FrontPage(): React.ReactElement | null {
         >
           {/* Lead story — flex column whose image fills the cell the grid
               stretches to the secondary column's height (kills the empty gap). */}
-          <a href={`/article/${lead.id}`} className="un-card un-lead un-fade" style={{ textDecoration: 'none', color: C.ink, display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <a href={`/article/${lead.id}`} onClick={navClick(() => router.push('article/:id', { id: lead.id }))} className="un-card un-lead un-fade" style={{ textDecoration: 'none', color: C.ink, display: 'flex', flexDirection: 'column', height: '100%' }}>
             <div
               style={{
                 position: 'relative',
@@ -236,6 +240,7 @@ function FrontPage(): React.ReactElement | null {
               <a
                 key={a.id}
                 href={`/article/${a.id}`}
+                onClick={navClick(() => router.push('article/:id', { id: a.id }))}
                 className="un-card un-row un-fade"
                 style={{
                   textDecoration: 'none',
@@ -288,6 +293,7 @@ interface PodcastSummary {
  *  episode and gives the podcast top billing high on the page. Falls back to a
  *  teaser when today's episode is still recording or absent. */
 function PodcastSpotlight(): React.ReactElement {
+  const router = useRouter();
   const [pod, setPod] = React.useState<PodcastSummary | null>(null);
   const [loaded, setLoaded] = React.useState(false);
 
@@ -341,6 +347,7 @@ function PodcastSpotlight(): React.ReactElement {
         {/* Play button → podcast page */}
         <a
           href="/podcast"
+          onClick={navClick(() => router.push('podcast', {}))}
           aria-label="Play today’s podcast"
           style={{
             flexShrink: 0,
@@ -356,7 +363,7 @@ function PodcastSpotlight(): React.ReactElement {
           }}
           className="un-pod-play"
         >
-          <span style={{ fontSize: 'clamp(26px,4vw,38px)', marginLeft: 6, lineHeight: 1 }}>▶</span>
+          <PlayIcon style={{ width: 'clamp(28px,4.4vw,42px)', height: 'clamp(28px,4.4vw,42px)', marginLeft: '8%' }} />
         </a>
 
         {/* Episode meta */}
@@ -407,6 +414,7 @@ function PodcastSpotlight(): React.ReactElement {
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
             <a
               href="/podcast"
+              onClick={navClick(() => router.push('podcast', {}))}
               className="un-pod-cta"
               style={{
                 fontFamily: 'IBM Plex Mono, monospace',
@@ -687,6 +695,7 @@ function Ticker(): React.ReactElement {
 }
 
 function Hero({ name }: { name?: string | undefined }): React.ReactElement {
+  const router = useRouter();
   const lines = ['The news,', 'minus the', 'noise.'];
   return (
     <section
@@ -761,8 +770,8 @@ function Hero({ name }: { name?: string | undefined }): React.ReactElement {
           <a href="#front" className="un-cta">
             Read today →
           </a>
-          <a href="/podcast" className="un-cta ghost">
-            ▶ Today’s podcast
+          <a href="/podcast" onClick={navClick(() => router.push('podcast', {}))} className="un-cta ghost">
+            <PlayIcon size={14} /> Today’s podcast
           </a>
           <a href="#daily" className="un-cta ghost">
             Get the 8 a.m.
@@ -799,6 +808,7 @@ function Hero({ name }: { name?: string | undefined }): React.ReactElement {
 }
 
 function Sections(): React.ReactElement {
+  const router = useRouter();
   return (
     <section
       id="sections"
@@ -883,7 +893,7 @@ function Sections(): React.ReactElement {
               </a>
             )}
             {i === 1 && (
-              <a href="/podcast" className="un-link" style={{ display: 'inline-block', marginTop: 14, fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.ink }}>
+              <a href="/podcast" onClick={navClick(() => router.push('podcast', {}))} className="un-link" style={{ display: 'inline-block', marginTop: 14, fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.ink }}>
                 Open the podcast →
               </a>
             )}
@@ -975,6 +985,7 @@ export default function HomePage(): React.ReactElement {
   // personalized greeting gracefully.
   const app = useAppOptional() as { user?: { name?: string } | null } | null;
   const name = app?.user?.name ?? undefined;
+  const router = useRouter();
   const dateStr = new Date()
     .toLocaleDateString('en-US', {
       weekday: 'long',
@@ -1030,7 +1041,7 @@ export default function HomePage(): React.ReactElement {
         }}
       >
         <span>
-          The Ugly Press · <a className="un-link" href="/archive" style={{ color: C.ink }}>Archive</a> · <a className="un-link" href="/podcast" style={{ color: C.ink }}>Podcast</a>
+          The Ugly Press · <a className="un-link" href="/archive" onClick={navClick(() => router.push('archive', {}))} style={{ color: C.ink }}>Archive</a> · <a className="un-link" href="/podcast" onClick={navClick(() => router.push('podcast', {}))} style={{ color: C.ink }}>Podcast</a>
         </span>
         <span>
           Printed by{' '}

@@ -1,4 +1,6 @@
 import React from 'react';
+import { useRouter } from '../router';
+import { navClick } from '../nav';
 
 /** Ugly News article view (route `article/:id`). Newsprint editorial style,
  *  matching the home landing. Fetches the public newsArticleGet endpoint. */
@@ -66,6 +68,7 @@ function renderMarkdown(md: string): string {
 }
 
 export default function ArticlePage({ id }: { id: string }): React.ReactElement {
+  const router = useRouter();
   const [article, setArticle] = React.useState<Article | null>(null);
   const [state, setState] = React.useState<'loading' | 'ready' | 'missing'>('loading');
 
@@ -118,7 +121,7 @@ export default function ArticlePage({ id }: { id: string }): React.ReactElement 
       ` }} />
       <div style={{ maxWidth: 720, margin: '0 auto', padding: 'clamp(20px,5vw,48px)' }}>
         <div style={{ height: 6, background: C.ink, marginBottom: 18 }} />
-        <a href="/" className="ar-back">← The Ugly Press</a>
+        <a href="/" onClick={navClick(() => router.push('', {}))} className="ar-back">← The Ugly Press</a>
 
         {state === 'loading' && (
           <p style={{ fontFamily: 'IBM Plex Mono, monospace', color: C.muted, marginTop: 40 }}>
@@ -127,7 +130,7 @@ export default function ArticlePage({ id }: { id: string }): React.ReactElement 
         )}
         {state === 'missing' && (
           <p style={{ fontFamily: 'Spectral, serif', fontSize: 20, marginTop: 40 }}>
-            This story has gone to press elsewhere. <a href="/" style={{ color: C.accent }}>Back to the front page →</a>
+            This story has gone to press elsewhere. <a href="/" onClick={navClick(() => router.push('', {}))} style={{ color: C.accent }}>Back to the front page →</a>
           </p>
         )}
         {state === 'ready' && article && (

@@ -10,10 +10,36 @@ import { enqueueTask } from './queue';
 import type { NewsDb } from './db';
 
 const ONE_DAY = 24 * 60 * 60 * 1000;
-const PUBLIC_URL = (() => {
-  // eslint-disable-next-line @typescript-eslint/dot-notation
-  return (process.env['PUBLIC_URL'] ?? 'https://ugly.press').replace(/\/$/, '');
-})();
+
+function envVar(name: string): string {
+  return process.env[name] ?? '';
+}
+
+const PUBLIC_URL = (envVar('PUBLIC_URL') || 'https://ugly.press').replace(/\/$/, '');
+
+/**
+ * Resolve a ugly.bot userId → email via ugly.bot's `/v1/users/email` proxy.
+ * The centralized userId→email email proxy was removed, so apps resolve the
+ * recipient here and then send by `to` address via Cloudflare Email Sending.
+ * Auth uses any non-revoked app token (Mode A mints no owner AI token, so
+ * AI_PROXY_TOKEN may be empty — prefer the email/search token).
+ */
+export async function resolveUserEmail(userId: string): Promise<string | null> {
+  const base = (envVar('AI_PROXY_URL') || 'https://ugly.bot/v1/ai').replace(/\/ai\/?$/, '');
+  const token =
+    envVar('EMAIL_PROXY_TOKEN') || envVar('SEARCH_PROXY_TOKEN') || envVar('AI_PROXY_TOKEN');
+  const res = await fetch(`${base}/users/email`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ userId }),
+  });
+  if (!res.ok) {
+    console.error(`[news] resolveUserEmail HTTP ${res.status} for ${userId}`);
+    return null;
+  }
+  const data = (await res.json()) as { email?: string | null };
+  return data.email ?? null;
+}
 
 export interface NewsEmailArticle {
   fileId: string;
@@ -196,9 +222,15 @@ export async function dispatchUserPrivateNewsEmail(
         }
       : null;
 
+  const to = await resolveUserEmail(input.userId);
+  if (!to) {
+    console.warn(`[news] daily email skipped — no email for ${input.userId}`);
+    return;
+  }
+
   const html = renderDailyNewsEmail(DEFAULT_STRINGS, dateStr, articles, podcastData);
   const subject = `${articles.hero.title.slice(0, 50)}... + ${articles.totalUnread - 1} more`;
-  await emailSend({ userId: input.userId, subject, html, id: 'dailyNews' });
+  await emailSend({ to, subject, html, id: 'dailyNews' });
 }
 
 /** Hourly: enqueue the daily email for every opted-in user whose local time is 8am. */

@@ -49,7 +49,22 @@ export async function newsPodcastGetDefault(
   input: NewsPodcastGetDefaultInput,
 ): Promise<NewsPodcastGetDefaultOutput> {
   const date = input.date ?? todayDateString(Date.now());
-  const podcast = await db.getDoc(collections.newsPodcast, `${date}_default`);
+  const today = await db.getDoc(collections.newsPodcast, `${date}_default`);
+
+  // The daily cron generates today's episode at 10:00 UTC, so there's a window
+  // each morning (00:00–10:00 UTC) where the current UTC day's episode doesn't
+  // exist yet — and for non-UTC users that lands in their evening. Rather than
+  // show an empty "not recorded yet" state, fall back to the most recent
+  // complete episode so there's always something to play.
+  let podcast = today;
+  if (!podcast || podcast.generationStatus !== 'complete') {
+    const latest = await db.getQuery<NewsPodcast & { _id: string }>(
+      'newsPodcast',
+      [{ $match: { userId: null, generationStatus: 'complete' } }, { $sort: { date: -1 } }],
+      { limit: 1 },
+    );
+    podcast = latest[0] ?? podcast;
+  }
 
   void podcastHost1BotId;
   void uglyBotId;

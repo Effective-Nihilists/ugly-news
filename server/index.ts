@@ -16,6 +16,7 @@ import { dbDefaults } from 'ugly-app/shared';
 import { messages, requests } from '../shared/api';
 import type { Todo } from '../shared/collections';
 import { collections } from '../shared/collections';
+import { resolveUserEmail } from './news/email';
 import * as emailPref from './news/emailPref';
 import * as feed from './news/feed';
 import * as podcast from './news/podcast';
@@ -105,7 +106,11 @@ const app = createApp(
     },
 
     sendTestEmail: async (_userId, { userId, subject, html, id }) => {
-      await emailSend({ userId, subject, html, id });
+      // Resolve the recipient (centralized userId→email proxy was removed) then
+      // send by `to` address via Cloudflare Email Sending.
+      const to = await resolveUserEmail(userId);
+      if (!to) return { ok: false };
+      await emailSend({ to, subject, html, id });
       return { ok: true };
     },
 
