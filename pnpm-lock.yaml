@@ -27,8 +27,8 @@ importers:
         specifier: ^0.183.2
         version: 0.183.2
       ugly-app:
-        specifier: ^0.1.604
-        version: 0.1.604(@types/react@19.2.17)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(three@0.183.2)(typescript@5.9.3)(vega-lite@6.4.3(vega@6.2.0))(vega@6.2.0)(y-protocols@1.0.7(yjs@13.6.31))(yjs@13.6.31)
+        specifier: ^0.1.612
+        version: 0.1.612(@types/react@19.2.17)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(three@0.183.2)(typescript@5.9.3)(vega-lite@6.4.3(vega@6.2.0))(vega@6.2.0)(y-protocols@1.0.7(yjs@13.6.31))(yjs@13.6.31)
       yjs:
         specifier: ^13.6.30
         version: 13.6.31
@@ -3953,8 +3953,8 @@ packages:
     engines: {node: '>=0.8.0'}
     hasBin: true
 
-  ugly-app@0.1.604:
-    resolution: {integrity: sha512-XEUrSRtu9AdFLXAMakJHhMrSh+TEH8KWuxuOKnw8Oj5tQ6gf23/YeAg4sahnTi5xyXyt4j/3NiAErcUskhQoVg==}
+  ugly-app@0.1.612:
+    resolution: {integrity: sha512-ZP+kd/VFORFhE4boOvTwJi8EXi5bz4/qMGKLtVlStLtzAuJrRIa8QZyOSQQBxnbfuaNbWn4f54CSsU7K58staw==}
     hasBin: true
     peerDependencies:
       '@types/react': '>=18.0.0'
@@ -9114,7 +9114,7 @@ snapshots:
   uglify-js@3.19.3:
     optional: true
 
-  ugly-app@0.1.604(@types/react@19.2.17)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(three@0.183.2)(typescript@5.9.3)(vega-lite@6.4.3(vega@6.2.0))(vega@6.2.0)(y-protocols@1.0.7(yjs@13.6.31))(yjs@13.6.31):
+  ugly-app@0.1.612(@types/react@19.2.17)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(three@0.183.2)(typescript@5.9.3)(vega-lite@6.4.3(vega@6.2.0))(vega@6.2.0)(y-protocols@1.0.7(yjs@13.6.31))(yjs@13.6.31):
     dependencies:
       '@aws-sdk/client-s3': 3.1068.0
       '@aws-sdk/s3-request-presigner': 3.1068.0
