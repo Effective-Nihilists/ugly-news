@@ -3,6 +3,7 @@ import { collections } from '../../shared/collections';
 import type { FileMarkdown, NewsArticle, NewsPodcast } from '../../shared/collections';
 import { uglyBotId } from '../../shared/news/Bot';
 import { decodeHtmlEntities } from './download';
+import { embed } from './ai';
 
 type Db = TypedDB<Record<string, DBObject>>;
 
@@ -173,19 +174,21 @@ export async function newsArchive(
   const q = input.query?.trim();
 
   if (q) {
-    // Natural-language full-text search via Postgres FTS — the `file`
-    // collection declares `search: { fields: ['title','text'] }`, which the
-    // framework materializes as a generated `tsvector` column (+ GIN) and
-    // ranks with ts_rank. OR-join the significant terms so a question like
-    // "latest on AI regulation" still matches articles about either term
-    // (websearch_to_tsquery otherwise ANDs them → near-zero recall). The
-    // structured filter (public/userId/type/category) still applies.
-    // Semantic/vector ranking lands here (`near`) once embeddings are
-    // backfilled into the `embedding` column.
+    // Hybrid semantic + full-text search, both Postgres-native via getDocs:
+    //  - `near`: a 512-dim OpenAI query embedding ranked against the `embedding`
+    //    column (HNSW cosine) — catches meaning with no keyword overlap
+    //    ("tensions in the middle east" → Lebanon/Iran stories).
+    //  - `search`: the generated `tsvector` column (GIN + ts_rank). OR-join the
+    //    significant terms so websearch_to_tsquery doesn't AND them to zero.
+    // When both are present the framework blends ts_rank + cosine; the FTS arm
+    // boosts exact-keyword hits without hard-filtering the semantic matches.
+    // If the query embedding is unavailable we degrade to FTS-only.
     const terms = queryTerms(q);
     const search = terms.length ? terms.join(' OR ') : q;
+    const near = (await embed(q)) ?? undefined;
     const rows = await db.getDocs(collections.file, filter, {
       search,
+      ...(near ? { near } : {}),
       limit: limit + 1,
       skip,
     });

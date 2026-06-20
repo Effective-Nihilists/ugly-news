@@ -1,5 +1,6 @@
 import type { DBObject, TypedDB } from 'ugly-app/shared';
 import { dbDefaults } from 'ugly-app/shared';
+import { getAdapter } from 'ugly-app/server/adapter/workers';
 import { collections } from '../../shared/collections';
 import type {
   FileMarkdown,
@@ -191,21 +192,30 @@ export async function newsFeedGet(
   }
 
   const twoWeeksAgo = now - 14 * 24 * 60 * 60 * 1000;
-  const [userPreference, recentPool] = await Promise.all([
+  // Embeddings live in the pgvector `embedding` COLUMN (the framework strips the
+  // blob copy), so read it via raw SQL — getQuery only sees the JSON `data`.
+  // `created` is the table column (timestamptz), surfaced as epoch-ms.
+  const [userPreference, candidateRows] = await Promise.all([
     db.getDoc(collections.userFilePreference, userId),
-    db.getQuery<CandidateFile>('file', [
-      {
-        $match: {
-          public: true,
-          userId: { $in: botIds },
-          embedding: { $exists: true, $ne: null },
-          created: { $gte: twoWeeksAgo },
-        },
-      },
-      { $sort: { created: -1 } },
-      { $limit: CANDIDATE_POOL_SIZE * 2 },
-    ]),
+    getAdapter().db.query<{ _id: string; embedding: string; created: string }>(
+      `SELECT _id,
+              embedding::text AS embedding,
+              (extract(epoch from created) * 1000)::bigint AS created
+         FROM "file"
+        WHERE data->>'public' = 'true'
+          AND data->>'userId' = ANY($1)
+          AND embedding IS NOT NULL
+          AND created >= to_timestamp($2 / 1000.0)
+        ORDER BY created DESC
+        LIMIT $3`,
+      [botIds, twoWeeksAgo, CANDIDATE_POOL_SIZE * 2],
+    ),
   ]);
+  const recentPool: CandidateFile[] = candidateRows.map((r) => ({
+    _id: r._id,
+    embedding: JSON.parse(r.embedding) as number[],
+    created: Number(r.created),
+  }));
 
   // Shuffle and take CANDIDATE_POOL_SIZE for random diversity
   for (let i = recentPool.length - 1; i > 0; i--) {
