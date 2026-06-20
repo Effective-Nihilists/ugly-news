@@ -6,6 +6,20 @@ import { decodeHtmlEntities } from './download';
 
 type Db = TypedDB<Record<string, DBObject>>;
 
+// Stopwords dropped from a keyword query so natural-language questions
+// ("latest news on AI regulation") still match by their content terms.
+const STOP = new Set([
+  'the', 'a', 'an', 'of', 'on', 'in', 'to', 'for', 'and', 'or', 'is', 'are',
+  'was', 'were', 'be', 'about', 'with', 'what', 'whats', 'who', 'when', 'where',
+  'why', 'how', 'latest', 'news', 'recent', 'tell', 'me', 'show', 'find', 'any',
+  'this', 'that', 'these', 'those', 'do', 'does', 'did', 'i', 'you', 'it',
+]);
+
+/** Significant lowercased terms (≥3 chars, non-stopword) from a query. */
+function queryTerms(q: string): string[] {
+  return [...new Set(q.toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length >= 3 && !STOP.has(t)))];
+}
+
 export interface NewsCard {
   id: string;
   title: string;
@@ -161,20 +175,39 @@ export async function newsArchive(
   if (q) {
     // Keyword search. The framework's getQuery filter supports only equality
     // operators (no $regex/$ilike) and the `file` FTS column isn't provisioned
-    // on prod, so we scan a recent window in JS: pull the newest SEARCH_WINDOW
-    // stories and substring-match title/summary. Covers the live archive at
-    // current scale; for the full back-catalogue, provision the `file` search
-    // index and switch to db.searchDocs().
+    // on prod, so we scan a recent window in JS. Rank by how many query TERMS
+    // appear in title/summary (term-based, so a natural-language question still
+    // matches by its content words), tie-broken by recency. Falls back to a
+    // whole-phrase substring when the query is all stopwords.
     const SEARCH_WINDOW = 1000;
     const rows = await db.getQuery<FileMarkdown & { _id: string; created?: unknown }>(
       'file',
       [{ $match: filter }, { $sort: { created: -1 } }],
       { limit: SEARCH_WINDOW },
     );
-    const needle = q.toLowerCase();
-    const matched = rows
-      .map(fileToCard)
-      .filter((c) => c.title.toLowerCase().includes(needle) || c.summary.toLowerCase().includes(needle));
+    const terms = queryTerms(q);
+    const cards = rows.map(fileToCard);
+    let matched: NewsCard[];
+    if (terms.length > 0) {
+      matched = cards
+        .map((c) => {
+          const hay = `${c.title} ${c.summary}`.toLowerCase();
+          // Title hits weigh double; sum over distinct terms.
+          const score = terms.reduce(
+            (s, t) => s + (c.title.toLowerCase().includes(t) ? 2 : 0) + (hay.includes(t) ? 1 : 0),
+            0,
+          );
+          return { c, score };
+        })
+        .filter((x) => x.score > 0)
+        .sort((a, b) => b.score - a.score || b.c.createdMs - a.c.createdMs)
+        .map((x) => x.c);
+    } else {
+      const needle = q.toLowerCase();
+      matched = cards.filter(
+        (c) => c.title.toLowerCase().includes(needle) || c.summary.toLowerCase().includes(needle),
+      );
+    }
     const page = matched.slice(skip, skip + limit);
     return { items: page, hasMore: matched.length > skip + limit };
   }
