@@ -106,33 +106,24 @@ export async function genImage(
   }
 }
 
-// Semantic embeddings use OpenAI text-embedding-3-small @ 512 dims (matches the
-// `file` collection's declared vector { dimensions: 512 } column). ugly.bot's
-// embed proxy only offers a CLIP ViT-B/32 encoder (77-token cap, image↔text
-// matching) — unsuitable for article retrieval — so news embeds directly with
-// OpenAI, a proper 8k-context retrieval model (same as bahai-app). The key is a
-// worker secret (OPENAI_API_KEY); cost is ~$0.02/1M tokens.
-const EMBED_MODEL = 'text-embedding-3-small';
-const EMBED_DIMS = 512;
+// Semantic embeddings (512-dim, matching the `file` collection's declared
+// vector { dimensions: 512 } column) route through ugly.bot's `embedGen` proxy
+// — NOT a direct OpenAI call. embedGen runs OpenAI text-embedding-3-small with
+// the key held centrally in ugly.bot, and meters/bills the call against the
+// app's account (same platform pattern as bahai-app). `createEmbeddingClient`
+// from the workers adapter is a thin fetch wrapper over `uglyBotRequest`.
+import { createEmbeddingClient } from 'ugly-app/server/adapter/workers';
 
-/** OpenAI embedding for feed ranking / search (512-dim), or null. */
+const EMBED_DIMS = 512;
+let embeddingClient: ReturnType<typeof createEmbeddingClient> | null = null;
+
+/** ugly.bot embedGen embedding for feed ranking / search (512-dim), or null. */
 export async function embed(text: string): Promise<number[] | null> {
-  /* eslint-disable-next-line @typescript-eslint/dot-notation */
-  const key = process.env['OPENAI_API_KEY'] ?? '';
-  if (!key) { console.warn('[news/ai] embed: OPENAI_API_KEY not set'); return null; }
   const input = text.trim().slice(0, 8000) || ' ';
   try {
-    const res = await fetch('https://api.openai.com/v1/embeddings', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: EMBED_MODEL, input, dimensions: EMBED_DIMS }),
-    });
-    if (!res.ok) {
-      console.warn(`[news/ai] embed ${res.status}: ${(await res.text().catch(() => '')).slice(0, 200)}`);
-      return null;
-    }
-    const data = (await res.json()) as { data?: { embedding?: number[] }[] };
-    return data.data?.[0]?.embedding ?? null;
+    embeddingClient ??= createEmbeddingClient();
+    const vec = await embeddingClient.embed(input, { dimensions: EMBED_DIMS });
+    return vec ?? null;
   } catch (error) {
     console.warn('[news/ai] embed failed', error);
     return null;
