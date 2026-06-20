@@ -88,9 +88,14 @@ export const collections = defineCollections({
   // FileMarkdown — the user-facing article (feed ranking + podcast select + email key off this).
   file: {
     schema: FileMarkdownSchema,
-    meta: { cache: false, trackable: true, public: true, cascadeFrom: null },
+    meta: {
+      cache: false, trackable: true, public: true, cascadeFrom: null,
+      // Postgres FTS (generated tsvector column) + pgvector (embedding column,
+      // materialized from the doc's `embedding` field the scraper fills).
+      search: { fields: ['title', 'text'], language: 'english' },
+      vector: { dimensions: 512, from: 'embedding' },
+    },
     indexes: [{ fields: { type: 1 } }, { fields: { feedId: 1 } }],
-    search: { fields: ['title', 'text', 'markdown'] },
   },
   userFilePreference: {
     schema: UserFilePreferenceSchema,

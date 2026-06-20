@@ -173,43 +173,24 @@ export async function newsArchive(
   const q = input.query?.trim();
 
   if (q) {
-    // Keyword search. The framework's getQuery filter supports only equality
-    // operators (no $regex/$ilike) and the `file` FTS column isn't provisioned
-    // on prod, so we scan a recent window in JS. Rank by how many query TERMS
-    // appear in title/summary (term-based, so a natural-language question still
-    // matches by its content words), tie-broken by recency. Falls back to a
-    // whole-phrase substring when the query is all stopwords.
-    const SEARCH_WINDOW = 1000;
-    const rows = await db.getQuery<FileMarkdown & { _id: string; created?: unknown }>(
-      'file',
-      [{ $match: filter }, { $sort: { created: -1 } }],
-      { limit: SEARCH_WINDOW },
-    );
+    // Natural-language full-text search via Postgres FTS — the `file`
+    // collection declares `search: { fields: ['title','text'] }`, which the
+    // framework materializes as a generated `tsvector` column (+ GIN) and
+    // ranks with ts_rank. OR-join the significant terms so a question like
+    // "latest on AI regulation" still matches articles about either term
+    // (websearch_to_tsquery otherwise ANDs them → near-zero recall). The
+    // structured filter (public/userId/type/category) still applies.
+    // Semantic/vector ranking lands here (`near`) once embeddings are
+    // backfilled into the `embedding` column.
     const terms = queryTerms(q);
-    const cards = rows.map(fileToCard);
-    let matched: NewsCard[];
-    if (terms.length > 0) {
-      matched = cards
-        .map((c) => {
-          const hay = `${c.title} ${c.summary}`.toLowerCase();
-          // Title hits weigh double; sum over distinct terms.
-          const score = terms.reduce(
-            (s, t) => s + (c.title.toLowerCase().includes(t) ? 2 : 0) + (hay.includes(t) ? 1 : 0),
-            0,
-          );
-          return { c, score };
-        })
-        .filter((x) => x.score > 0)
-        .sort((a, b) => b.score - a.score || b.c.createdMs - a.c.createdMs)
-        .map((x) => x.c);
-    } else {
-      const needle = q.toLowerCase();
-      matched = cards.filter(
-        (c) => c.title.toLowerCase().includes(needle) || c.summary.toLowerCase().includes(needle),
-      );
-    }
-    const page = matched.slice(skip, skip + limit);
-    return { items: page, hasMore: matched.length > skip + limit };
+    const search = terms.length ? terms.join(' OR ') : q;
+    const rows = await db.getDocs(collections.file, filter, {
+      search,
+      limit: limit + 1,
+      skip,
+    });
+    const hasMore = rows.length > limit;
+    return { items: rows.slice(0, limit).map((r) => fileToCard(r as FileMarkdown & { _id: string; created?: unknown })), hasMore };
   }
 
   // Browse: true reverse-chronological with offset pagination.
