@@ -26,5 +26,6 @@
   "icon": "https://ugly.press/icon.png",
   "image": "https://ugly.press/icon.png",
   "title": "Ugly Press",
-  "shortDescription": "Real headlines with AI commentary + a daily podcast."
+  "shortDescription": "Real headlines with AI commentary + a daily podcast.",
+  "domain": "ugly.press"
 }
