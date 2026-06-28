@@ -3,6 +3,7 @@ import { useAppOptional } from 'ugly-app/client';
 import { useRouter } from '../router';
 import { navClick } from '../nav';
 import { PlayIcon } from '../components/Icon';
+import { requestPushPermission } from '../push';
 
 /**
  * Ugly News landing page (the `''` route).
@@ -522,6 +523,11 @@ function EmailSignup(): React.ReactElement {
     try {
       const r = await rpc<EmailPref>('newsEmailPrefSet', { emailAllowed: next, timezone: tz, lang: 'en' });
       setPref(r);
+      // Subscribing also opts into the "new episode" push — register the device
+      // (best-effort: a denied browser prompt must not fail the email opt-in).
+      if (next) {
+        try { await requestPushPermission(); } catch { /* permission denied / unsupported */ }
+      }
     } catch { /* surfaced by the disabled state */ }
     setBusy(false);
   }
@@ -556,7 +562,7 @@ function EmailSignup(): React.ReactElement {
       {pref.emailAllowed ? (
         <>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase', color: C.accent, marginBottom: 10 }}>
-            ★ Subscribed — 8 a.m. {pref.timezone}
+            ★ Subscribed — 8 a.m. {pref.timezone} + podcast ping
           </div>
           <button style={{ ...btn, background: 'transparent', color: C.ink, boxShadow: `inset 0 0 0 2px ${C.ink}` }} disabled={busy}
             onClick={() => { void subscribe(false); }}>
@@ -572,7 +578,7 @@ function EmailSignup(): React.ReactElement {
             {busy ? 'Subscribing…' : 'Email me at 8 a.m. →'}
           </button>
           <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10.5, letterSpacing: '0.06em', color: C.muted, marginTop: 8 }}>
-            Delivered 8 a.m. in {pref.timezone}.
+            Delivered 8 a.m. in {pref.timezone} — plus a ping when the daily podcast drops.
           </div>
         </>
       )}

@@ -1,4 +1,5 @@
 import * as cheerio from 'cheerio';
+import { getAdapter } from 'ugly-app/server/adapter/workers';
 import { dbDefaults } from 'ugly-app/shared';
 import { collections } from '../../shared/collections';
 import type { FileMarkdown, NewsArticle } from '../../shared/collections';
@@ -221,6 +222,31 @@ export async function dispatchArticleScrape(db: NewsDb, articleId: string): Prom
     created: article.created,
   };
   await db.setDoc(collections.file, file, { skipIfExists: true });
+
+  // WORKAROUND: the framework's vector-column materialization (DB.js
+  // syncDocVector, driven by the collection's `vector: { from: 'embedding' }`)
+  // silently no-ops on the Workers/Neon runtime — the embedding stays in the
+  // JSON `data.embedding` blob and the indexed pgvector `embedding` COLUMN
+  // (which feed ranking, hybrid search, AND the daily email all query) stays
+  // null. Materialize it ourselves via the proven raw-SQL adapter path (see
+  // feed.ts), mirroring the framework's strip-the-blob behavior. Idempotent and
+  // guarded, so it's a no-op once the upstream ugly-app fix lands.
+  if (isDefined(embedding)) {
+    try {
+      await getAdapter().db.query(
+        `UPDATE "file"
+            SET embedding = (data->>'embedding')::vector(512),
+                data = data - 'embedding'
+          WHERE _id = $1
+            AND embedding IS NULL
+            AND jsonb_typeof(data->'embedding') = 'array'
+            AND jsonb_array_length(data->'embedding') = 512`,
+        [fileId],
+      );
+    } catch (err) {
+      console.warn(`[news] embedding column materialize failed for ${fileId}`, err);
+    }
+  }
 
   await db.setDoc(collections.newsArticle, {
     ...article,

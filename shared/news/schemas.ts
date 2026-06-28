@@ -242,6 +242,9 @@ export const NewsPodcastSchema = z.object({
   generationStatus: z.enum(['pending', 'generating', 'complete', 'failed']),
   generationError: z.string().nullable(),
   generatedAt: z.number(),
+  // Set once the "new episode" push fan-out has run for this (default) episode,
+  // so a manual regenerate doesn't re-notify subscribers. Null/absent = unsent.
+  pushedAt: z.number().nullable().optional(),
 });
 
 // ─── FileMarkdown (news-scoped subset of ugly.bot's File union) ────────────

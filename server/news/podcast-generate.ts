@@ -1,4 +1,4 @@
-import { getAdapter } from 'ugly-app/server/adapter/workers';
+import { getAdapter, pushSend } from 'ugly-app/server/adapter/workers';
 import { dbDefaults, visemeNameSet } from 'ugly-app/shared';
 import { collections } from '../../shared/collections';
 import type { FileMarkdown, NewsPodcast } from '../../shared/collections';
@@ -103,19 +103,37 @@ For EVERY segment include:
 OUTPUT JSON ONLY (no markdown fences):
 { "title": "catchy episode title", "segments": [ { "speaker": "HOST1", "text": "...", "articleRef": "fileId or null", "cameraShot": "normal", "cameraEnergy": "normal", "listenerReaction": "nod", "gestureHint": { "gesture": "shrug", "timing": "mid" }, "speakerEmotion": "surprised", "nonVerbalCue": null } ] }`;
 
-  const responseText = await genText([{ role: 'user', content: prompt }], {
-    model: 'gpt_4o',
-    temperature: 0.9,
-    maxTokens: 4000,
-  });
-  if (!responseText) throw new Error('No response from script model');
-  const jsonMatch = /\{[\s\S]*\}/.exec(responseText);
-  if (!jsonMatch) throw new Error('Failed to parse script JSON');
-  const script = JSON.parse(jsonMatch[0]) as PodcastScriptOutput;
-  if (!script.title || !script.segments || script.segments.length === 0) {
-    throw new Error('Invalid script format');
+  // The script model (gpt_4o via the ugly.bot AI proxy) intermittently 429s /
+  // times out at the 10:00 UTC cron, returning null → "No response from script
+  // model" and a failed episode. Retry up to 5 attempts with exponential backoff
+  // (the queue job has a 120s budget) so a transient blip doesn't lose the day.
+  const MAX_ATTEMPTS = 5;
+  let lastError = 'unknown error';
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const responseText = await genText([{ role: 'user', content: prompt }], {
+        model: 'gpt_4o',
+        temperature: 0.9,
+        maxTokens: 4000,
+      });
+      if (!responseText) throw new Error('No response from script model');
+      const jsonMatch = /\{[\s\S]*\}/.exec(responseText);
+      if (!jsonMatch) throw new Error('Failed to parse script JSON');
+      const script = JSON.parse(jsonMatch[0]) as PodcastScriptOutput;
+      if (!script.title || !script.segments || script.segments.length === 0) {
+        throw new Error('Invalid script format');
+      }
+      return script;
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error);
+      console.warn(`[PODCAST] script attempt ${attempt}/${MAX_ATTEMPTS} failed: ${lastError}`);
+      if (attempt < MAX_ATTEMPTS) {
+        const backoffMs = Math.min(1000 * 2 ** (attempt - 1), 8000);
+        await new Promise((resolve) => setTimeout(resolve, backoffMs));
+      }
+    }
   }
-  return script;
+  throw new Error(`Script generation failed after ${MAX_ATTEMPTS} attempts: ${lastError}`);
 }
 
 // ── Audio assembly (InWorld TTS → WAV) ─────────────────────────────────────
@@ -279,12 +297,54 @@ async function uploadPodcastAudio(podcastId: string, audio: Uint8Array): Promise
 
 // ── Orchestration ──────────────────────────────────────────────────────────
 
+/**
+ * Fan a "new episode is live" push out to everyone subscribed to the daily
+ * edition. We reuse the email opt-in (`userNewsEmailPref.emailAllowed`) as the
+ * push audience — the home-page "8 A.M. Edition" toggle both subscribes and
+ * registers the device. Best-effort per user: a missing/denied device just
+ * yields { sent:false } and never aborts the batch. Routes through pushSend →
+ * ugly.bot with the owner UGLY_BOT_TOKEN (no PUSH_PROXY_TOKEN needed).
+ */
+export async function notifyPodcastReady(db: NewsDb, podcast: NewsPodcast): Promise<void> {
+  const subs = await db.getDocs(collections.userNewsEmailPref, { emailAllowed: true });
+  if (subs.length === 0) return;
+  const title = "Today's episode is live";
+  const body = podcast.title || 'Your daily Ugly Press news podcast is ready.';
+  const imageUrl = podcast.articles[0]?.imageUri ?? undefined;
+  const CHUNK = 20;
+  let sent = 0;
+  for (let i = 0; i < subs.length; i += CHUNK) {
+    const results = await Promise.all(
+      subs.slice(i, i + CHUNK).map((s) =>
+        pushSend({
+          targetUserId: s.userId,
+          title,
+          body,
+          path: 'podcast',
+          ...(imageUrl ? { imageUrl } : {}),
+        })
+          .then((r) => (r.sent ? 1 : 0))
+          .catch((e) => {
+            console.warn(`[news] podcast push failed for ${s.userId}`, e);
+            return 0;
+          }),
+      ),
+    );
+    sent += results.reduce((a: number, b: number) => a + b, 0);
+  }
+  console.log(`[news] podcast push: ${sent}/${subs.length} delivered for ${podcast.date}`);
+}
+
 export async function dispatchPodcastGenerate(
   db: NewsDb,
   input: { date: string; userId: string | null; replaceDefault?: boolean | undefined },
 ): Promise<void> {
   const { date, userId } = input;
   const podcastId = userId ? `${date}_${userId}` : `${date}_default`;
+  // Preserve the dedupe flag across a manual regenerate so we never re-notify
+  // subscribers about an episode they were already pinged for.
+  const existing = await db.getDoc(collections.newsPodcast, podcastId);
+  const alreadyPushed = Boolean(existing?.pushedAt);
 
   const initial: NewsPodcast = {
     _id: podcastId,
@@ -316,7 +376,7 @@ export async function dispatchPodcastGenerate(
     const audioUri = await uploadPodcastAudio(podcastId, audio);
     const articleRefs = buildArticleReferences(articles, segments);
 
-    await db.setDoc(collections.newsPodcast, {
+    const completed: NewsPodcast = {
       ...initial,
       title: script.title,
       description: `Daily satirical news roundup featuring ${articles.length} stories`,
@@ -328,8 +388,16 @@ export async function dispatchPodcastGenerate(
       subtitles,
       generationStatus: 'complete',
       generatedAt: Date.now(),
+      pushedAt: existing?.pushedAt ?? null,
       updated: new Date(),
-    } satisfies NewsPodcast);
+    };
+    await db.setDoc(collections.newsPodcast, completed);
+
+    // Notify subscribers about the new DEFAULT daily episode (once per episode).
+    if (userId === null && !alreadyPushed) {
+      await notifyPodcastReady(db, completed);
+      await db.setDocFields(collections.newsPodcast, podcastId, { pushedAt: Date.now() });
+    }
   } catch (error) {
     console.error('[PODCAST] generation failed', error);
     await db.setDoc(collections.newsPodcast, {
