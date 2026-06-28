@@ -1,4 +1,5 @@
 import { emailSend } from 'ugly-app/server/adapter/workers';
+import { shareLink } from 'ugly-app/server';
 import { collections } from '../../shared/collections';
 import type { FileMarkdown } from '../../shared/collections';
 import { uglyBotId } from '../../shared/news/Bot';
@@ -50,13 +51,25 @@ export interface NewsEmailArticle {
   engagementCount: number;
 }
 
-function fileToEmailArticle(file: FileMarkdown & { _id: string }): NewsEmailArticle {
+async function fileToEmailArticle(
+  file: FileMarkdown & { _id: string },
+): Promise<NewsEmailArticle> {
+  const title = file.title ?? '';
+  const summary = (file.text ?? '').slice(0, 200);
+  const thumbnailUri = file.thumbnail?.uri ?? null;
   return {
     fileId: file._id,
-    title: file.title ?? '',
-    summary: (file.text ?? '').slice(0, 200),
-    thumbnailUri: file.thumbnail?.uri ?? null,
-    uri: `${PUBLIC_URL}/article/${encodeURIComponent(file._id)}`,
+    title,
+    summary,
+    thumbnailUri,
+    uri: await shareLink({
+      target: `${PUBLIC_URL}/article/${encodeURIComponent(file._id)}`,
+      og: {
+        title,
+        description: summary,
+        ...(thumbnailUri ? { image: thumbnailUri } : {}),
+      },
+    }),
     engagementCount: (file.likeCount ?? 0) + (file.dislikeCount ?? 0),
   };
 }
@@ -104,15 +117,21 @@ export async function selectDailyEmailArticles(
   const byEngagement = [...files].sort(
     (a, b) => (b.likeCount ?? 0) + (b.dislikeCount ?? 0) - ((a.likeCount ?? 0) + (a.dislikeCount ?? 0)),
   );
-  const hero = rankedFiles.length > 0 ? fileToEmailArticle(rankedFiles[0]!) : null;
   const trendingIds = new Set(byEngagement.slice(0, 3).map((f) => f._id));
-  const trending = byEngagement.slice(0, 3).map(fileToEmailArticle);
-  const pickedForYou = rankedFiles
-    .filter((f) => f._id !== rankedFiles[0]?._id && !trendingIds.has(f._id))
-    .slice(0, 3)
-    .map(fileToEmailArticle);
   const topCategory = files.find((f) => f.tags && f.tags.length > 0)?.tags?.[0] ?? 'News';
-  const categorySpotlight = files.filter((f) => f.tags?.includes(topCategory)).slice(0, 1).map(fileToEmailArticle);
+  const [hero, trending, pickedForYou, categorySpotlight] = await Promise.all([
+    rankedFiles.length > 0 ? fileToEmailArticle(rankedFiles[0]!) : Promise.resolve(null),
+    Promise.all(byEngagement.slice(0, 3).map(fileToEmailArticle)),
+    Promise.all(
+      rankedFiles
+        .filter((f) => f._id !== rankedFiles[0]?._id && !trendingIds.has(f._id))
+        .slice(0, 3)
+        .map(fileToEmailArticle),
+    ),
+    Promise.all(
+      files.filter((f) => f.tags?.includes(topCategory)).slice(0, 1).map(fileToEmailArticle),
+    ),
+  ]);
 
   return {
     hero,
@@ -158,6 +177,7 @@ export function renderDailyNewsEmail(
   date: string,
   articles: SelectedArticles,
   podcast: { title: string; duration: string; uri: string; imageUri?: string | undefined } | null,
+  homeUrl: string,
 ): string {
   const podcastBlock = podcast
     ? `<div style="margin:0 0 24px;padding:16px;background:#111;border-radius:10px;color:#fff">
@@ -179,7 +199,7 @@ export function renderDailyNewsEmail(
       ${section(s.pickedTitle, s.pickedSubtitle, articles.pickedForYou)}
       ${section(s.categoryPrefix.replace('%s', articles.topCategory), '', articles.categorySpotlight)}
       <div style="text-align:center;margin:28px 0">
-        <a href="${PUBLIC_URL}/news" style="display:inline-block;padding:14px 28px;background:#111;color:#fff;border-radius:8px;text-decoration:none;font-weight:700">${s.buttonText}</a>
+        <a href="${homeUrl}" style="display:inline-block;padding:14px 28px;background:#111;color:#fff;border-radius:8px;text-decoration:none;font-weight:700">${s.buttonText}</a>
         <p style="margin:12px 0 0;color:#aaa;font-size:12px">${s.seeAll.replace('%d', String(articles.totalUnread))}</p>
       </div>
     </div></body></html>`;
@@ -217,7 +237,10 @@ export async function dispatchUserPrivateNewsEmail(
       ? {
           title: podcast.title,
           duration: `${Math.round(podcast.durationMs / 60000)} min`,
-          uri: `${PUBLIC_URL}/podcast`,
+          uri: await shareLink({
+            target: `${PUBLIC_URL}/podcast`,
+            og: { title: podcast.title },
+          }),
           imageUri: podcast.articles[0]?.imageUri ?? undefined,
         }
       : null;
@@ -228,7 +251,8 @@ export async function dispatchUserPrivateNewsEmail(
     return;
   }
 
-  const html = renderDailyNewsEmail(DEFAULT_STRINGS, dateStr, articles, podcastData);
+  const homeUrl = await shareLink({ target: `${PUBLIC_URL}/`, og: { title: DEFAULT_STRINGS.greeting } });
+  const html = renderDailyNewsEmail(DEFAULT_STRINGS, dateStr, articles, podcastData, homeUrl);
   const subject = `${articles.hero.title.slice(0, 50)}... + ${articles.totalUnread - 1} more`;
   await emailSend({ to, subject, html, id: 'dailyNews' });
 }
