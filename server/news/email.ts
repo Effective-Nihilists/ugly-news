@@ -1,5 +1,4 @@
-import { emailSend } from 'ugly-app/server/adapter/workers';
-import { shareLink } from 'ugly-app/server';
+import { emailSend, shareLink } from 'ugly-app/server/adapter/workers';
 import { collections } from '../../shared/collections';
 import type { FileMarkdown } from '../../shared/collections';
 import { uglyBotId } from '../../shared/news/Bot';
