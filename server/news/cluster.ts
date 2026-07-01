@@ -16,18 +16,25 @@ import type { Factuality } from '../../shared/news/schemas';
 import type { NewsCategory } from '../../shared/news/types';
 import type { NewsDb } from './db';
 import { recordPerfSample } from './perf';
+import { enqueueTask } from './queue';
 
 // How far back to look for an existing cluster to join. Stories older than this
 // have "happened"; a new article matching them starts a fresh cluster.
 const CLUSTER_WINDOW_MS = 72 * 60 * 60 * 1000;
-// Cosine threshold to join a cluster. Tunable via env without redeploy — local
-// real-embedding tests showed same-event cross-spectrum framing (e.g. a left vs
-// a right write-up of the same vote) lands ~0.78-0.84, so 0.82 can wrongly split
-// "all sides". Default 0.78 to keep the spectrum together; raise if unrelated
-// stories merge.
+// Cosine threshold to join a cluster. Tunable via env (CLUSTER_SIM_THRESHOLD).
+// Calibrated on PROD embeddings (2026-06-30): same-event cross-spectrum framing
+// lands ~0.74-0.85; at 0.78 only ~7/556 clusters spanned both left+right, and a
+// nearest-neighbor scan showed lowering 0.78→0.74 recovers ~50% more same-event
+// merges before the 0.68-0.72 "same topic, different event" muddy zone. Default
+// 0.74; raise if unrelated stories merge, lower if sides stay split.
 // eslint-disable-next-line @typescript-eslint/dot-notation
-const SIMILARITY_THRESHOLD = Number(process.env['CLUSTER_SIM_THRESHOLD'] ?? '0.78');
+const SIMILARITY_THRESHOLD = Number(process.env['CLUSTER_SIM_THRESHOLD'] ?? '0.74');
 const CANDIDATE_LIMIT = 400;
+const SATIRE_MIN_ARTICLES = 3;
+
+function distinctBuckets(b: NewsCluster['biasBreakdown']): number {
+  return (b.left > 0 ? 1 : 0) + (b.center > 0 ? 1 : 0) + (b.right > 0 ? 1 : 0);
+}
 
 /** Coerce a stored `created` value (Date | number | string) to epoch ms. */
 function toMs(v: unknown, fallback: number): number {
@@ -184,6 +191,19 @@ export async function assignFileToCluster(
           `bias(L/C/R)=${agg.biasBreakdown.left}/${agg.biasBreakdown.center}/${agg.biasBreakdown.right} ` +
           `blindspot=${agg.blindspotSide ?? 'none'} score=${agg.score.toFixed(2)}`,
       );
+
+      // Trigger synthesis / satire FROM THE ARTICLE FLOW (the queue processes
+      // reliably) rather than the standalone clusterSweep cron, which wasn't
+      // firing in prod. Gated to the crossing transition so each fires once.
+      const grewToMultiSide = distinctBuckets(agg.biasBreakdown) >= 2 && distinctBuckets(cluster.biasBreakdown) < 2;
+      if (grewToMultiSide && !cluster.neutralSummary) {
+        await enqueueTask('clusterSynthesize', { clusterId: cluster._id });
+        console.log(`[cluster] → enqueued clusterSynthesize for ${cluster._id} (now spans ≥2 sides)`);
+      }
+      if (fileIds.length === SATIRE_MIN_ARTICLES && !cluster.uglyTakeFileId) {
+        await enqueueTask('clusterSatirize', { clusterId: cluster._id });
+        console.log(`[cluster] → enqueued clusterSatirize for ${cluster._id} (reached ${SATIRE_MIN_ARTICLES} articles)`);
+      }
       return cluster._id;
     }
     console.warn(`[cluster] matched ${match.clusterId} but candidate not found — creating new cluster instead`);

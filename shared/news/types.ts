@@ -162,6 +162,52 @@ export const newsFeeds: NewsFeed[] = [
   { id: 'pitchfork', name: 'Pitchfork', url: 'https://pitchfork.com/rss/news/', category: 'events' },
   { id: 'espn', name: 'ESPN', url: 'https://www.espn.com/espn/rss/news', category: 'events' },
 
+  // ─── EXPANSION 2026-06-30 (all verified live) — density for cross-spectrum
+  //     clustering. Politics gets the biggest L/C/R boost. ────────────────────
+  // Politics — Center
+  { id: 'pbs', name: 'PBS NewsHour', url: 'https://www.pbs.org/newshour/feeds/rss/headlines', category: 'politics' },
+  { id: 'csmonitor', name: 'Christian Science Monitor', url: 'https://rss.csmonitor.com/feeds/all', category: 'politics' },
+  { id: 'newsweek', name: 'Newsweek', url: 'https://www.newsweek.com/rss', category: 'politics' },
+  // Politics — Left
+  { id: 'abcnews', name: 'ABC News', url: 'https://abcnews.go.com/abcnews/topstories', category: 'politics' },
+  { id: 'cbsnews', name: 'CBS News', url: 'https://www.cbsnews.com/latest/rss/main', category: 'politics' },
+  { id: 'theconversation', name: 'The Conversation', url: 'https://theconversation.com/us/articles.atom', category: 'politics' },
+  { id: 'slate', name: 'Slate', url: 'https://slate.com/feeds/all.rss', category: 'politics' },
+  { id: 'motherjones', name: 'Mother Jones', url: 'https://www.motherjones.com/feed/', category: 'politics' },
+  { id: 'salon', name: 'Salon', url: 'https://www.salon.com/feed/', category: 'politics' },
+  { id: 'intercept', name: 'The Intercept', url: 'https://theintercept.com/feed/?rss', category: 'politics' },
+  { id: 'commondreams', name: 'Common Dreams', url: 'https://www.commondreams.org/rss.xml', category: 'politics' },
+  { id: 'newrepublic', name: 'The New Republic', url: 'https://newrepublic.com/rss.xml', category: 'politics' },
+  // Politics — Right
+  { id: 'washingtontimes', name: 'The Washington Times', url: 'https://www.washingtontimes.com/rss/headlines/news/', category: 'politics' },
+  { id: 'breitbart', name: 'Breitbart', url: 'https://feeds.feedburner.com/breitbart', category: 'politics' },
+  { id: 'federalist', name: 'The Federalist', url: 'https://thefederalist.com/feed/', category: 'politics' },
+  { id: 'reason', name: 'Reason', url: 'https://reason.com/latest/feed/', category: 'politics' },
+  { id: 'dailycaller', name: 'The Daily Caller', url: 'https://dailycaller.com/feed/', category: 'politics' },
+  { id: 'freebeacon', name: 'Washington Free Beacon', url: 'https://freebeacon.com/feed/', category: 'politics' },
+  // World
+  { id: 'france24', name: 'France 24', url: 'https://www.france24.com/en/rss', category: 'world' },
+  { id: 'cnn_world', name: 'CNN (World)', url: 'http://rss.cnn.com/rss/edition_world.rss', category: 'world' },
+  { id: 'skynews_world', name: 'Sky News (World)', url: 'https://feeds.skynews.com/feeds/rss/world.xml', category: 'world' },
+  { id: 'independent_world', name: 'The Independent (World)', url: 'https://www.independent.co.uk/news/world/rss', category: 'world' },
+  // Business
+  { id: 'businessinsider', name: 'Business Insider', url: 'https://www.businessinsider.com/rss', category: 'business' },
+  { id: 'yahoofinance', name: 'Yahoo Finance', url: 'https://finance.yahoo.com/news/rssindex', category: 'business' },
+  // Tech
+  { id: 'theregister', name: 'The Register', url: 'https://www.theregister.com/headlines.atom', category: 'tech' },
+  { id: 'venturebeat', name: 'VentureBeat', url: 'https://venturebeat.com/feed/', category: 'tech' },
+  { id: 'hackernews', name: 'Hacker News', url: 'https://hnrss.org/frontpage', category: 'tech' },
+  { id: '404media', name: '404 Media', url: 'https://www.404media.co/rss/', category: 'tech' },
+  // Science
+  { id: 'nature', name: 'Nature', url: 'http://feeds.nature.com/nature/rss/current', category: 'science' },
+  { id: 'quanta', name: 'Quanta Magazine', url: 'https://api.quantamagazine.org/feed/', category: 'science' },
+  { id: 'space', name: 'Space.com', url: 'https://www.space.com/feeds/all', category: 'science' },
+  // Events
+  { id: 'deadline', name: 'Deadline', url: 'https://deadline.com/feed/', category: 'events' },
+  { id: 'avclub', name: 'The A.V. Club', url: 'https://www.avclub.com/rss', category: 'events' },
+  { id: 'ign', name: 'IGN', url: 'https://feeds.ign.com/ign/all', category: 'events' },
+  { id: 'stereogum', name: 'Stereogum', url: 'https://www.stereogum.com/feed/', category: 'events' },
+
   // ─── GOOGLE NEWS (free, unlimited breadth/backfill; mixed-source aggregator,
   // so items are "unrated" for bias and don't skew the coverage bar). ────────
   { id: 'googlenews_world', name: 'Google News — World', url: 'https://news.google.com/rss/headlines/section/topic/WORLD?hl=en-US&gl=US&ceid=US:en', category: 'world' },

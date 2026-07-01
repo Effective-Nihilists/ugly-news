@@ -19,6 +19,12 @@ export function createCronHandlers(getDb: () => NewsDb): WorkerHandlers<typeof c
     // ── Scheduled ──────────────────────────────────────────────────────────
     newsHourly: async () => {
       await newsRefreshAllFeeds();
+      // Backstop: the standalone gdeltPull/clusterSweep cron TRIGGERS don't fire
+      // in prod (only the pre-existing hourly schedule does), so drive them from
+      // here too. Best-effort — a failure must not abort the feed refresh.
+      const db = getDb();
+      await dispatchClusterSweep(db).catch((e: unknown) => { console.error('[news] clusterSweep (hourly) failed', e); });
+      await dispatchGdeltPull(db).catch((e: unknown) => { console.error('[news] gdeltPull (hourly) failed', e); });
     },
     podcastDaily: async () => {
       const date = todayDateString(Date.now());

@@ -67,6 +67,46 @@ export const newsSourceSeeds: NewsSourceSeed[] = [
   { id: 'nypost', name: 'New York Post', homepage: 'https://nypost.com', domains: ['nypost.com'], feedIds: ['nypost'], bias: 'right', biasScore: 3, factuality: 'mixed', owner: 'News Corp', country: 'US' },
   { id: 'foxnews', name: 'Fox News', homepage: 'https://www.foxnews.com', domains: ['foxnews.com'], feedIds: ['foxnews_politics'], bias: 'right', biasScore: 3.5, factuality: 'mixed', owner: 'Fox Corporation', country: 'US' },
   { id: 'dailywire', name: 'The Daily Wire', homepage: 'https://www.dailywire.com', domains: ['dailywire.com'], feedIds: ['dailywire'], bias: 'far-right', biasScore: 4.5, factuality: 'mixed', owner: 'The Daily Wire', country: 'US' },
+
+  // ─── Expansion 2026-06-30 ─────────────────────────────────────────────────
+  // Center
+  { id: 'pbs', name: 'PBS NewsHour', homepage: 'https://www.pbs.org/newshour', domains: ['pbs.org'], feedIds: ['pbs'], bias: 'center', biasScore: -0.5, factuality: 'high', owner: 'PBS (US public)', country: 'US' },
+  { id: 'csmonitor', name: 'Christian Science Monitor', homepage: 'https://www.csmonitor.com', domains: ['csmonitor.com'], feedIds: ['csmonitor'], bias: 'center', biasScore: 0, factuality: 'high', owner: 'Christian Science Publishing Society', country: 'US' },
+  { id: 'newsweek', name: 'Newsweek', homepage: 'https://www.newsweek.com', domains: ['newsweek.com'], feedIds: ['newsweek'], bias: 'center', biasScore: 0.5, factuality: 'mixed', owner: 'Newsweek LLC', country: 'US' },
+  { id: 'france24', name: 'France 24', homepage: 'https://www.france24.com', domains: ['france24.com'], feedIds: ['france24'], bias: 'center', biasScore: 0, factuality: 'high', owner: 'France Médias Monde (French public)', country: 'FR' },
+  { id: 'skynews', name: 'Sky News', homepage: 'https://news.sky.com', domains: ['skynews.com', 'sky.com'], feedIds: ['skynews_world'], bias: 'center', biasScore: -0.5, factuality: 'high', owner: 'Sky Group (Comcast)', country: 'UK' },
+  { id: 'yahoofinance', name: 'Yahoo Finance', homepage: 'https://finance.yahoo.com', domains: ['finance.yahoo.com', 'yahoo.com'], feedIds: ['yahoofinance'], bias: 'center', biasScore: 0, factuality: 'high', owner: 'Yahoo (Apollo)', country: 'US' },
+  { id: 'businessinsider', name: 'Business Insider', homepage: 'https://www.businessinsider.com', domains: ['businessinsider.com'], feedIds: ['businessinsider'], bias: 'lean-left', biasScore: -1, factuality: 'mixed', owner: 'Axel Springer SE', country: 'US' },
+  { id: 'theregister', name: 'The Register', homepage: 'https://www.theregister.com', domains: ['theregister.com'], feedIds: ['theregister'], bias: 'center', biasScore: 0, factuality: 'high', owner: 'Situation Publishing', country: 'UK' },
+  { id: 'venturebeat', name: 'VentureBeat', homepage: 'https://venturebeat.com', domains: ['venturebeat.com'], feedIds: ['venturebeat'], bias: 'center', biasScore: 0, factuality: 'high', owner: 'VentureBeat', country: 'US' },
+  { id: 'hackernews', name: 'Hacker News', homepage: 'https://news.ycombinator.com', domains: ['ycombinator.com'], feedIds: ['hackernews'], bias: 'center', biasScore: 0, factuality: 'high', owner: 'Y Combinator', country: 'US' },
+  { id: '404media', name: '404 Media', homepage: 'https://www.404media.co', domains: ['404media.co'], feedIds: ['404media'], bias: 'lean-left', biasScore: -1, factuality: 'high', owner: '404 Media', country: 'US' },
+  { id: 'nature', name: 'Nature', homepage: 'https://www.nature.com', domains: ['nature.com'], feedIds: ['nature'], bias: 'center', biasScore: 0, factuality: 'very-high', owner: 'Springer Nature', country: 'UK' },
+  { id: 'quanta', name: 'Quanta Magazine', homepage: 'https://www.quantamagazine.org', domains: ['quantamagazine.org'], feedIds: ['quanta'], bias: 'center', biasScore: 0, factuality: 'very-high', owner: 'Simons Foundation', country: 'US' },
+  { id: 'space', name: 'Space.com', homepage: 'https://www.space.com', domains: ['space.com'], feedIds: ['space'], bias: 'center', biasScore: 0, factuality: 'high', owner: 'Future plc', country: 'US' },
+  { id: 'deadline', name: 'Deadline', homepage: 'https://deadline.com', domains: ['deadline.com'], feedIds: ['deadline'], bias: 'center', biasScore: 0, factuality: 'high', owner: 'Penske Media', country: 'US' },
+  { id: 'ign', name: 'IGN', homepage: 'https://www.ign.com', domains: ['ign.com'], feedIds: ['ign'], bias: 'center', biasScore: 0, factuality: 'high', owner: 'Ziff Davis', country: 'US' },
+  { id: 'stereogum', name: 'Stereogum', homepage: 'https://www.stereogum.com', domains: ['stereogum.com'], feedIds: ['stereogum'], bias: 'center', biasScore: 0, factuality: 'high', owner: 'Brooklyn Vegan / SpinMedia', country: 'US' },
+  // Left
+  { id: 'abcnews', name: 'ABC News', homepage: 'https://abcnews.go.com', domains: ['abcnews.go.com', 'go.com'], feedIds: ['abcnews'], bias: 'lean-left', biasScore: -1.5, factuality: 'high', owner: 'The Walt Disney Company', country: 'US' },
+  { id: 'cbsnews', name: 'CBS News', homepage: 'https://www.cbsnews.com', domains: ['cbsnews.com'], feedIds: ['cbsnews'], bias: 'lean-left', biasScore: -1.5, factuality: 'high', owner: 'Paramount Global', country: 'US' },
+  { id: 'theconversation', name: 'The Conversation', homepage: 'https://theconversation.com', domains: ['theconversation.com'], feedIds: ['theconversation'], bias: 'lean-left', biasScore: -1.5, factuality: 'high', owner: 'The Conversation Trust', country: 'US' },
+  { id: 'independent', name: 'The Independent', homepage: 'https://www.independent.co.uk', domains: ['independent.co.uk'], feedIds: ['independent_world'], bias: 'lean-left', biasScore: -1.5, factuality: 'high', owner: 'Independent Digital News & Media', country: 'UK' },
+  { id: 'avclub', name: 'The A.V. Club', homepage: 'https://www.avclub.com', domains: ['avclub.com'], feedIds: ['avclub'], bias: 'lean-left', biasScore: -1.5, factuality: 'mixed', owner: 'Paste Media', country: 'US' },
+  { id: 'cnn', name: 'CNN', homepage: 'https://www.cnn.com', domains: ['cnn.com'], feedIds: ['cnn_world'], bias: 'left', biasScore: -2, factuality: 'mixed', owner: 'Warner Bros. Discovery', country: 'US' },
+  { id: 'newrepublic', name: 'The New Republic', homepage: 'https://newrepublic.com', domains: ['newrepublic.com'], feedIds: ['newrepublic'], bias: 'left', biasScore: -3, factuality: 'high', owner: 'The New Republic', country: 'US' },
+  { id: 'slate', name: 'Slate', homepage: 'https://slate.com', domains: ['slate.com'], feedIds: ['slate'], bias: 'left', biasScore: -3, factuality: 'mixed', owner: 'The Slate Group', country: 'US' },
+  { id: 'intercept', name: 'The Intercept', homepage: 'https://theintercept.com', domains: ['theintercept.com'], feedIds: ['intercept'], bias: 'left', biasScore: -3, factuality: 'mixed', owner: 'First Look Media', country: 'US' },
+  { id: 'motherjones', name: 'Mother Jones', homepage: 'https://www.motherjones.com', domains: ['motherjones.com'], feedIds: ['motherjones'], bias: 'left', biasScore: -3.5, factuality: 'high', owner: 'Foundation for National Progress', country: 'US' },
+  { id: 'salon', name: 'Salon', homepage: 'https://www.salon.com', domains: ['salon.com'], feedIds: ['salon'], bias: 'left', biasScore: -3.5, factuality: 'mixed', owner: 'Salon Media Group', country: 'US' },
+  { id: 'commondreams', name: 'Common Dreams', homepage: 'https://www.commondreams.org', domains: ['commondreams.org'], feedIds: ['commondreams'], bias: 'left', biasScore: -3.5, factuality: 'mixed', owner: 'Common Dreams', country: 'US' },
+  // Right
+  { id: 'reason', name: 'Reason', homepage: 'https://reason.com', domains: ['reason.com'], feedIds: ['reason'], bias: 'lean-right', biasScore: 1.5, factuality: 'high', owner: 'Reason Foundation', country: 'US' },
+  { id: 'washingtontimes', name: 'The Washington Times', homepage: 'https://www.washingtontimes.com', domains: ['washingtontimes.com'], feedIds: ['washingtontimes'], bias: 'right', biasScore: 3, factuality: 'mixed', owner: 'Operations Holdings', country: 'US' },
+  { id: 'freebeacon', name: 'Washington Free Beacon', homepage: 'https://freebeacon.com', domains: ['freebeacon.com'], feedIds: ['freebeacon'], bias: 'right', biasScore: 3, factuality: 'mixed', owner: 'Washington Free Beacon', country: 'US' },
+  { id: 'dailycaller', name: 'The Daily Caller', homepage: 'https://dailycaller.com', domains: ['dailycaller.com'], feedIds: ['dailycaller'], bias: 'right', biasScore: 3.5, factuality: 'mixed', owner: 'The Daily Caller', country: 'US' },
+  { id: 'federalist', name: 'The Federalist', homepage: 'https://thefederalist.com', domains: ['thefederalist.com'], feedIds: ['federalist'], bias: 'right', biasScore: 3.5, factuality: 'mixed', owner: 'FDRLST Media', country: 'US' },
+  { id: 'breitbart', name: 'Breitbart', homepage: 'https://www.breitbart.com', domains: ['breitbart.com'], feedIds: ['breitbart'], bias: 'far-right', biasScore: 4.5, factuality: 'low', owner: 'Breitbart News Network', country: 'US' },
 ];
 
 /** feedId → sourceId lookup, derived from the seed's `feedIds`. */

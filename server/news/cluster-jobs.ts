@@ -94,6 +94,10 @@ export async function dispatchClusterSynthesize(db: NewsDb, clusterId: string): 
     return;
   }
   const c = cluster as NewsCluster & { _id: string };
+  if (c.neutralSummary && c.synthesizedAt) {
+    console.log(`[cluster-synth] ${clusterId} already synthesized — skipping`);
+    return;
+  }
 
   const files = await db.getQuery<FileMarkdown & { _id: string }>('file', [
     { $match: { _id: { $in: c.fileIds.slice(0, 12) } } },
