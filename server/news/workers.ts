@@ -9,7 +9,6 @@ import { dispatchArticleScrape } from './scraper';
 import { dispatchPodcastGenerate } from './podcast-generate';
 import { dispatchUserPrivateNewsEmail, userEmailHourly } from './email';
 import { dispatchClusterSatirize, dispatchClusterSweep, dispatchClusterSynthesize } from './cluster-jobs';
-import { dispatchGdeltPull } from './gdelt';
 
 // Build the worker handler map. Shared by the Node entry (server/index.ts) and
 // the Cloudflare Workers entry (server/workers.ts) so cron + queue behavior is
@@ -19,12 +18,10 @@ export function createCronHandlers(getDb: () => NewsDb): WorkerHandlers<typeof c
     // ── Scheduled ──────────────────────────────────────────────────────────
     newsHourly: async () => {
       await newsRefreshAllFeeds();
-      // Backstop: the standalone gdeltPull/clusterSweep cron TRIGGERS don't fire
-      // in prod (only the pre-existing hourly schedule does), so drive them from
-      // here too. Best-effort — a failure must not abort the feed refresh.
-      const db = getDb();
-      await dispatchClusterSweep(db).catch((e: unknown) => { console.error('[news] clusterSweep (hourly) failed', e); });
-      await dispatchGdeltPull(db).catch((e: unknown) => { console.error('[news] gdeltPull (hourly) failed', e); });
+      // Backstop: the standalone clusterSweep cron TRIGGER doesn't fire in prod
+      // (only the pre-existing hourly schedule does), so drive it from here too.
+      // Best-effort — a failure must not abort the feed refresh.
+      await dispatchClusterSweep(getDb()).catch((e: unknown) => { console.error('[news] clusterSweep (hourly) failed', e); });
     },
     podcastDaily: async () => {
       const date = todayDateString(Date.now());
@@ -34,9 +31,6 @@ export function createCronHandlers(getDb: () => NewsDb): WorkerHandlers<typeof c
     },
     userEmailHourly: async () => {
       await userEmailHourly(getDb(), Date.now());
-    },
-    gdeltPull: async () => {
-      await dispatchGdeltPull(getDb());
     },
     clusterSweep: async () => {
       await dispatchClusterSweep(getDb());
