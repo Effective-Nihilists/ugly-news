@@ -17,12 +17,20 @@ import { messages, requests } from '../shared/api';
 import type { Todo } from '../shared/collections';
 import { collections } from '../shared/collections';
 import { resolveUserEmail } from './news/email';
+import { absolutePushPath } from './news/pushUrl';
+import * as clusters from './news/clusters';
 import * as emailPref from './news/emailPref';
 import * as feed from './news/feed';
 import * as podcast from './news/podcast';
 import * as pub from './news/public';
 import { newsDb, setNewsDb } from './news/db';
+import { seedNewsSources } from './news/seedSources';
+import { setPerfSink } from './news/perf';
 import { createCronHandlers } from './news/workers';
+
+// Node entry: wire the real (barrel-only) recordPerf into the worker-safe perf
+// sink so cluster similarity-calibration samples are queryable via `ugly-app perf`.
+setPerfSink(recordPerf);
 import { cronTasks } from '../shared/cron';
 import { experiments } from '../shared/experiments';
 import en from '../shared/lang/en';
@@ -59,7 +67,9 @@ const app = createApp(
 
     sendPush: async (_userId, { targetUserId, title, body, path, query, imageUrl }) => {
       try {
-        const result = await pushSend({ targetUserId, title, body, path, ...(query ? { query } : {}), ...(imageUrl ? { imageUrl } : {}) });
+        // Absolutize the click-target so the ugly-mobile iOS shell host-matches
+        // the dock app on tap (a relative path falls through to home).
+        const result = await pushSend({ targetUserId, title, body, path: absolutePushPath(path), ...(query ? { query } : {}), ...(imageUrl ? { imageUrl } : {}) });
         return { sent: result.sent };
       } catch (e) {
         console.error(e);
@@ -119,6 +129,12 @@ const app = createApp(
     newsArticleGet: (_userId, input) => pub.newsArticleGet(newsDb(), input),
     newsArchive: (_userId, input) => pub.newsArchive(newsDb(), input),
     newsPodcastArchive: (_userId, input) => pub.newsPodcastArchive(newsDb(), input),
+
+    // ─── News: "Three Ways" clusters (public) ────────────────────────────
+    newsTopStories: (_userId, input) => clusters.newsTopStories(newsDb(), input),
+    newsClusterGet: (_userId, input) => clusters.newsClusterGet(newsDb(), input),
+    newsBlindspot: (_userId, input) => clusters.newsBlindspot(newsDb(), input),
+    newsClusterArchive: (_userId, input) => clusters.newsClusterArchive(newsDb(), input),
 
     // ─── News: read tracking ─────────────────────────────────────────────
     newsMarkRead: (userId, input) => feed.newsMarkRead(newsDb(), userId, input),
@@ -222,11 +238,15 @@ const app = createApp(
     });
 
     // Set db after app is initialized (app isn't available during createApp)
-    // eslint-disable-next-line @typescript-eslint/require-await
     configurator.setOnAfterStart(async (db) => {
       convDeps.db = db;
       convServer.setDb(db);
-      setNewsDb(db as unknown as Parameters<typeof setNewsDb>[0]);
+      const newsDbHandle = db as unknown as Parameters<typeof setNewsDb>[0];
+      setNewsDb(newsDbHandle);
+      // Seed the outlet bias registry from the curated table (idempotent).
+      await seedNewsSources(newsDbHandle).catch((err: unknown) => {
+        console.warn('[news] seedNewsSources failed', err);
+      });
     });
   },
 );

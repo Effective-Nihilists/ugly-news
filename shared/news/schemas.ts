@@ -19,19 +19,15 @@ export type ImagePublic = z.infer<typeof ImagePublicSchema>;
 
 // ─── News categories ───────────────────────────────────────────────────────
 
+// Keep in sync with NewsCategory in shared/news/types.ts. Lifestyle desks were
+// dropped in the "Three Ways" rewrite.
 export const newsCategoryValues = [
-  'fashion',
+  'politics',
+  'world',
+  'business',
   'tech',
-  'sports',
-  'food',
-  'music',
-  'auto',
-  'news',
-  'home',
-  'entertainment',
   'science',
-  'gaming',
-  'health',
+  'events',
 ] as const;
 
 export const NewsCategorySchema = z.enum(newsCategoryValues);
@@ -70,6 +66,92 @@ export const NewsFeedDocSchema = z.object({
       negativePrompt: z.string().optional(),
     })
     .optional(),
+});
+
+// ─── Bias / factuality (Ground-News-style "see all sides") ─────────────────
+// Seven-point political-lean scale, averaged from public AllSides / Ad Fontes /
+// MBFC ratings (see shared/news/sourceBias.ts). `biasScore` is the numeric
+// position on a −6 (far left) .. +6 (far right) line; the three-way bucket
+// (left | center | right) used by the bias bar is derived from it.
+export const biasValues = [
+  'far-left',
+  'left',
+  'lean-left',
+  'center',
+  'lean-right',
+  'right',
+  'far-right',
+] as const;
+export const BiasSchema = z.enum(biasValues);
+export type Bias = z.infer<typeof BiasSchema>;
+
+export const factualityValues = ['very-low', 'low', 'mixed', 'high', 'very-high'] as const;
+export const FactualitySchema = z.enum(factualityValues);
+export type Factuality = z.infer<typeof FactualitySchema>;
+
+// The three buckets the coverage bar renders (Left / Center / Right).
+export const biasBucketValues = ['left', 'center', 'right'] as const;
+export const BiasBucketSchema = z.enum(biasBucketValues);
+export type BiasBucket = z.infer<typeof BiasBucketSchema>;
+
+// A news outlet, with the bias/factuality/ownership metadata that powers The
+// Spread + The Blindspot. One row per outlet; `feedIds` links to the RSS feeds
+// in shared/news/types.ts that belong to it.
+export const NewsSourceSchema = z.object({
+  name: z.string(),
+  homepage: z.string().nullable().default(null),
+  domains: z.array(z.string()).default([]),
+  feedIds: z.array(z.string()).default([]),
+  bias: BiasSchema,
+  biasScore: z.number(), // −6 (far left) .. +6 (far right)
+  factuality: FactualitySchema,
+  owner: z.string().nullable().default(null),
+  country: z.string().nullable().default(null),
+});
+
+// ─── Story cluster (the "same story, many outlets" unit) ───────────────────
+// Coverage distribution across the three buckets, plus the percentages the bias
+// bar renders. `total` excludes articles from sources we can't rate.
+export const BiasBreakdownSchema = z.object({
+  left: z.number().default(0),
+  center: z.number().default(0),
+  right: z.number().default(0),
+  unrated: z.number().default(0),
+  total: z.number().default(0),
+  leftPct: z.number().default(0),
+  centerPct: z.number().default(0),
+  rightPct: z.number().default(0),
+});
+export type BiasBreakdown = z.infer<typeof BiasBreakdownSchema>;
+
+export const NewsClusterSchema = z.object({
+  title: z.string(),
+  category: NewsCategorySchema,
+  // Running-mean centroid of member embeddings. Stored as a plain JSON array
+  // (NOT a declared `vector` column): cluster counts in the active window are
+  // small, so assignment does an in-TS cosine scan via shared/news/ranking.
+  centroid: z.array(z.number()).nullable().default(null),
+  fileIds: z.array(z.string()).default([]),
+  sourceIds: z.array(z.string()).default([]),
+  feedIds: z.array(z.string()).default([]),
+  articleCount: z.number().default(0),
+  biasBreakdown: BiasBreakdownSchema,
+  // Set when coverage is lopsided enough that one side is effectively missing.
+  blindspotSide: BiasBucketSchema.nullable().default(null),
+  // Mean factuality across rated member sources, 1 (very-low)..5 (very-high).
+  factualityAvg: z.number().nullable().default(null),
+  // AI-written, populated once a cluster spans ≥2 buckets (clusterSynthesize).
+  neutralSummary: z.string().nullable().default(null),
+  framingSummary: z.string().nullable().default(null),
+  // The labeled Onion-style companion (a `file` with kind:'satire').
+  uglyTakeFileId: z.string().nullable().default(null),
+  topImageUri: z.string().nullable().default(null),
+  // Ranking signal for Top Stories (coverage breadth + recency + engagement).
+  score: z.number().default(0),
+  synthesizedAt: z.number().nullable().default(null),
+  satirizedAt: z.number().nullable().default(null),
+  firstSeenAt: z.number(),
+  lastUpdatedAt: z.number(),
 });
 
 export const UserNewsPreferenceSchema = z.object({
@@ -274,6 +356,13 @@ export const FileMarkdownSchema = z.object({
   dislikeCount: z.number().default(0),
   viewCount: z.number().default(0),
   conversationId: z.string().nullable().optional(),
+  // ─── "Three Ways" linkage ────────────────────────────────────────────────
+  // The story cluster this article belongs to (set by the clustering engine).
+  clusterId: z.string().nullable().optional(),
+  // 'article' = real summarized news (default). 'satire' = the labeled Ugly
+  // Take companion — excluded from the normal feed/search, only surfaced via
+  // its cluster's `uglyTakeFileId`.
+  kind: z.enum(['article', 'satire']).default('article').optional(),
 });
 
 // Interest cluster: a centroid of liked-article embeddings, weighted + time-decayed.

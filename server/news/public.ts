@@ -33,6 +33,7 @@ export interface NewsCard {
 export interface NewsArticleFull extends NewsCard {
   markdown: string;
   sourceUri: string | null;
+  clusterId: string | null;
 }
 export interface PodcastCard {
   id: string;
@@ -242,12 +243,14 @@ export async function newsArticleGet(
 ): Promise<{ article: NewsArticleFull | null }> {
   const file = await db.getDoc(collections.file, input.id);
   if (file) {
-    const card = fileToCard(file as FileMarkdown & { _id: string; created?: unknown });
+    const f = file as FileMarkdown & { _id: string; created?: unknown };
+    const card = fileToCard(f);
     return {
       article: {
         ...card,
-        markdown: decodeHtmlEntities((file as FileMarkdown).markdown ?? ''),
-        sourceUri: (file as FileMarkdown).sourceUri ?? null,
+        markdown: decodeHtmlEntities(f.markdown ?? ''),
+        sourceUri: f.sourceUri ?? null,
+        clusterId: f.clusterId ?? null,
       },
     };
   }
@@ -260,6 +263,7 @@ export async function newsArticleGet(
         ...card,
         markdown: decodeHtmlEntities(art.summary ?? art.contentMarkdown ?? ''),
         sourceUri: art.uri ?? null,
+        clusterId: null,
       },
     };
   }

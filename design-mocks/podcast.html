@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Ugly Press — The Daily Ugly (mock)</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+  .back { font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); padding:18px 0 8px; display:inline-block; }
+
+  .stage { border:3px double var(--ink); background:var(--ink); color:var(--paper); padding:26px 28px; margin:10px 0 26px; }
+  .stage .top { display:flex; justify-content:space-between; align-items:center; }
+  .stage .anton { color:var(--paper); font-size: clamp(30px,5vw,52px); }
+  .stage .date { font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:.1em; color:#cfc7b8; margin-top:6px; }
+  .onair { font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.16em; color:var(--accent); display:flex; align-items:center; gap:8px; }
+  .eq { display:inline-flex; gap:2px; align-items:flex-end; height:16px; }
+  .eq i { width:3px; background:var(--accent); animation:eq .9s ease-in-out infinite; }
+  .eq i:nth-child(2){animation-delay:.15s} .eq i:nth-child(3){animation-delay:.3s} .eq i:nth-child(4){animation-delay:.45s}
+  @keyframes eq { 0%,100%{height:35%} 50%{height:100%} }
+
+  .hosts { display:flex; gap:26px; align-items:center; margin:24px 0 20px; }
+  .host { display:flex; gap:12px; align-items:center; }
+  .host .face { width:60px; height:60px; border-radius:50%; border:2px solid var(--paper); background:
+      radial-gradient(circle at 40% 35%, rgba(214,38,29,.5), transparent 60%), #2b2622; }
+  .host .n { font-family:'Anton',sans-serif; text-transform:uppercase; font-size:18px; color:var(--paper); }
+  .host .r { font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.08em; color:#cfc7b8; margin-top:4px; }
+
+  .player { display:flex; align-items:center; gap:16px; margin-top:8px; }
+  .player .play { width:50px; height:50px; border-radius:50%; border:2px solid var(--paper); display:flex; align-items:center; justify-content:center; font-size:18px; flex:none; }
+  .player .bar { flex:1; height:5px; background:#4a443d; position:relative; }
+  .player .bar .fill { position:absolute; left:0; top:0; bottom:0; width:30%; background:var(--accent); }
+  .player .bar .knob { position:absolute; left:30%; top:50%; width:13px; height:13px; border-radius:50%; background:var(--paper); transform:translate(-50%,-50%); }
+  .player .t { font-family:'IBM Plex Mono',monospace; font-size:12px; color:#cfc7b8; }
+
+  .acts { display:grid; grid-template-columns:repeat(3,1fr); gap:0; border:3px double var(--ink); margin:26px 0; }
+  .act { padding:22px 22px; border-right:3px double var(--ink); }
+  .act:last-child { border-right:0; }
+  .act .num { font-family:'Anton',sans-serif; font-size:40px; color:var(--accent); line-height:1; }
+  .act h3 { font-family:'Anton',sans-serif; text-transform:uppercase; font-size:19px; margin:8px 0 8px; }
+  .act p { font-size:15px; line-height:1.5; color:#2c2722; margin:0; }
+  .act.satire h3 { color:var(--accent); }
+  .act .mini-stamp { display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent); border:1px solid var(--accent); padding:2px 6px; margin-top:10px; }
+
+  .cols { display:grid; grid-template-columns: 1.4fr 1fr; gap:30px; }
+  .transcript .anton { font-size:22px; margin-bottom:14px; }
+  .seg { display:grid; grid-template-columns: 96px 1fr; gap:14px; padding:12px 0; border-bottom:1px solid rgba(26,23,20,.18); cursor:pointer; }
+  .seg:hover { background:var(--paper2); }
+  .seg .who { font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.06em; text-transform:uppercase; }
+  .seg .who.a { color:var(--ink); } .seg .who.b { color:var(--accent); }
+  .seg .who .ts { display:block; color:var(--muted); margin-top:3px; }
+  .seg .line { font-size:17px; line-height:1.5; }
+  .seg .actlbl { font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+
+  .episode .anton { font-size:20px; margin-bottom:14px; }
+  .epitem { display:flex; gap:12px; align-items:center; padding:12px 0; border-bottom:1px solid rgba(26,23,20,.2); }
+  .epitem .th { width:54px; height:54px; flex:none; background:
+      repeating-linear-gradient(45deg, rgba(26,23,20,.10) 0 2px, transparent 2px 8px), var(--paper2); border:1px solid var(--ink); }
+  .epitem .info { flex:1; }
+  .epitem .info h4 { font-family:'Spectral',serif; font-weight:600; font-size:16px; margin:0 0 7px; line-height:1.15; }
+  .epitem .biasbar { height:6px; }
+  .epitem .see { font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--accent); margin-top:6px; display:block; }
+
+  @media (max-width:820px){ .acts, .cols { grid-template-columns:1fr; } .act { border-right:0; border-bottom:3px double var(--ink); } .act:last-child{border-bottom:0;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="home.html">‹ back to front page</a>
+
+  <!-- STAGE / PLAYER -->
+  <section class="stage">
+    <div class="top">
+      <div>
+        <div class="anton">The Daily Ugly</div>
+        <div class="date">TUESDAY, JUNE 30 2026 · EPISODE 184 · 9:12</div>
+      </div>
+      <div class="onair"><span class="eq"><i></i><i></i><i></i><i></i></span> ON AIR</div>
+    </div>
+    <div class="hosts">
+      <div class="host"><div class="face"></div><div><div class="n">Sarah</div><div class="r">News anchor · plays it straight</div></div></div>
+      <div class="host"><div class="face"></div><div><div class="n">Ugly Bot</div><div class="r">Commentator · no sympathy</div></div></div>
+    </div>
+    <div class="player">
+      <div class="play">▶</div>
+      <div class="bar"><div class="fill"></div><div class="knob"></div></div>
+      <span class="t">02:41 / 09:12</span>
+    </div>
+  </section>
+
+  <!-- THREE ACTS -->
+  <div class="acts">
+    <div class="act">
+      <div class="num">1</div>
+      <h3>The Rundown</h3>
+      <p>The day's top clusters, fast — what happened, who's covering it, and how big the spread is.</p>
+    </div>
+    <div class="act">
+      <div class="num">2</div>
+      <h3>The Spread</h3>
+      <p>Sarah takes the left read, Ugly Bot takes the right — same story, both framings, voiced out loud so you hear the gap.</p>
+    </div>
+    <div class="act satire">
+      <div class="num">3</div>
+      <h3>The Ugly Take</h3>
+      <p>A deadpan satirical segment riffing on the lead story. It's a bit. Obviously.</p>
+      <span class="mini-stamp">⌖ Satire segment</span>
+    </div>
+  </div>
+
+  <!-- TRANSCRIPT + EPISODE LIST -->
+  <div class="cols">
+    <div class="transcript">
+      <div class="anton">Transcript</div>
+
+      <div class="seg"><div class="who a">SARAH<span class="ts actlbl">ACT 1</span><span class="ts">00:04</span></div><div class="line">Top of the show: the Senate passed a $1.2 trillion spending bill overnight, 51 to 49. Forty-one outlets covered it. Spoiler — they did not agree on what it means.</div></div>
+      <div class="seg"><div class="who b">UGLY BOT<span class="ts actlbl">ACT 1</span><span class="ts">00:19</span></div><div class="line">Forty-one outlets, one vote, and forty-two opinions. Math checks out.</div></div>
+      <div class="seg"><div class="who a">SARAH<span class="ts actlbl">ACT 2 · THE SPREAD</span><span class="ts">03:02</span></div><div class="line">Here's the left read: a pragmatic deal that protects working families, held up by a handful of holdouts.</div></div>
+      <div class="seg"><div class="who b">UGLY BOT<span class="ts actlbl">ACT 2 · THE SPREAD</span><span class="ts">03:20</span></div><div class="line">And the right read: a trillion-dollar price tag with the energy provisions buried in the back like a bad clause in a lease. Both of those ran today. Same vote.</div></div>
+      <div class="seg"><div class="who b">UGLY BOT<span class="ts actlbl">ACT 3 · THE UGLY TAKE</span><span class="ts">07:10</span></div><div class="line">And now, the Ugly Take. Breaking: Senate celebrates passing the bill by immediately going on recess. One staffer remains to turn off the lights…</div></div>
+    </div>
+
+    <div class="episode">
+      <div class="anton">In This Episode</div>
+      <div class="epitem">
+        <div class="th"></div>
+        <div class="info"><h4>Senate Passes Sweeping Spending Bill</h4>
+          <div class="biasbar"><div class="seg L" style="width:48%"></div><div class="seg C" style="width:20%"></div><div class="seg R" style="width:32%"></div></div>
+          <a class="see" href="story.html">→ see all sides</a>
+        </div>
+      </div>
+      <div class="epitem">
+        <div class="th"></div>
+        <div class="info"><h4>Fed Holds Rates, Signals One Cut</h4>
+          <div class="biasbar"><div class="seg L" style="width:25%"></div><div class="seg C" style="width:60%"></div><div class="seg R" style="width:15%"></div></div>
+          <a class="see" href="story.html">→ see all sides</a>
+        </div>
+      </div>
+      <div class="epitem">
+        <div class="th"></div>
+        <div class="info"><h4>Ceasefire Talks Resume Abroad</h4>
+          <div class="biasbar"><div class="seg L" style="width:55%"></div><div class="seg C" style="width:25%"></div><div class="seg R" style="width:20%"></div></div>
+          <a class="see" href="story.html">→ see all sides</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">The Ugly Press · The Daily Ugly · scripted, voiced &amp; lip-synced by machines · © 2026</div>
+</div>
+</body>
+</html>

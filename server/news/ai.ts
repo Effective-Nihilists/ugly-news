@@ -13,7 +13,11 @@ import type { ImageGenModel } from 'ugly-app/shared';
 
 export type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
 
-const DEFAULT_AI_PROXY_URL = 'https://api.ugly.bot/v1/ai';
+// NOTE: must match the live host. `api.ugly.bot` does NOT resolve — verified
+// against the proxy; the working host is `ugly.bot/v1/ai` (same default
+// server/news/email.ts uses). Prod normally sets AI_PROXY_URL at publish, but a
+// correct fallback avoids a silent total-AI-outage if that env is ever missing.
+const DEFAULT_AI_PROXY_URL = 'https://ugly.bot/v1/ai';
 
 function aiProxy(): { baseUrl: string; token: string } {
   /* eslint-disable @typescript-eslint/dot-notation */

@@ -4,8 +4,10 @@ import { defineCollections } from 'ugly-app/shared';
 import {
   FileMarkdownSchema,
   NewsArticleSchema,
+  NewsClusterSchema,
   NewsFeedDocSchema,
   NewsPodcastSchema,
+  NewsSourceSchema,
   UserFilePreferenceSchema,
   UserNewsEmailPrefSchema,
   UserNewsPreferenceSchema,
@@ -85,6 +87,25 @@ export const collections = defineCollections({
     meta: { cache: false, trackable: false, public: false, cascadeFrom: null },
     indexes: [{ fields: { feedId: 1 } }, { fields: { scrapedAt: -1 } }],
   },
+  // Outlet bias/factuality/ownership registry (small, read often → cache;
+  // publicly readable so the bias bar + source chips can render unauthenticated).
+  newsSource: {
+    schema: NewsSourceSchema,
+    meta: { cache: true, trackable: false, public: true, cascadeFrom: null },
+  },
+  // Story clusters — the "same story across many outlets" unit that powers The
+  // Spread / The Blindspot / The Ugly Take. Publicly readable; trackable so the
+  // home rail can live-update as coverage grows.
+  newsCluster: {
+    schema: NewsClusterSchema,
+    meta: { cache: false, trackable: true, public: true, cascadeFrom: null },
+    indexes: [
+      { fields: { category: 1 } },
+      { fields: { lastUpdatedAt: -1 } },
+      { fields: { blindspotSide: 1 } },
+      { fields: { score: -1 } },
+    ],
+  },
   // FileMarkdown — the user-facing article (feed ranking + podcast select + email key off this).
   file: {
     schema: FileMarkdownSchema,
@@ -143,6 +164,8 @@ export type AppCollections = typeof collections;
 // Re-export news doc types for convenience.
 export type NewsFeedDoc = InferDocType<typeof NewsFeedDocSchema>;
 export type NewsArticle = InferDocType<typeof NewsArticleSchema>;
+export type NewsSource = InferDocType<typeof NewsSourceSchema>;
+export type NewsCluster = InferDocType<typeof NewsClusterSchema>;
 export type FileMarkdown = InferDocType<typeof FileMarkdownSchema>;
 export type UserFilePreference = InferDocType<typeof UserFilePreferenceSchema>;
 export type NewsPodcast = InferDocType<typeof NewsPodcastSchema>;

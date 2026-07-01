@@ -24,8 +24,31 @@ export const cronTasks = defineWorkers({
     schedule: '0 * * * *',
     description: 'Enqueue daily news email for users at 8am local time',
   }),
+  // Every 2 hours: pull a recent GDELT slice per desk for breadth + blindspot.
+  gdeltPull: defineWorker({
+    schedule: '15 */2 * * *',
+    description: 'Pull recent GDELT articles per desk and enqueue scrapes',
+    timeout: 60_000,
+  }),
+  // Every 30 min: gate + fan out cluster synthesis (neutral + framing) and the
+  // Ugly Take satire for clusters that crossed the thresholds.
+  clusterSweep: defineWorker({
+    schedule: '*/30 * * * *',
+    description: 'Enqueue synthesis + satire for qualifying story clusters',
+    timeout: 30_000,
+  }),
 
   // ── Queue-only jobs (fan-out) ────────────────────────────────────────────
+  clusterSynthesize: defineWorker({
+    description: 'Generate neutral + per-side framing summaries for a cluster',
+    input: z.object({ clusterId: z.string() }),
+    timeout: 60_000,
+  }),
+  clusterSatirize: defineWorker({
+    description: 'Generate the labeled Ugly Take satire companion for a cluster',
+    input: z.object({ clusterId: z.string() }),
+    timeout: 60_000,
+  }),
   newsFeedDownload: defineWorker({
     description: 'Download + parse one RSS feed, create articles, enqueue scrapes',
     input: z.object({ feedId: z.string() }),

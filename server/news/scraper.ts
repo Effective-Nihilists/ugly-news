@@ -10,6 +10,7 @@ import {
   type NewsCategory,
 } from '../../shared/news/types';
 import { embed, genImage, genText, truncateToApproximateTokens } from './ai';
+import { assignFileToCluster } from './cluster';
 import type { NewsDb } from './db';
 import { htmlToMarkdown } from './download';
 
@@ -159,7 +160,7 @@ export async function dispatchArticleScrape(db: NewsDb, articleId: string): Prom
   if (article.fileId) return; // already processed
 
   const now = Date.now();
-  const category = (article.categories[0] ?? 'news') as NewsCategory;
+  const category = (article.categories[0] ?? 'world') as NewsCategory;
 
   // Extract full content (fallback to RSS-provided markdown).
   let content = article.contentMarkdown;
@@ -200,6 +201,7 @@ export async function dispatchArticleScrape(db: NewsDb, articleId: string): Prom
   const file: FileMarkdown = {
     _id: fileId,
     type: 'markdown',
+    kind: 'article',
     userId: uglyBotId,
     markdown,
     title: article.title,
@@ -257,6 +259,17 @@ export async function dispatchArticleScrape(db: NewsDb, articleId: string): Prom
     scrapedAt: now,
     updated: new Date(now),
   } satisfies NewsArticle);
+
+  // Assign to a story cluster ("same story, many outlets") for The Spread /
+  // Blindspot / Ugly Take. Needs the embedding (stripped from the file's JSON),
+  // so pass it directly. Best-effort — clustering must never break the scrape.
+  if (isDefined(embedding)) {
+    try {
+      await assignFileToCluster(db, file, embedding, article.feedId, now);
+    } catch (error) {
+      console.warn('[scrape] cluster assignment failed', error);
+    }
+  }
 
   // newsBot opening comment → conversation thread (id === fileId), best-effort.
   try {

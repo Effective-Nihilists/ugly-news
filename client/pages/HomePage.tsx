@@ -4,6 +4,7 @@ import { useRouter } from '../router';
 import { navClick } from '../nav';
 import { PlayIcon } from '../components/Icon';
 import { requestPushPermission } from '../push';
+import { BlindspotStrip, TopStoriesRail } from '../newsUi';
 
 /**
  * Ugly News landing page (the `''` route).
@@ -1027,6 +1028,8 @@ export default function HomePage(): React.ReactElement {
       <Masthead dateStr={dateStr} />
       <Ticker />
       <Hero name={name} />
+      <TopStoriesRail />
+      <BlindspotStrip />
       <PodcastSpotlight />
       <FrontPage />
       <Sections />

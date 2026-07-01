@@ -21,6 +21,7 @@ interface Article {
   category: string | null;
   feedId: string | null;
   sourceUri: string | null;
+  clusterId: string | null;
   createdMs: number;
 }
 
@@ -146,6 +147,17 @@ export default function ArticlePage({ id }: { id: string }): React.ReactElement 
             <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11.5, letterSpacing: '.1em', textTransform: 'uppercase', color: C.muted, borderBottom: `1px solid ${C.ink}`, paddingBottom: 12, marginBottom: 20 }}>
               {dateStr}{article.feedId ? ` · via ${article.feedId}` : ''}
             </div>
+            {article.clusterId && (
+              <a
+                href={`/story/${article.clusterId}`}
+                onClick={navClick(() => router.push('story/:id', { id: article.clusterId! }))}
+                data-id="see-all-sides"
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, border: `2px solid ${C.ink}`, background: C.accent, color: C.paper, textDecoration: 'none', padding: '12px 16px', marginBottom: 22, fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, letterSpacing: '.1em', textTransform: 'uppercase' }}
+              >
+                <span>This story is covered across the spectrum</span>
+                <span>See all sides →</span>
+              </a>
+            )}
             {article.thumbnailUri && (
               <img src={article.thumbnailUri} alt="" style={{ width: '100%', borderRadius: 4, marginBottom: 22, border: `1px solid rgba(26,23,20,0.15)` }} />
             )}

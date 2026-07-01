@@ -1,5 +1,9 @@
 import { authReq, req, z } from 'ugly-app/shared';
 import {
+  BiasBreakdownSchema,
+  BiasBucketSchema,
+  BiasSchema,
+  FactualitySchema,
   FileMarkdownSchema,
   NewsPodcastSchema,
   newsCategoryValues,
@@ -38,6 +42,7 @@ export const NewsCardSchema = z.object({
 export const NewsArticleFullSchema = NewsCardSchema.extend({
   markdown: z.string(),
   sourceUri: z.string().nullable(),
+  clusterId: z.string().nullable(),
 });
 
 // Lightweight podcast row for the public archive (no segments/visemes payload).
@@ -51,8 +56,87 @@ export const PodcastCardSchema = z.object({
   coverImageUri: z.string().nullable(),
 });
 
+// ── "Three Ways" cluster shapes (Ground-News-style coverage) ───────────────
+export const ClusterCardSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  category: z.string(),
+  biasBreakdown: BiasBreakdownSchema,
+  blindspotSide: BiasBucketSchema.nullable(),
+  factualityAvg: z.number().nullable(),
+  articleCount: z.number(),
+  sourceCount: z.number(),
+  topImageUri: z.string().nullable(),
+  summary: z.string().nullable(),
+  hasUglyTake: z.boolean(),
+  lastUpdatedAt: z.number(),
+});
+
+const ClusterSourceSchema = z.object({
+  sourceId: z.string(),
+  name: z.string(),
+  bias: BiasSchema,
+  biasScore: z.number(),
+  factuality: FactualitySchema,
+  bucket: BiasBucketSchema,
+});
+
+const ClusterCoverageItemSchema = z.object({
+  fileId: z.string(),
+  title: z.string(),
+  sourceId: z.string().nullable(),
+  sourceName: z.string(),
+  bucket: BiasBucketSchema.nullable(),
+  factuality: FactualitySchema.nullable(),
+  uri: z.string().nullable(),
+});
+
+const UglyTakeSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  markdown: z.string(),
+  imageUri: z.string().nullable(),
+});
+
+export const ClusterFullSchema = ClusterCardSchema.extend({
+  neutralSummary: z.string().nullable(),
+  framingSummary: z.string().nullable(),
+  sources: z.array(ClusterSourceSchema),
+  coverage: z.array(ClusterCoverageItemSchema),
+  uglyTake: UglyTakeSchema.nullable(),
+});
+
 // News request definitions. Spread into the app's defineRequests() registry.
 export const newsRequestDefs = {
+  // ─── "Three Ways" clusters (public) ──────────────────────────────────────
+  newsTopStories: req({
+    input: z.object({
+      limit: z.number().min(1).max(40).default(12),
+      category: z.enum(newsCategoryValues).optional(),
+    }),
+    output: z.object({ items: z.array(ClusterCardSchema) }),
+    rateLimit: { max: 60, window: 60 },
+  }),
+  newsClusterGet: req({
+    input: z.object({ id: z.string() }),
+    output: z.object({ cluster: ClusterFullSchema.nullable() }),
+    rateLimit: { max: 120, window: 60 },
+  }),
+  newsBlindspot: req({
+    input: z.object({ limit: z.number().min(1).max(40).default(12) }),
+    output: z.object({ items: z.array(ClusterCardSchema) }),
+    rateLimit: { max: 60, window: 60 },
+  }),
+  newsClusterArchive: req({
+    input: z.object({
+      limit: z.number().min(1).max(60).default(30),
+      skip: z.number().min(0).default(0),
+      category: z.enum(newsCategoryValues).optional(),
+    }),
+    output: z.object({ items: z.array(ClusterCardSchema), hasMore: z.boolean() }),
+    rateLimit: { max: 60, window: 60 },
+  }),
+
   // ─── Public (no auth) — the landing/feed + article view ──────────────────
   newsLatest: req({
     input: z.object({

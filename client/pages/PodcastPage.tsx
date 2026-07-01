@@ -148,10 +148,10 @@ export default function PodcastPage(): React.ReactElement {
         </div>
 
         <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, letterSpacing: '0.22em', textTransform: 'uppercase', color: C.accent, margin: '22px 0 6px' }}>
-          The Daily Podcast
+          The Daily Ugly · Rundown → The Spread → The Ugly Take
         </div>
         <h1 style={{ fontFamily: 'Anton, sans-serif', fontWeight: 400, fontSize: 'clamp(36px,7vw,72px)', lineHeight: 0.92, textTransform: 'uppercase', margin: '0 0 8px' }}>
-          {status === 'ready' && podcast ? podcast.title : 'Two hosts. No sympathy.'}
+          {status === 'ready' && podcast ? podcast.title : 'Two hosts. Three voices.'}
         </h1>
         {dateStr && (
           <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11.5, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.muted }}>

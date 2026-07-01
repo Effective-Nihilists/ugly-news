@@ -15,6 +15,8 @@ import { definePage, definePages } from 'ugly-app/shared';
 export const pages = definePages({
   '': definePage<{}>({ auth: false }),
   'article/:id': definePage<{ id: string }>({ auth: false }),
+  'story/:id': definePage<{ id: string }>({ auth: false }),
+  'blindspot': definePage<{}>({ auth: false }),
   'podcast': definePage<{}>({ auth: false }),
   'archive': definePage<{ q?: string; tab?: string }>({ auth: false }),
   'auth-demo': definePage<{}>({ auth: false }),

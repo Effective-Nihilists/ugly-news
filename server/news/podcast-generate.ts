@@ -1,7 +1,9 @@
 import { getAdapter, pushSend } from 'ugly-app/server/adapter/workers';
 import { dbDefaults, visemeNameSet } from 'ugly-app/shared';
 import { collections } from '../../shared/collections';
-import type { FileMarkdown, NewsPodcast } from '../../shared/collections';
+import type { FileMarkdown, NewsCluster, NewsPodcast } from '../../shared/collections';
+import type { BiasBreakdown } from '../../shared/news/schemas';
+import { absolutePushPath } from './pushUrl';
 import { uglyBotId } from '../../shared/news/Bot';
 import {
   podcastHost1BotId,
@@ -60,12 +62,68 @@ async function getArticlesForPodcast(db: NewsDb): Promise<FileMarkdown[]> {
   return selectWeightedRandom(articles, 7);
 }
 
+// ── Cluster-driven selection (for the 3-act "Daily Ugly" script) ───────────
+export interface PodcastClusterCtx {
+  file: FileMarkdown & { _id: string };
+  title: string;
+  neutralSummary: string | null;
+  framingSummary: string | null;
+  breakdown: BiasBreakdown;
+  blindspotSide: string | null;
+}
+
+/** Top recent multi-source clusters + a representative article each, so the
+ *  podcast can debate the spread. Empty/short → caller falls back to articles. */
+async function getClustersForPodcast(db: NewsDb): Promise<PodcastClusterCtx[]> {
+  const recent = await db.getQuery<NewsCluster & { _id: string }>(
+    'newsCluster',
+    [
+      { $match: { lastUpdatedAt: { $gte: Date.now() - 2 * 24 * 60 * 60 * 1000 } } },
+      { $sort: { score: -1 } },
+    ],
+    { limit: 30 },
+  );
+  const top = recent.filter((c) => c.articleCount >= 2).slice(0, 6);
+  const out: PodcastClusterCtx[] = [];
+  for (const c of top) {
+    const fid = c.fileIds[0];
+    if (!fid) continue;
+    const f = await db.getDoc(collections.file, fid);
+    if (!f) continue;
+    out.push({
+      file: f,
+      title: c.title,
+      neutralSummary: c.neutralSummary,
+      framingSummary: c.framingSummary,
+      breakdown: c.biasBreakdown,
+      blindspotSide: c.blindspotSide,
+    });
+  }
+  return out;
+}
+
 // ── Script generation (GPT-4o) ─────────────────────────────────────────────
+
+function buildClusterPromptBlock(ctx: PodcastClusterCtx[]): string {
+  return JSON.stringify(
+    ctx.map((c) => ({
+      fileId: c.file._id,
+      story: c.title,
+      whatHappened: (c.neutralSummary ?? c.file.markdown ?? '').slice(0, 400),
+      howEachSideFramesIt: c.framingSummary ?? 'Coverage not yet split by side.',
+      coverage: `Left ${c.breakdown.leftPct}% · Center ${c.breakdown.centerPct}% · Right ${c.breakdown.rightPct}%`,
+      blindspot: c.blindspotSide ? `${c.blindspotSide} is barely covering this` : 'none',
+    })),
+    null,
+    2,
+  );
+}
 
 async function generatePodcastScript(
   articles: FileMarkdown[],
   host1: HostConfig,
   host2: HostConfig,
+  clusterCtx?: PodcastClusterCtx[],
 ): Promise<PodcastScriptOutput> {
   const articlesJson = articles.map((a) => ({
     fileId: a._id,
@@ -74,7 +132,27 @@ async function generatePodcastScript(
     category: a.tags?.[0] ?? 'news',
   }));
 
-  const prompt = `You are writing a script for "Ugly News Daily" - a COMEDY podcast that roasts the news, with CAMERA and EMOTION directions per segment.
+  // "The Daily Ugly" three-act script when we have clustered, multi-side
+  // stories; otherwise fall back to the classic roast format.
+  const prompt = clusterCtx && clusterCtx.length >= 3
+    ? `You are writing "The Daily Ugly" — a COMEDY news podcast structured in THREE ACTS, with CAMERA and EMOTION directions per segment.
+
+HOSTS:
+- ${host1.name} (HOST1): serious professional news anchor; gravitas, factual, the straight man.
+- ${host2.name} (HOST2): snarky, unfiltered commentator; dark humor, savage takes.
+
+TODAY'S CLUSTERED STORIES (each covered by multiple outlets across the spectrum):
+${buildClusterPromptBlock(clusterCtx)}
+
+STRUCTURE — write all three acts in order, as one continuous segment list:
+• ACT 1 — THE RUNDOWN: a fast hook (<8 words) then a quick pass over each story. ${host1.name} states it straight; ${host2.name} jabs.
+• ACT 2 — THE SPREAD: take the TOP 2-3 stories and DEBATE THE FRAMING. ${host1.name} voices the LEFT read of a story; ${host2.name} voices the RIGHT read of the SAME story (use "howEachSideFramesIt"). Make the gap audible and call out any blindspot. They argue, but fairly.
+• ACT 3 — THE UGLY TAKE: a deadpan satirical riff on the lead story — clearly a bit, never mean-spirited. ${host2.name} leads; ${host1.name} reacts. End by mentioning "ugly.press" naturally.
+
+Set "articleRef" to the story's fileId on segments about that story (null otherwise). ~900-1100 words.
+
+For EVERY segment include:`
+    : `You are writing a script for "Ugly News Daily" - a COMEDY podcast that roasts the news, with CAMERA and EMOTION directions per segment.
 
 HOSTS:
 - ${host1.name} (HOST1): serious professional news anchor; gravitas, factual, the straight man.
@@ -320,7 +398,9 @@ export async function notifyPodcastReady(db: NewsDb, podcast: NewsPodcast): Prom
           targetUserId: s.userId,
           title,
           body,
-          path: 'podcast',
+          // Absolute so the ugly-mobile iOS shell host-matches the dock app on
+          // tap — a relative "podcast" has no host and falls through to home.
+          path: absolutePushPath('podcast'),
           ...(imageUrl ? { imageUrl } : {}),
         })
           .then((r) => (r.sent ? 1 : 0))
@@ -368,10 +448,19 @@ export async function dispatchPodcastGenerate(
   await db.setDoc(collections.newsPodcast, initial);
 
   try {
-    const articles = await getArticlesForPodcast(db);
-    if (articles.length < 3) throw new Error(`Not enough articles: ${articles.length}`);
-
-    const script = await generatePodcastScript(articles, HOST1, HOST2);
+    // Prefer clustered, multi-side stories (drives the 3-act "Daily Ugly"
+    // script); fall back to plain article selection if clustering is still warming up.
+    const clusterCtx = await getClustersForPodcast(db);
+    let articles: FileMarkdown[];
+    let script: PodcastScriptOutput;
+    if (clusterCtx.length >= 3) {
+      articles = clusterCtx.map((c) => c.file);
+      script = await generatePodcastScript(articles, HOST1, HOST2, clusterCtx);
+    } else {
+      articles = await getArticlesForPodcast(db);
+      if (articles.length < 3) throw new Error(`Not enough articles: ${articles.length}`);
+      script = await generatePodcastScript(articles, HOST1, HOST2);
+    }
     const { audio, visemes, subtitles, segments, durationMs } = await generatePodcastAudio(script, HOST1, HOST2);
     const audioUri = await uploadPodcastAudio(podcastId, audio);
     const articleRefs = buildArticleReferences(articles, segments);
@@ -379,7 +468,7 @@ export async function dispatchPodcastGenerate(
     const completed: NewsPodcast = {
       ...initial,
       title: script.title,
-      description: `Daily satirical news roundup featuring ${articles.length} stories`,
+      description: `The Daily Ugly — ${articles.length} stories, three ways: the rundown, the spread (debated), and the ugly take.`,
       articles: articleRefs,
       segments,
       audioUri,

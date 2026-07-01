@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-27T19:00:47.519Z",
+  "generatedAt": "2026-06-30T22:58:39.708Z",
   "source": "shared/collections.ts",
   "collections": {
     "perfLog": {
@@ -263,18 +263,12 @@
           "category": {
             "type": "enum",
             "values": [
-              "fashion",
+              "politics",
+              "world",
+              "business",
               "tech",
-              "sports",
-              "food",
-              "music",
-              "auto",
-              "news",
-              "home",
-              "entertainment",
               "science",
-              "gaming",
-              "health"
+              "events"
             ],
             "required": true
           },
@@ -421,11 +415,302 @@
         "cascadeFrom": null
       }
     },
+    "newsSource": {
+      "name": "newsSource",
+      "schema": {
+        "fields": {
+          "bias": {
+            "type": "enum",
+            "values": [
+              "far-left",
+              "left",
+              "lean-left",
+              "center",
+              "lean-right",
+              "right",
+              "far-right"
+            ],
+            "required": true
+          },
+          "biasScore": {
+            "type": "number",
+            "required": true
+          },
+          "country": {
+            "type": "string",
+            "required": true,
+            "nullable": true,
+            "default": null
+          },
+          "domains": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "required": true
+            },
+            "required": true,
+            "default": []
+          },
+          "factuality": {
+            "type": "enum",
+            "values": [
+              "very-low",
+              "low",
+              "mixed",
+              "high",
+              "very-high"
+            ],
+            "required": true
+          },
+          "feedIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "required": true
+            },
+            "required": true,
+            "default": []
+          },
+          "homepage": {
+            "type": "string",
+            "required": true,
+            "nullable": true,
+            "default": null
+          },
+          "name": {
+            "type": "string",
+            "required": true
+          },
+          "owner": {
+            "type": "string",
+            "required": true,
+            "nullable": true,
+            "default": null
+          }
+        }
+      },
+      "meta": {
+        "cache": true,
+        "trackable": false,
+        "public": true,
+        "cascadeFrom": null
+      }
+    },
+    "newsCluster": {
+      "name": "newsCluster",
+      "schema": {
+        "fields": {
+          "articleCount": {
+            "type": "number",
+            "required": true,
+            "default": 0
+          },
+          "biasBreakdown": {
+            "type": "object",
+            "fields": {
+              "center": {
+                "type": "number",
+                "required": true,
+                "default": 0
+              },
+              "centerPct": {
+                "type": "number",
+                "required": true,
+                "default": 0
+              },
+              "left": {
+                "type": "number",
+                "required": true,
+                "default": 0
+              },
+              "leftPct": {
+                "type": "number",
+                "required": true,
+                "default": 0
+              },
+              "right": {
+                "type": "number",
+                "required": true,
+                "default": 0
+              },
+              "rightPct": {
+                "type": "number",
+                "required": true,
+                "default": 0
+              },
+              "total": {
+                "type": "number",
+                "required": true,
+                "default": 0
+              },
+              "unrated": {
+                "type": "number",
+                "required": true,
+                "default": 0
+              }
+            },
+            "required": true
+          },
+          "blindspotSide": {
+            "type": "enum",
+            "values": [
+              "left",
+              "center",
+              "right"
+            ],
+            "required": true,
+            "nullable": true,
+            "default": null
+          },
+          "category": {
+            "type": "enum",
+            "values": [
+              "politics",
+              "world",
+              "business",
+              "tech",
+              "science",
+              "events"
+            ],
+            "required": true
+          },
+          "centroid": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "required": true
+            },
+            "required": true,
+            "nullable": true,
+            "default": null
+          },
+          "factualityAvg": {
+            "type": "number",
+            "required": true,
+            "nullable": true,
+            "default": null
+          },
+          "feedIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "required": true
+            },
+            "required": true,
+            "default": []
+          },
+          "fileIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "required": true
+            },
+            "required": true,
+            "default": []
+          },
+          "firstSeenAt": {
+            "type": "number",
+            "required": true
+          },
+          "framingSummary": {
+            "type": "string",
+            "required": true,
+            "nullable": true,
+            "default": null
+          },
+          "lastUpdatedAt": {
+            "type": "number",
+            "required": true
+          },
+          "neutralSummary": {
+            "type": "string",
+            "required": true,
+            "nullable": true,
+            "default": null
+          },
+          "satirizedAt": {
+            "type": "number",
+            "required": true,
+            "nullable": true,
+            "default": null
+          },
+          "score": {
+            "type": "number",
+            "required": true,
+            "default": 0
+          },
+          "sourceIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "required": true
+            },
+            "required": true,
+            "default": []
+          },
+          "synthesizedAt": {
+            "type": "number",
+            "required": true,
+            "nullable": true,
+            "default": null
+          },
+          "title": {
+            "type": "string",
+            "required": true
+          },
+          "topImageUri": {
+            "type": "string",
+            "required": true,
+            "nullable": true,
+            "default": null
+          },
+          "uglyTakeFileId": {
+            "type": "string",
+            "required": true,
+            "nullable": true,
+            "default": null
+          }
+        },
+        "indexes": [
+          {
+            "fields": {
+              "category": 1
+            }
+          },
+          {
+            "fields": {
+              "lastUpdatedAt": -1
+            }
+          },
+          {
+            "fields": {
+              "blindspotSide": 1
+            }
+          },
+          {
+            "fields": {
+              "score": -1
+            }
+          }
+        ]
+      },
+      "meta": {
+        "cache": false,
+        "trackable": true,
+        "public": true,
+        "cascadeFrom": null
+      }
+    },
     "file": {
       "name": "file",
       "schema": {
         "fields": {
           "category": {
+            "type": "string",
+            "required": false,
+            "nullable": true
+          },
+          "clusterId": {
             "type": "string",
             "required": false,
             "nullable": true
@@ -463,6 +748,15 @@
             "type": "boolean",
             "required": true,
             "default": false
+          },
+          "kind": {
+            "type": "enum",
+            "values": [
+              "article",
+              "satire"
+            ],
+            "required": false,
+            "default": "article"
           },
           "likeCount": {
             "type": "number",

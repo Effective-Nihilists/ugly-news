@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Ugly Press — Home (mock)</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+  /* Home-specific */
+  .topnav { display:flex; justify-content:space-between; align-items:center; padding:14px 0; }
+  .topnav .tabs a { font-family:'IBM Plex Mono',monospace; font-size:12px; text-transform:uppercase; letter-spacing:.12em; margin-left:22px; color:var(--muted); }
+  .topnav .tabs a:hover, .topnav .tabs a.on { color:var(--ink); }
+
+  .lead { display:grid; grid-template-columns: 1.5fr 1fr; gap:0; border:3px double var(--ink); margin:8px 0 30px; }
+  .lead .img { background:
+      linear-gradient(135deg, rgba(214,38,29,.16), transparent 60%),
+      repeating-linear-gradient(45deg, rgba(26,23,20,.10) 0 2px, transparent 2px 9px),
+      var(--paper2);
+      min-height: 320px; border-right:3px double var(--ink); position:relative; }
+  .lead .img .badge { position:absolute; left:16px; top:16px; }
+  .lead .body { padding:26px 28px; display:flex; flex-direction:column; }
+  .lead h2 { font-family:'Spectral',serif; font-weight:600; font-size: clamp(28px,3.2vw,42px); line-height:1.06; margin:6px 0 14px; }
+  .lead .dek { font-size:18px; line-height:1.5; color:#2c2722; }
+  .lead .meta { font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin:14px 0 10px; }
+  .lead .cta { margin-top:auto; display:flex; gap:12px; align-items:center; padding-top:18px; }
+
+  .section-head { display:flex; align-items:baseline; justify-content:space-between; margin:34px 0 14px; }
+  .section-head .anton { font-size:26px; }
+  .section-head .more { font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent); }
+
+  .grid { display:grid; grid-template-columns:repeat(4,1fr); gap:22px; }
+  .card { border-top:3px solid var(--ink); padding-top:12px; }
+  .card .thumb { height:120px; margin-bottom:10px; background:
+      repeating-linear-gradient(45deg, rgba(26,23,20,.09) 0 2px, transparent 2px 8px), var(--paper2); }
+  .card .kick { margin-bottom:6px; }
+  .card h3 { font-family:'Spectral',serif; font-weight:600; font-size:18px; line-height:1.15; margin:0 0 12px; }
+  .card .src { font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin-top:8px; }
+
+  .blindspot { border:3px double var(--ink); margin:34px 0; }
+  .blindspot .bh { background:var(--accent); color:var(--paper); font-family:'Anton',sans-serif; text-transform:uppercase; letter-spacing:.06em; padding:10px 18px; font-size:18px; display:flex; justify-content:space-between; align-items:center; }
+  .blindspot .row { display:flex; gap:14px; align-items:center; padding:16px 18px; border-bottom:1px solid rgba(26,23,20,.25); }
+  .blindspot .row:last-child { border-bottom:0; }
+  .blindspot .tag { font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; border:1.5px solid var(--ink); padding:4px 9px; white-space:nowrap; }
+  .blindspot .tag.left { color:var(--left); border-color:var(--left); }
+  .blindspot .tag.right { color:var(--right); border-color:var(--right); }
+  .blindspot .row h4 { font-family:'Spectral',serif; font-weight:600; font-size:19px; margin:0; flex:1; }
+  .blindspot .row .cov { font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--muted); white-space:nowrap; }
+
+  .ut-grid { display:grid; grid-template-columns:1.4fr 1fr; gap:24px; align-items:center; margin-top:8px; }
+  .ut-grid h2 { font-family:'Spectral',serif; font-weight:600; font-size:30px; line-height:1.08; margin:6px 0 12px; }
+  .ut-grid p { font-size:17px; line-height:1.5; color:#2c2722; margin:0 0 16px; }
+  .ut-art { height:200px; background:
+      radial-gradient(circle at 70% 30%, rgba(214,38,29,.20), transparent 55%),
+      repeating-linear-gradient(-45deg, rgba(26,23,20,.10) 0 2px, transparent 2px 9px), var(--paper); border:1px solid var(--ink); }
+
+  .podcast { display:flex; gap:20px; align-items:center; border:3px double var(--ink); padding:18px 22px; margin:34px 0; background:var(--ink); color:var(--paper); }
+  .podcast .play { width:54px; height:54px; border-radius:50%; border:2px solid var(--paper); display:flex; align-items:center; justify-content:center; font-size:20px; flex:none; }
+  .podcast .pmeta .anton { color:var(--paper); font-size:24px; }
+  .podcast .pmeta .sub { font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:#cfc7b8; margin-top:6px; }
+  .podcast .onair { margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.14em; color:var(--accent); display:flex; align-items:center; gap:8px; }
+  .eq { display:inline-flex; gap:2px; align-items:flex-end; height:16px; }
+  .eq i { width:3px; background:var(--accent); animation:eq .9s ease-in-out infinite; }
+  .eq i:nth-child(2){ animation-delay:.15s } .eq i:nth-child(3){ animation-delay:.3s } .eq i:nth-child(4){ animation-delay:.45s }
+  @keyframes eq { 0%,100%{ height:35% } 50%{ height:100% } }
+
+  .signup { border:3px double var(--ink); padding:26px 28px; display:flex; gap:24px; align-items:center; justify-content:space-between; margin:34px 0; }
+  .signup .anton { font-size:24px; }
+  .signup .sub { color:var(--muted); font-family:'Spectral',serif; font-style:italic; margin-top:6px; }
+  .signup .form { display:flex; gap:10px; }
+  .signup input { font-family:'IBM Plex Mono',monospace; padding:11px 14px; border:2px solid var(--ink); background:var(--paper); min-width:240px; }
+
+  .manifesto { text-align:center; font-style:italic; font-size:22px; color:#2c2722; padding:20px 0; }
+  .manifesto .by { font-style:normal; font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-top:10px; }
+
+  @media (max-width:820px){
+    .lead, .ut-grid { grid-template-columns:1fr; }
+    .lead .img { border-right:0; border-bottom:3px double var(--ink); }
+    .grid { grid-template-columns:1fr 1fr; }
+    .signup { flex-direction:column; align-items:flex-start; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- top nav -->
+  <div class="topnav">
+    <span class="kicker">EST. 2026 · NO EDITORS</span>
+    <nav class="tabs">
+      <a href="#" class="on">Front Page</a>
+      <a href="blindspot.html">Blindspot</a>
+      <a href="#">Politics</a>
+      <a href="#">Tech</a>
+      <a href="#">Events</a>
+      <a href="podcast.html">Podcast</a>
+    </nav>
+  </div>
+
+  <!-- masthead -->
+  <header class="masthead">
+    <div class="stamp">The<br>Ugly<br>Truth</div>
+    <h1>The Ugly Press</h1>
+    <div class="dateline kicker">TUESDAY, JUNE 30 2026 · LATE EDITION · AI-CURATED · BRUTALLY SUMMARIZED · FOREVER FREE</div>
+  </header>
+</div>
+
+<!-- ticker (full bleed) -->
+<div class="ticker">
+  <div class="track">
+    <span><b>◆</b>60+ SOURCES, ZERO HOLD MUSIC<b>◆</b>THE NEWS, BUT HONEST ABOUT IT<b>◆</b>AI HOSTS ROAST THE HEADLINES — HUMANITY FILES COMPLAINT<b>◆</b>YOUR 8 A.M. EDITION IS BREWING<b>◆</b>60+ SOURCES, ZERO HOLD MUSIC<b>◆</b>THE NEWS, BUT HONEST ABOUT IT<b>◆</b>AI HOSTS ROAST THE HEADLINES — HUMANITY FILES COMPLAINT<b>◆</b>YOUR 8 A.M. EDITION IS BREWING<b>◆</b></span>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- TODAY, THREE WAYS — lead cluster -->
+  <div class="section-head"><span class="anton">Today, Three Ways</span><span class="more kicker">the day's biggest story, every angle</span></div>
+  <article class="lead">
+    <div class="img"><span class="badge kicker" style="background:var(--paper);padding:5px 9px;border:1px solid var(--ink)">POLITICS · 41 SOURCES</span></div>
+    <div class="body">
+      <div class="kicker">THE LEAD</div>
+      <h2>Senate Passes Sweeping Spending Bill After All-Night Floor Fight</h2>
+      <p class="dek">The $1.2T package cleared on a 51–49 vote. We pulled 41 outlets so you can see exactly who's spinning what.</p>
+      <div class="meta">FACTUALITY: HIGH · UPDATED 12 MIN AGO</div>
+      <div class="biasbar"><div class="seg L" style="width:48%"></div><div class="seg C" style="width:20%"></div><div class="seg R" style="width:32%"></div></div>
+      <div class="biaslegend"><span><span class="dot L"></span>Left 48%</span><span><span class="dot C"></span>Center 20%</span><span><span class="dot R"></span>Right 32%</span></div>
+      <div class="cta"><a class="btn" href="story.html">See all sides →</a><a class="btn ghost" href="#">The Ugly Take</a></div>
+    </div>
+  </article>
+
+  <!-- TOP STORIES -->
+  <div class="section-head"><span class="anton">Top Stories</span><span class="more">more →</span></div>
+  <div class="grid">
+    <article class="card">
+      <div class="thumb"></div>
+      <div class="kick kicker">WORLD</div>
+      <h3>Ceasefire Talks Resume as Both Sides Trade Blame</h3>
+      <div class="biasbar mini"><div class="seg L" style="width:55%"></div><div class="seg C" style="width:25%"></div><div class="seg R" style="width:20%"></div></div>
+      <div class="src">28 sources · factuality high</div>
+    </article>
+    <article class="card">
+      <div class="thumb"></div>
+      <div class="kick kicker">TECH</div>
+      <h3>Chipmaker Unveils AI Accelerator, Stock Pops 9%</h3>
+      <div class="biasbar mini"><div class="seg L" style="width:30%"></div><div class="seg C" style="width:55%"></div><div class="seg R" style="width:15%"></div></div>
+      <div class="src">12 sources · factuality high</div>
+    </article>
+    <article class="card">
+      <div class="thumb"></div>
+      <div class="kick kicker">BUSINESS</div>
+      <h3>Fed Holds Rates, Signals One Cut Before Year's End</h3>
+      <div class="biasbar mini"><div class="seg L" style="width:25%"></div><div class="seg C" style="width:60%"></div><div class="seg R" style="width:15%"></div></div>
+      <div class="src">30 sources · factuality very high</div>
+    </article>
+    <article class="card">
+      <div class="thumb"></div>
+      <div class="kick kicker">EVENTS</div>
+      <h3>Festival Headliner Cancels Hours Before Set</h3>
+      <div class="biasbar mini"><div class="seg L" style="width:20%"></div><div class="seg C" style="width:45%"></div><div class="seg R" style="width:35%"></div></div>
+      <div class="src">9 sources · factuality mixed</div>
+    </article>
+  </div>
+
+  <!-- BLINDSPOT -->
+  <section class="blindspot">
+    <div class="bh"><span>▟ The Blindspot</span><span class="kicker" style="color:var(--paper);opacity:.85">what one side isn't telling you</span></div>
+    <div class="row">
+      <span class="tag right">Right Blindspot</span>
+      <h4>New Emissions Rules Draw Industry Pushback</h4>
+      <span class="cov">14 left · 3 center · 1 right →</span>
+    </div>
+    <div class="row">
+      <span class="tag left">Left Blindspot</span>
+      <h4>Border County Reports Record Crossing Numbers</h4>
+      <span class="cov">0 left · 2 center · 11 right →</span>
+    </div>
+    <div class="row">
+      <span class="tag right">Right Blindspot</span>
+      <h4>Union Membership Ticks Up First Time in a Decade</h4>
+      <span class="cov">9 left · 1 center · 0 right →</span>
+    </div>
+  </section>
+
+  <!-- THE UGLY TAKE -->
+  <div class="section-head"><span class="anton" style="color:var(--accent)">The Ugly Take</span><span class="more kicker">our satire desk, clearly labeled</span></div>
+  <div class="uglytake">
+    <div class="ut-grid">
+      <div>
+        <span class="satire-stamp">⌖ Satire — Not A Real Story</span>
+        <h2>Senate Celebrates Passing Bill By Immediately Going On Recess</h2>
+        <p><span class="mono" style="font-weight:600">WASHINGTON—</span> Moments after the 51–49 vote, lawmakers reportedly high-fived, declared the nation's problems "basically solved," and boarded flights home. "We did the thing where we voted," said Sen. [redacted], adjusting a flag pin. "Implementation is a Tuesday-Justin problem."</p>
+        <a class="btn" href="story.html#ugly">Read the Ugly Take →</a>
+      </div>
+      <div class="ut-art"></div>
+    </div>
+  </div>
+
+  <!-- DAILY UGLY PODCAST -->
+  <a href="podcast.html" style="text-decoration:none">
+  <div class="podcast">
+    <div class="play">▶</div>
+    <div class="pmeta">
+      <div class="anton">The Daily Ugly</div>
+      <div class="sub">Two hosts. Three voices. 9 min · rundown → the spread, debated → the ugly take</div>
+    </div>
+    <div class="onair"><span class="eq"><i></i><i></i><i></i><i></i></span> ON AIR</div>
+  </div>
+  </a>
+
+  <!-- EMAIL SIGNUP -->
+  <div class="signup">
+    <div>
+      <div class="anton">The 8 A.M. Edition</div>
+      <div class="sub">Delivered at your local dawn — personalized to what you actually read.</div>
+    </div>
+    <div class="form">
+      <input placeholder="you@email.com">
+      <button class="btn">Get the 8 A.M.</button>
+    </div>
+  </div>
+
+  <hr class="rule">
+  <div class="manifesto">
+    "All the news that's fit to summarize — and a lot that isn't."
+    <div class="by">— The Editors (there are no editors)</div>
+  </div>
+  <div class="footer">The Ugly Press · AI-curated · Brutally summarized · Forever free · © 2026</div>
+
+</div>
+</body>
+</html>

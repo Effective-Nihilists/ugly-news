@@ -8,6 +8,8 @@ import { todayDateString } from './podcast';
 import { dispatchArticleScrape } from './scraper';
 import { dispatchPodcastGenerate } from './podcast-generate';
 import { dispatchUserPrivateNewsEmail, userEmailHourly } from './email';
+import { dispatchClusterSatirize, dispatchClusterSweep, dispatchClusterSynthesize } from './cluster-jobs';
+import { dispatchGdeltPull } from './gdelt';
 
 // Build the worker handler map. Shared by the Node entry (server/index.ts) and
 // the Cloudflare Workers entry (server/workers.ts) so cron + queue behavior is
@@ -27,15 +29,28 @@ export function createCronHandlers(getDb: () => NewsDb): WorkerHandlers<typeof c
     userEmailHourly: async () => {
       await userEmailHourly(getDb(), Date.now());
     },
+    gdeltPull: async () => {
+      await dispatchGdeltPull(getDb());
+    },
+    clusterSweep: async () => {
+      await dispatchClusterSweep(getDb());
+    },
 
     // ── Queue-only jobs ──────────────────────────────────────────────────
     newsFeedDownload: async ({ feedId }) => {
       const feed = findFeed(feedId);
       if (feed) await dispatchNewsFeedDownload(getDb(), feed);
     },
+    clusterSynthesize: async ({ clusterId }) => {
+      await dispatchClusterSynthesize(getDb(), clusterId);
+    },
+    clusterSatirize: async ({ clusterId }) => {
+      await dispatchClusterSatirize(getDb(), clusterId);
+    },
     articleScrape: async ({ articleId }) => {
       await dispatchArticleScrape(getDb(), articleId);
-      // Phase 3 wires the newsBot conversation/comment for this article's file.
+      // Cluster similarity-calibration is emitted as `[cluster-sim]` console
+      // lines during assignment (Workers logging barrel isn't bundle-safe here).
     },
     podcastGenerate: async ({ date, userId, replaceDefault }) => {
       await dispatchPodcastGenerate(getDb(), { date, userId, replaceDefault });

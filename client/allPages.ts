@@ -16,6 +16,8 @@ import type { AppPages } from '../shared/pages';
 export const allPages = {
   ['']: lazyPage(() => import('./pages/HomePage')),
   ['article/:id']: lazyPage(() => import('./pages/ArticlePage')),
+  ['story/:id']: lazyPage(() => import('./pages/ClusterPage')),
+  ['blindspot']: lazyPage(() => import('./pages/BlindspotPage')),
   ['podcast']: lazyPage(() => import('./pages/PodcastPage')),
   ['archive']: lazyPage(() => import('./pages/ArchivePage')),
   ['auth-demo']: lazyPage(() => import('./pages/AuthDemoPage')),
