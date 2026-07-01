@@ -75,6 +75,7 @@ const STYLE = `
 `;
 
 const TICKER = [
+  'Left. Right. Ugly.',
   'AI hosts roast the headlines — humanity files complaint',
   '60+ sources, zero hold music',
   'Local newspaper replaced by something uglier',
@@ -603,7 +604,7 @@ function Masthead({ dateStr }: { dateStr: string }): React.ReactElement {
           padding: '10px 0 4px',
         }}
       >
-        AI-curated · Brutally summarized · Forever free
+        Left. Right. Ugly.
       </div>
       <h1
         className="un-rise"

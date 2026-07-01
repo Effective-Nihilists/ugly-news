@@ -242,7 +242,7 @@ function clusterCard(c: EmailCluster): string {
     <h3 style="margin:0 0 12px;font-family:Georgia,serif;font-size:20px;line-height:1.15;color:${INK};font-weight:bold"><a href="${c.uri}" style="color:${INK};text-decoration:none">${c.title}</a></h3>
     ${biasBar(c)}
     <div style="font-family:${MONO};font-size:11px;letter-spacing:1px;text-transform:uppercase;color:${MUTED};margin-top:8px">L ${c.leftPct}% &middot; C ${c.centerPct}% &middot; R ${c.rightPct}% &nbsp;&middot;&nbsp; ${c.sourceCount} sources</div>
-    <div style="margin-top:12px">${blind}<a href="${c.uri}" style="color:${ACCENT};font-family:${MONO};font-size:12px;letter-spacing:1px;text-transform:uppercase;text-decoration:none;font-weight:bold">See all sides &rarr;</a></div>
+    <div style="margin-top:12px">${blind}<a href="${c.uri}" style="color:${ACCENT};font-family:${MONO};font-size:12px;letter-spacing:1px;text-transform:uppercase;text-decoration:none;font-weight:bold">See every angle &rarr;</a></div>
   </div>`;
 }
 
@@ -280,7 +280,7 @@ export function renderDailyNewsEmail(
       </div>`
     : '';
   const topStories = clusters.topStories.length
-    ? `<div style="font-family:${HEAD};font-size:20px;text-transform:uppercase;color:${INK};margin:6px 0 4px">Today, Three Ways</div>
+    ? `<div style="font-family:${HEAD};font-size:20px;text-transform:uppercase;color:${INK};margin:6px 0 4px">Today, Every Angle</div>
        <p style="margin:0 0 12px;color:${MUTED};font-family:${MONO};font-size:11px;letter-spacing:1px;text-transform:uppercase">The day's biggest stories &mdash; every side</p>
        ${clusters.topStories.map(clusterCard).join('')}`
     : '';
@@ -292,7 +292,7 @@ export function renderDailyNewsEmail(
     <div style="max-width:600px;margin:0 auto;padding:24px;background:${PAPER}">
       <div style="text-align:center;border-bottom:3px double ${INK};padding-bottom:12px;margin-bottom:16px">
         <div style="font-family:${HEAD};font-size:34px;letter-spacing:1px;text-transform:uppercase;color:${INK}">The Ugly Press</div>
-        <div style="font-family:${MONO};font-size:11px;letter-spacing:2px;text-transform:uppercase;color:${MUTED};margin-top:8px">${date} &middot; Every Story, Three Ways</div>
+        <div style="font-family:${MONO};font-size:11px;letter-spacing:2px;text-transform:uppercase;color:${MUTED};margin-top:8px">${date} &middot; Left. Right. Ugly.</div>
       </div>
       ${podcastBlock}
       ${topStories}

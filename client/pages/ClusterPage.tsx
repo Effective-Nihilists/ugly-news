@@ -16,7 +16,7 @@ import {
   type ClusterCoverageItem,
 } from '../newsUi';
 
-/** The "Every story, three ways" cluster page (route `story/:id`):
+/** The "Every story, every angle" cluster page (route `story/:id`):
  *  The Spread (bias bar) → What Happened / How Each Side Frames It →
  *  Coverage by Side → the labeled Ugly Take. */
 export default function ClusterPage({ id }: { id: string }): React.ReactElement {

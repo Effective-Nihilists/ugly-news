@@ -155,7 +155,7 @@ export default function ArticlePage({ id }: { id: string }): React.ReactElement 
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, border: `2px solid ${C.ink}`, background: C.accent, color: C.paper, textDecoration: 'none', padding: '12px 16px', marginBottom: 22, fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, letterSpacing: '.1em', textTransform: 'uppercase' }}
               >
                 <span>This story is covered across the spectrum</span>
-                <span>See all sides →</span>
+                <span>See every angle →</span>
               </a>
             )}
             {article.thumbnailUri && (

@@ -468,7 +468,7 @@ export async function dispatchPodcastGenerate(
     const completed: NewsPodcast = {
       ...initial,
       title: script.title,
-      description: `The Daily Ugly — ${articles.length} stories, three ways: the rundown, the spread (debated), and the ugly take.`,
+      description: `The Daily Ugly — ${articles.length} stories in three acts: the rundown, the spread (debated), and the ugly take.`,
       articles: articleRefs,
       segments,
       audioUri,

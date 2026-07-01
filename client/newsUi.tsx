@@ -167,7 +167,7 @@ const kicker: React.CSSProperties = {
 
 // ─── Home sections ──────────────────────────────────────────────────────────
 
-/** "Top Stories — see all sides": a rail of score-ranked clusters. */
+/** "Top Stories — see every angle": a rail of score-ranked clusters. */
 export function TopStoriesRail(): React.ReactElement | null {
   const router = useRouter();
   const [items, setItems] = React.useState<ClusterCard[] | null>(null);
@@ -183,7 +183,7 @@ export function TopStoriesRail(): React.ReactElement | null {
   return (
     <section style={{ maxWidth: 1180, margin: '0 auto', padding: '8px clamp(20px,5vw,64px) 0' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '22px 0 14px' }}>
-        <span style={{ fontFamily: 'Anton, sans-serif', textTransform: 'uppercase', fontSize: 26 }}>Today, Three Ways</span>
+        <span style={{ fontFamily: 'Anton, sans-serif', textTransform: 'uppercase', fontSize: 26 }}>Today, Every Angle</span>
         <span style={kicker}>the day's biggest stories, every angle</span>
       </div>
       {lead && <LeadCluster c={lead} onOpen={() => { router.push('story/:id', { id: lead.id }); }} />}
@@ -213,7 +213,7 @@ function LeadCluster({ c, onOpen }: { c: ClusterCard; onOpen: () => void }): Rea
           <BiasBar b={c.biasBreakdown} />
           <BiasLegend b={c.biasBreakdown} />
           <div style={{ display: 'flex', gap: 12, marginTop: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-            <button onClick={onOpen} data-id="lead-see-all-sides" style={btn(C)}>See all sides →</button>
+            <button onClick={onOpen} data-id="lead-see-all-sides" style={btn(C)}>See every angle →</button>
             {c.blindspotSide && <BlindspotBadge side={c.blindspotSide} />}
           </div>
         </div>

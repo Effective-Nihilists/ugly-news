@@ -59,7 +59,7 @@ export default function BlindspotPage(): React.ReactElement {
                   {c.biasBreakdown.left} left · {c.biasBreakdown.center} center · {c.biasBreakdown.right} right
                 </div>
                 <div style={{ marginTop: 'auto', paddingTop: 16 }}>
-                  <a href={`/story/${c.id}`} onClick={navClick(() => { router.push('story/:id', { id: c.id }); })} data-id="blindspot-see-all-sides" style={{ ...btn(C), display: 'inline-block', textDecoration: 'none' }}>See all sides →</a>
+                  <a href={`/story/${c.id}`} onClick={navClick(() => { router.push('story/:id', { id: c.id }); })} data-id="blindspot-see-all-sides" style={{ ...btn(C), display: 'inline-block', textDecoration: 'none' }}>See every angle →</a>
                 </div>
               </article>
             ))}
