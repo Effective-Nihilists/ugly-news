@@ -11,22 +11,26 @@ import { enqueueTask } from './queue';
 // detection; items insert as `newsArticle`s (feedId 'gdelt', UNRATED for bias)
 // and flow through the same scrape → embed → cluster path as RSS.
 const GDELT_DOC_URL = 'https://api.gdeltproject.org/api/v2/doc/doc';
-const PER_CATEGORY = 20;
-// GDELT's public Doc API rate-limits to ONE request / 5s (429 otherwise) and a
-// 2h window returns ~nothing for English desk queries — verified live. Use a
-// 24h window (dedup by URL hash skips already-seen articles) and space the
-// per-desk requests out.
+const GDELT_MAX_RECORDS = 75;
 const TIMESPAN = '24h';
-const GDELT_REQUEST_GAP_MS = 6000;
+// ONE broad request per run — NOT a per-desk loop. GDELT's public Doc API
+// rate-limits to 1 req/5s, and `setTimeout` sleeps are unreliable inside a
+// Cloudflare cron handler (which is why the old 5-request-with-gaps version
+// produced 0 articles in prod). A single request sidesteps both. Category is
+// inferred from the headline (categorizeGdelt) since one query spans desks.
+const GDELT_QUERY = '(election OR congress OR president OR senate OR economy OR market OR technology OR science OR court OR war OR climate) sourcelang:english';
 
-// Query term per desk (GDELT ANDs terms with `sourcelang:english`).
-const GDELT_QUERIES: Partial<Record<NewsCategory, string>> = {
-  politics: 'politics',
-  world: 'world',
-  business: 'business OR economy',
-  tech: 'technology',
-  science: 'science',
-};
+const CATEGORY_PATTERNS: [NewsCategory, RegExp][] = [
+  ['politics', /\b(election|congress|senate|president|white house|governor|gop|democrat|republican|campaign|supreme court|policy|impeach|vote|lawmaker|capitol)\b/i],
+  ['business', /\b(econom|market|stock|inflation|trade|tariff|fed|earnings|revenue|ceo|billion|nasdaq|dow|layoff|ipo|merger)\b/i],
+  ['tech', /\b(\bai\b|artificial intelligence|software|chip|semiconductor|startup|google|apple|microsoft|meta|openai|app|cyber|hacker|robot)\b/i],
+  ['science', /\b(study|research|scientist|space|nasa|physics|biolog|genome|quantum|telescope|climate|fossil|species)\b/i],
+];
+
+function categorizeGdelt(title: string): NewsCategory {
+  for (const [cat, re] of CATEGORY_PATTERNS) if (re.test(title)) return cat;
+  return 'world';
+}
 
 interface GdeltArticle {
   url?: string;
@@ -57,81 +61,69 @@ function parseSeenDate(s: string | undefined): number {
   return Date.UTC(+m[1]!, +m[2]! - 1, +m[3]!, +m[4]!, +m[5]!, +m[6]!);
 }
 
-async function fetchGdelt(query: string): Promise<GdeltArticle[]> {
+async function fetchGdelt(): Promise<GdeltArticle[]> {
   const url =
-    `${GDELT_DOC_URL}?query=${encodeURIComponent(`${query} sourcelang:english`)}` +
-    `&mode=artlist&format=json&sort=datedesc&maxrecords=${PER_CATEGORY}&timespan=${TIMESPAN}`;
+    `${GDELT_DOC_URL}?query=${encodeURIComponent(GDELT_QUERY)}` +
+    `&mode=artlist&format=json&sort=datedesc&maxrecords=${GDELT_MAX_RECORDS}&timespan=${TIMESPAN}`;
   const res = await fetch(url, {
     headers: { 'user-agent': 'Mozilla/5.0 (compatible; UglyNews/1.0; +https://ugly.press)' },
   });
-  if (!res.ok) {
-    // 429 = exceeded GDELT's 1-req/5s limit — surface it distinctly so we can
-    // see in the logs whether GDELT_REQUEST_GAP_MS needs raising.
-    const hint = res.status === 429 ? ' (rate-limited — raise GDELT_REQUEST_GAP_MS)' : '';
-    throw new Error(`GDELT HTTP ${res.status}${hint}`);
-  }
+  if (!res.ok) throw new Error(`GDELT HTTP ${res.status}`);
   // GDELT sometimes returns HTML/empty on a bad query; guard the JSON parse.
   const text = await res.text();
   try {
     const data = JSON.parse(text) as { articles?: GdeltArticle[] };
     return data.articles ?? [];
   } catch {
-    console.warn(`[gdelt] non-JSON response for query="${query}": ${text.slice(0, 120)}`);
+    console.warn(`[gdelt] non-JSON response: ${text.slice(0, 120)}`);
     return [];
   }
 }
 
-/** Pull a recent GDELT slice per desk and enqueue scrapes for new URLs. The
- *  per-desk requests are spaced ≥5s apart to respect GDELT's rate limit. */
+/** Pull one broad recent GDELT slice and enqueue scrapes for new URLs. Single
+ *  request (no rate-limit dance, no cron-unfriendly setTimeout). */
 export async function dispatchGdeltPull(db: NewsDb, now: number = Date.now()): Promise<void> {
-  const entries = Object.entries(GDELT_QUERIES);
-  let totalNew = 0;
-  for (let i = 0; i < entries.length; i++) {
-    const [category, query] = entries[i]!;
-    if (i > 0) await new Promise((resolve) => setTimeout(resolve, GDELT_REQUEST_GAP_MS));
-    let articles: GdeltArticle[];
-    try {
-      articles = await fetchGdelt(query);
-    } catch (error) {
-      console.error(`[gdelt] desk=${category} fetch failed: ${error instanceof Error ? error.message : String(error)}`);
-      continue;
-    }
-    let added = 0;
-    for (const a of articles) {
-      try {
-        if (isStringEmpty(a.url) || isStringEmpty(a.title)) continue;
-        const _id = `gdelt_${stableHash(a.url!)}`;
-        if (await db.getDoc(collections.newsArticle, _id)) continue;
-
-        const createdMs = parseSeenDate(a.seendate);
-        const article: NewsArticle = {
-          _id,
-          feedId: 'gdelt',
-          title: a.title!.trim(),
-          contentHtml: '',
-          contentMarkdown: a.title!.trim(),
-          uri: a.url!,
-          categories: [category],
-          imageUri: isStringEmpty(a.socialimage) ? null : a.socialimage!,
-          summary: null,
-          summaryGeneratedAt: null,
-          scrapeStatus: 'pending',
-          scrapeError: null,
-          scrapedAt: null,
-          fileId: null,
-          ...dbDefaults(),
-          created: new Date(createdMs),
-        };
-        await db.setDoc(collections.newsArticle, article);
-        await enqueueTask('articleScrape', { articleId: _id });
-        added++;
-      } catch (error) {
-        console.error(`[gdelt] desk=${category} item failed: ${error instanceof Error ? error.message : String(error)}`);
-      }
-    }
-    totalNew += added;
-    console.log(`[gdelt] desk=${category} fetched=${articles.length} new=${added}`);
-    void now;
+  void now;
+  let articles: GdeltArticle[];
+  try {
+    articles = await fetchGdelt();
+  } catch (error) {
+    console.error(`[gdelt] fetch failed: ${error instanceof Error ? error.message : String(error)}`);
+    return;
   }
-  console.log(`[gdelt] pull complete — ${totalNew} new articles enqueued for scrape`);
+  let added = 0;
+  for (const a of articles) {
+    try {
+      if (isStringEmpty(a.url) || isStringEmpty(a.title)) continue;
+      const _id = `gdelt_${stableHash(a.url!)}`;
+      if (await db.getDoc(collections.newsArticle, _id)) continue;
+
+      const category = categorizeGdelt(a.title!);
+      const createdMs = parseSeenDate(a.seendate);
+      const article: NewsArticle = {
+        _id,
+        feedId: 'gdelt',
+        title: a.title!.trim(),
+        contentHtml: '',
+        contentMarkdown: a.title!.trim(),
+        uri: a.url!,
+        categories: [category],
+        imageUri: isStringEmpty(a.socialimage) ? null : a.socialimage!,
+        summary: null,
+        summaryGeneratedAt: null,
+        scrapeStatus: 'pending',
+        scrapeError: null,
+        scrapedAt: null,
+        fileId: null,
+        ...dbDefaults(),
+        created: new Date(createdMs),
+      };
+      await db.setDoc(collections.newsArticle, article);
+      await enqueueTask('articleScrape', { articleId: _id });
+      added++;
+    } catch (error) {
+      console.error(`[gdelt] item failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  console.log(`[gdelt] pull complete — fetched=${articles.length} new=${added}`);
 }

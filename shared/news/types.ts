@@ -208,13 +208,10 @@ export const newsFeeds: NewsFeed[] = [
   { id: 'ign', name: 'IGN', url: 'https://feeds.ign.com/ign/all', category: 'events' },
   { id: 'stereogum', name: 'Stereogum', url: 'https://www.stereogum.com/feed/', category: 'events' },
 
-  // ─── GOOGLE NEWS (free, unlimited breadth/backfill; mixed-source aggregator,
-  // so items are "unrated" for bias and don't skew the coverage bar). ────────
-  { id: 'googlenews_world', name: 'Google News — World', url: 'https://news.google.com/rss/headlines/section/topic/WORLD?hl=en-US&gl=US&ceid=US:en', category: 'world' },
-  { id: 'googlenews_business', name: 'Google News — Business', url: 'https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=en-US&gl=US&ceid=US:en', category: 'business' },
-  { id: 'googlenews_tech', name: 'Google News — Technology', url: 'https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=en-US&gl=US&ceid=US:en', category: 'tech' },
-  { id: 'googlenews_science', name: 'Google News — Science', url: 'https://news.google.com/rss/headlines/section/topic/SCIENCE?hl=en-US&gl=US&ceid=US:en', category: 'science' },
-  { id: 'googlenews_entertainment', name: 'Google News — Entertainment', url: 'https://news.google.com/rss/headlines/section/topic/ENTERTAINMENT?hl=en-US&gl=US&ceid=US:en', category: 'events' },
+  // NOTE: Google News RSS was removed — its item links are CBM…-encoded redirect
+  // URLs that resolve only to Google's own JS page (not the article), so the
+  // scraper produced 0 usable files. Free breadth now comes from GDELT (real
+  // article URLs) + the direct outlet feeds above.
 ];
 
 // ============================================================================
