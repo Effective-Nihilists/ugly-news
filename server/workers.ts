@@ -38,6 +38,7 @@ const requestHandlers: Partial<RequestHandlers<typeof requests>> = {
   newsTopStories: (_userId, input) => clusters.newsTopStories(wdb(), input),
   newsClusterGet: (_userId, input) => clusters.newsClusterGet(wdb(), input),
   newsBlindspot: (_userId, input) => clusters.newsBlindspot(wdb(), input),
+  newsUglyTakes: (_userId, input) => clusters.newsUglyTakes(wdb(), input),
   newsClusterArchive: (_userId, input) => clusters.newsClusterArchive(wdb(), input),
   newsMarkRead: (userId, input) => feed.newsMarkRead(wdb(), userId, input),
   newsMarkReadBulk: (userId, input) => feed.newsMarkReadBulk(wdb(), userId, input),
