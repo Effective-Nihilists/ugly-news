@@ -202,6 +202,46 @@ export async function selectEmailClusters(
   return { topStories, blindspot };
 }
 
+// ─── The Ugly Take (labeled satire) for the email ──────────────────────────
+export interface EmailUglyTake {
+  title: string;
+  category: string;
+  snippet: string;
+  imageUri: string | null;
+  uri: string;
+}
+
+/** Newest Ugly Take (labeled satire) for the daily email, or null if none recent. */
+export async function selectEmailUglyTake(db: NewsDb, now: number): Promise<EmailUglyTake | null> {
+  const rows = await db.getQuery<NewsCluster & { _id: string }>(
+    'newsCluster',
+    [
+      { $match: { uglyTakeFileId: { $ne: null }, satirizedAt: { $gte: now - 2 * ONE_DAY } } },
+      { $sort: { satirizedAt: -1 } },
+    ],
+    { limit: 1 },
+  );
+  const c = rows[0];
+  if (!c || !c.uglyTakeFileId) return null;
+  const sf = await db.getDoc(collections.file, c.uglyTakeFileId);
+  if (!sf) return null;
+  const f = sf as FileMarkdown;
+  const body = (f.markdown ?? '').replace(/^\s*#[^\n]*\n/, '');
+  const snippet = body.replace(/[#>*_`[\]]/g, '').replace(/\s+/g, ' ').trim().slice(0, 160);
+  const title = f.title ?? 'The Ugly Take';
+  const imageUri = f.thumbnail?.uri ?? null;
+  return {
+    title,
+    category: c.category,
+    snippet,
+    imageUri,
+    uri: await shareLink({
+      target: `${PUBLIC_URL}/ugly-take/${encodeURIComponent(c._id)}`,
+      og: { title, description: snippet, ...(imageUri ? { image: imageUri } : {}) },
+    }),
+  };
+}
+
 // ─── Newsprint palette (email-safe: inline styles, no web fonts) ────────────
 const INK = '#1a1714';
 const PAPER = '#f1ece0';
@@ -246,6 +286,21 @@ function clusterCard(c: EmailCluster): string {
   </div>`;
 }
 
+/** Email-safe "The Ugly Take" satire block — unmistakably labeled. */
+function uglyTakeBlock(t: EmailUglyTake): string {
+  const img = t.imageUri
+    ? `<img src="${t.imageUri}" alt="" width="100%" style="max-height:200px;object-fit:cover;border:1px solid ${INK};margin-bottom:12px"/>`
+    : '';
+  return `<div style="background:${ACCENT};color:${PAPER};font-family:${HEAD};font-size:16px;text-transform:uppercase;letter-spacing:1px;padding:10px 14px;margin:22px 0 12px">&#8982; The Ugly Take &mdash; satire, not a real story</div>
+    <div style="margin:0 0 16px;padding:18px;background:${PAPER2};border:2px solid ${INK}">
+      ${img}
+      <div style="font-family:${MONO};font-size:11px;letter-spacing:2px;color:${MUTED};margin-bottom:6px">${t.category.toUpperCase()} &middot; SATIRE</div>
+      <h3 style="margin:0 0 10px;font-family:Georgia,serif;font-size:20px;line-height:1.15;color:${INK};font-weight:bold"><a href="${t.uri}" style="color:${INK};text-decoration:none">${t.title}</a></h3>
+      <p style="margin:0 0 12px;color:#3a342d;font-family:Georgia,serif;font-size:14px;line-height:1.5">${t.snippet}&hellip;</p>
+      <a href="${t.uri}" style="color:${ACCENT};font-family:${MONO};font-size:12px;letter-spacing:1px;text-transform:uppercase;text-decoration:none;font-weight:bold">Read the Ugly Take &rarr;</a>
+    </div>`;
+}
+
 function card(a: NewsEmailArticle): string {
   const img = a.thumbnailUri
     ? `<img src="${a.thumbnailUri}" alt="" width="100%" style="max-height:200px;object-fit:cover;border:1px solid ${INK}"/>`
@@ -271,6 +326,7 @@ export function renderDailyNewsEmail(
   articles: SelectedArticles,
   podcast: { title: string; duration: string; uri: string; imageUri?: string | undefined } | null,
   homeUrl: string,
+  uglyTake: EmailUglyTake | null = null,
 ): string {
   const podcastBlock = podcast
     ? `<div style="margin:0 0 20px;padding:16px;background:${INK};color:${PAPER}">
@@ -297,6 +353,7 @@ export function renderDailyNewsEmail(
       ${podcastBlock}
       ${topStories}
       ${blindspot}
+      ${uglyTake ? uglyTakeBlock(uglyTake) : ''}
       ${pickedSection(s, articles.pickedForYou)}
       <div style="text-align:center;margin:28px 0;border-top:3px double ${INK};padding-top:20px">
         <a href="${homeUrl}" style="display:inline-block;padding:13px 26px;background:${INK};color:${PAPER};text-decoration:none;font-weight:bold;font-family:${MONO};font-size:12px;letter-spacing:1px;text-transform:uppercase">${s.buttonText}</a>
@@ -321,9 +378,10 @@ export async function dispatchUserPrivateNewsEmail(
   const pref = await db.getDoc(collections.userNewsEmailPref, input.userId);
   if (!pref || !pref.emailAllowed) return;
 
-  const [articles, clusters] = await Promise.all([
+  const [articles, clusters, uglyTake] = await Promise.all([
     selectDailyEmailArticles(db, input.userId, input.now),
     selectEmailClusters(db, input.now),
+    selectEmailUglyTake(db, input.now),
   ]);
   // Send if we have anything to show — clustered top stories OR personalized picks.
   if (clusters.topStories.length === 0 && articles.pickedForYou.length === 0) return;
@@ -353,7 +411,7 @@ export async function dispatchUserPrivateNewsEmail(
   }
 
   const homeUrl = await shareLink({ target: `${PUBLIC_URL}/`, og: { title: DEFAULT_STRINGS.greeting } });
-  const html = renderDailyNewsEmail(DEFAULT_STRINGS, dateStr, clusters, articles, podcastData, homeUrl);
+  const html = renderDailyNewsEmail(DEFAULT_STRINGS, dateStr, clusters, articles, podcastData, homeUrl, uglyTake);
   const leadTitle = clusters.topStories[0]?.title ?? articles.hero?.title ?? 'Your daily edition';
   const subject = `The Ugly Press: ${leadTitle.slice(0, 55)}${leadTitle.length > 55 ? '…' : ''}`;
   await emailSend({ to, subject, html, id: 'dailyNews' });

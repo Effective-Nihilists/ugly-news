@@ -107,6 +107,18 @@ export const ClusterFullSchema = ClusterCardSchema.extend({
   uglyTake: UglyTakeSchema.nullable(),
 });
 
+// A satire card for the front-page feature / rail and the Satire Desk. Carries
+// just the labeled Ugly Take (headline + illustration + teaser) plus its cluster
+// id so the reader can bridge back to the real coverage.
+export const UglyTakeCardSchema = z.object({
+  clusterId: z.string(),
+  category: z.string(),
+  satireTitle: z.string(),
+  satireImageUri: z.string().nullable(),
+  satireSnippet: z.string(),
+  lastUpdatedAt: z.number(),
+});
+
 // News request definitions. Spread into the app's defineRequests() registry.
 export const newsRequestDefs = {
   // ─── "Three Ways" clusters (public) ──────────────────────────────────────
@@ -136,6 +148,13 @@ export const newsRequestDefs = {
     }),
     output: z.object({ items: z.array(ClusterCardSchema), hasMore: z.boolean() }),
     rateLimit: { max: 60, window: 60 },
+  }),
+  // Newest Ugly Takes (labeled satire) — powers the home feature/rail, the
+  // Satire Desk, and the satirical ticker headlines.
+  newsUglyTakes: req({
+    input: z.object({ limit: z.number().min(1).max(40).default(12) }),
+    output: z.object({ items: z.array(UglyTakeCardSchema) }),
+    rateLimit: { max: 120, window: 60 },
   }),
 
   // ─── Public (no auth) — the landing/feed + article view ──────────────────

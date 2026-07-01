@@ -7,6 +7,7 @@ import { getDomainRating, normalizeDomain } from './domainBias';
 import type {
   ClusterCardSchema,
   ClusterFullSchema,
+  UglyTakeCardSchema,
 } from '../../shared/news/requests';
 import type { z } from 'ugly-app/shared';
 import { decodeHtmlEntities } from './download';
@@ -14,6 +15,7 @@ import { decodeHtmlEntities } from './download';
 type Db = TypedDB<Record<string, DBObject>>;
 type ClusterCard = z.infer<typeof ClusterCardSchema>;
 type ClusterFull = z.infer<typeof ClusterFullSchema>;
+type UglyTakeCard = z.infer<typeof UglyTakeCardSchema>;
 
 const RECENT_MS = 4 * 24 * 60 * 60 * 1000; // Top Stories window
 
@@ -67,6 +69,39 @@ export async function newsBlindspot(
     { limit },
   );
   return { items: rows.map(toCard) };
+}
+
+/** Newest Ugly Takes (labeled satire), for the home feature/rail + Satire Desk.
+ *  Reads each satire file by id (server-side read is fine even though the file is
+ *  public:false) and returns just the headline/illustration/teaser + cluster id. */
+export async function newsUglyTakes(
+  db: Db,
+  input: { limit?: number | undefined },
+): Promise<{ items: UglyTakeCard[] }> {
+  const limit = Math.min(Math.max(input.limit ?? 12, 1), 40);
+  const rows = await db.getQuery<NewsCluster & { _id: string }>(
+    'newsCluster',
+    [{ $match: { uglyTakeFileId: { $ne: null } } }, { $sort: { satirizedAt: -1 } }],
+    { limit },
+  );
+  const items: UglyTakeCard[] = [];
+  for (const c of rows) {
+    if (!c.uglyTakeFileId) continue;
+    const sf = await db.getDoc(collections.file, c.uglyTakeFileId);
+    if (!sf) continue;
+    const f = sf as FileMarkdown;
+    // Drop the leading H1 (already the title) before the teaser snippet.
+    const body = (f.markdown ?? '').replace(/^\s*#[^\n]*\n/, '');
+    items.push({
+      clusterId: c._id,
+      category: c.category,
+      satireTitle: decodeHtmlEntities(f.title ?? 'The Ugly Take'),
+      satireImageUri: f.thumbnail?.uri ?? null,
+      satireSnippet: snippet(body, 160),
+      lastUpdatedAt: c.satirizedAt ?? c.lastUpdatedAt,
+    });
+  }
+  return { items };
 }
 
 /** Paginated cluster browse, newest-first, optional desk filter. */

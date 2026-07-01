@@ -12,7 +12,7 @@ import { enqueueTask } from './queue';
 
 const SWEEP_WINDOW_MS = 72 * 60 * 60 * 1000;
 const SYNTH_MAX_PER_SWEEP = 8; // cap AI spend per sweep
-const SATIRE_MAX_PER_SWEEP = 3;
+const SATIRE_MAX_PER_SWEEP = 8;
 const SATIRE_MIN_ARTICLES = 3;
 
 function distinctBuckets(b: NewsCluster['biasBreakdown']): number {
@@ -48,10 +48,14 @@ export async function dispatchClusterSweep(db: NewsDb, now: number = Date.now())
     .slice(0, SYNTH_MAX_PER_SWEEP);
   for (const c of toSynth) await enqueueTask('clusterSynthesize', { clusterId: c._id });
 
-  // Satire: the most prominent clusters without an Ugly Take yet.
-  const toSatire = recent
-    .filter((c) => c.uglyTakeFileId === null && c.articleCount >= SATIRE_MIN_ARTICLES)
-    .slice(0, SATIRE_MAX_PER_SWEEP);
+  // Satire: the most prominent clusters without an Ugly Take yet. Prefer ones
+  // that already have a neutral summary (richer context → sharper jokes), but
+  // fall back to title-only clusters so the satire desk is never starved.
+  const eligible = recent.filter((c) => c.uglyTakeFileId === null && c.articleCount >= SATIRE_MIN_ARTICLES);
+  const toSatire = [
+    ...eligible.filter((c) => c.neutralSummary !== null),
+    ...eligible.filter((c) => c.neutralSummary === null),
+  ].slice(0, SATIRE_MAX_PER_SWEEP);
   for (const c of toSatire) await enqueueTask('clusterSatirize', { clusterId: c._id });
 
   console.log(

@@ -6,6 +6,7 @@ import {
   BlindspotBadge,
   C,
   FONT_IMPORT,
+  PressHeader,
   btn,
   newsRpc,
   type ClusterCard,
@@ -30,6 +31,7 @@ export default function BlindspotPage(): React.ReactElement {
       <style dangerouslySetInnerHTML={{ __html: `${FONT_IMPORT}
         @media (max-width: 820px) { .bs-grid { grid-template-columns: 1fr !important; } }
       ` }} />
+      <PressHeader active="blindspot" />
       <div style={{ maxWidth: 1040, margin: '0 auto', padding: 'clamp(18px,4vw,40px)' }}>
         <a href="/" onClick={navClick(() => { router.push('', {}); })} style={backLink}>‹ back to front page</a>
 

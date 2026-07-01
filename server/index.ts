@@ -134,6 +134,7 @@ const app = createApp(
     newsTopStories: (_userId, input) => clusters.newsTopStories(newsDb(), input),
     newsClusterGet: (_userId, input) => clusters.newsClusterGet(newsDb(), input),
     newsBlindspot: (_userId, input) => clusters.newsBlindspot(newsDb(), input),
+    newsUglyTakes: (_userId, input) => clusters.newsUglyTakes(newsDb(), input),
     newsClusterArchive: (_userId, input) => clusters.newsClusterArchive(newsDb(), input),
 
     // ─── News: read tracking ─────────────────────────────────────────────

@@ -4,7 +4,8 @@ import { useRouter } from '../router';
 import { navClick } from '../nav';
 import { PlayIcon } from '../components/Icon';
 import { requestPushPermission } from '../push';
-import { BlindspotStrip, TopStoriesRail } from '../newsUi';
+import { BlindspotStrip, TopStoriesRail, UglyTakeSection, type UglyTakeCard } from '../newsUi';
+import { composeTicker } from '../../shared/news/satire-ui';
 
 /**
  * Ugly News landing page (the `''` route).
@@ -648,8 +649,9 @@ function Masthead({ dateStr }: { dateStr: string }): React.ReactElement {
   );
 }
 
-function Ticker(): React.ReactElement {
-  const run = [...TICKER, ...TICKER];
+function Ticker({ lines }: { lines?: string[] }): React.ReactElement {
+  const base = lines && lines.length > 0 ? lines : TICKER;
+  const run = [...base, ...base];
   return (
     <div
       style={{
@@ -992,6 +994,15 @@ export default function HomePage(): React.ReactElement {
   // blanks the page; the optional variant returns null and we degrade the
   // personalized greeting gracefully.
   const app = useAppOptional() as { user?: { name?: string } | null } | null;
+  const [takes, setTakes] = React.useState<UglyTakeCard[]>([]);
+  React.useEffect(() => {
+    let alive = true;
+    rpc<{ items: UglyTakeCard[] }>('newsUglyTakes', { limit: 8 })
+      .then((r) => { if (alive) setTakes(r.items); })
+      .catch(() => { /* satire is optional; leave the static ticker */ });
+    return () => { alive = false; };
+  }, []);
+  const tickerLines = composeTicker(TICKER, takes.map((t) => t.satireTitle), { max: 10 });
   const name = app?.user?.name ?? undefined;
   const router = useRouter();
   const dateStr = new Date()
@@ -1027,9 +1038,10 @@ export default function HomePage(): React.ReactElement {
     >
       <style dangerouslySetInnerHTML={{ __html: STYLE }} />
       <Masthead dateStr={dateStr} />
-      <Ticker />
+      <Ticker lines={tickerLines} />
       <Hero name={name} />
       <TopStoriesRail />
+      <UglyTakeSection takes={takes} />
       <BlindspotStrip />
       <PodcastSpotlight />
       <FrontPage />
@@ -1051,7 +1063,7 @@ export default function HomePage(): React.ReactElement {
         }}
       >
         <span>
-          The Ugly Press · <a className="un-link" href="/archive" onClick={navClick(() => router.push('archive', {}))} style={{ color: C.ink }}>Archive</a> · <a className="un-link" href="/podcast" onClick={navClick(() => router.push('podcast', {}))} style={{ color: C.ink }}>Podcast</a>
+          The Ugly Press · <a className="un-link" href="/ugly-takes" onClick={navClick(() => router.push('ugly-takes', {}))} style={{ color: C.ink }}>Satire</a> · <a className="un-link" href="/archive" onClick={navClick(() => router.push('archive', {}))} style={{ color: C.ink }}>Archive</a> · <a className="un-link" href="/podcast" onClick={navClick(() => router.push('podcast', {}))} style={{ color: C.ink }}>Podcast</a>
         </span>
         <span>
           Printed by{' '}

@@ -7,10 +7,12 @@ import {
   BlindspotBadge,
   C,
   FONT_IMPORT,
+  PressHeader,
   SourceChip,
   factualityLabel,
   newsRpc,
   renderMarkdown,
+  satireStamp,
   type BiasBucket,
   type ClusterFull,
   type ClusterCoverageItem,
@@ -47,8 +49,11 @@ export default function ClusterPage({ id }: { id: string }): React.ReactElement 
         .uc-body p { margin: 0 0 14px; } .uc-body strong { font-weight: 600; }
         .uc-body blockquote { margin: 14px 0; padding: 4px 0 4px 16px; border-left: 3px solid ${C.accent}; font-style: italic; color: #2c2722; }
         .uc-frame strong { display:block; margin-top:10px; }
+        @keyframes uc-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+        .uc-rise { animation: uc-rise .5s cubic-bezier(.2,.8,.2,1) both; }
         @media (max-width: 820px) { .uc-two { grid-template-columns: 1fr !important; } .uc-two .uc-what { border-right: 0 !important; border-bottom: 3px double ${C.ink}; } .uc-cov { grid-template-columns: 1fr !important; } .uc-lead { grid-template-columns: 1fr !important; } }
       ` }} />
+      <PressHeader active="home" />
       <div style={{ maxWidth: 940, margin: '0 auto', padding: 'clamp(18px,4vw,40px)' }}>
         <a href="/" onClick={navClick(() => { router.push('', {}); })} style={backLink}>‹ back to front page</a>
 
@@ -61,12 +66,20 @@ export default function ClusterPage({ id }: { id: string }): React.ReactElement 
 
         {state === 'ready' && cluster && (
           <>
-            <div style={{ ...mono, fontSize: 12, letterSpacing: '.16em', color: C.muted, marginTop: 16 }}>
-              {cluster.category.toUpperCase()} · {cluster.sourceCount} SOURCES · {cluster.articleCount} ARTICLES
+            <div className="uc-rise" style={{ ...mono, fontSize: 12, letterSpacing: '.16em', marginTop: 16 }}>
+              <span style={{ color: C.accent }}>{cluster.category.toUpperCase()}</span>
+              <span style={{ color: C.muted }}> · {cluster.sourceCount} SOURCES · {cluster.articleCount} ARTICLES</span>
             </div>
-            <h1 style={{ fontFamily: 'Spectral, serif', fontWeight: 600, fontSize: 'clamp(30px,4.4vw,52px)', lineHeight: 1.04, margin: '6px 0 16px' }}>
+            <h1 className="uc-rise" style={{ fontFamily: 'Spectral, serif', fontWeight: 600, fontSize: 'clamp(30px,4.4vw,52px)', lineHeight: 1.04, margin: '6px 0 12px' }}>
               {cluster.title}
             </h1>
+            <div style={{ borderTop: `2px solid ${C.accent}`, width: 72, margin: '0 0 16px' }} />
+            {cluster.uglyTake && (
+              <a href="#ugly-take" data-id="ugly-take-jump" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', border: `1.5px solid ${C.accent}`, background: C.paper2, padding: '10px 14px', margin: '0 0 24px' }}>
+                <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase', color: C.accent, border: `1.5px solid ${C.accent}`, padding: '2px 6px', whiteSpace: 'nowrap' }}>⌖ Ugly Take</span>
+                <span style={{ fontFamily: 'Spectral, serif', fontStyle: 'italic', fontSize: 16, color: C.ink }}>This one got the Ugly treatment — read the satire ↓</span>
+              </a>
+            )}
 
             {/* THE SPREAD */}
             <section style={{ border: `3px double ${C.ink}`, padding: '20px 24px', margin: '6px 0 28px' }}>
@@ -125,8 +138,8 @@ export default function ClusterPage({ id }: { id: string }): React.ReactElement 
 
             {/* THE UGLY TAKE (labeled satire) */}
             {cluster.uglyTake && (
-              <section style={{ position: 'relative', border: `3px double ${C.ink}`, background: C.paper2, padding: '26px 28px 30px', marginBottom: 50 }}>
-                <span style={satireStamp}>⌖ Satire — Not A Real Story</span>
+              <section id="ugly-take" style={{ position: 'relative', border: `3px double ${C.ink}`, background: C.paper2, padding: '26px 28px 30px', marginBottom: 50, scrollMarginTop: 20 }}>
+                <span style={{ ...satireStamp, fontSize: 15, marginBottom: 12 }}>⌖ Satire — Not A Real Story</span>
                 {cluster.uglyTake.imageUri && (
                   <img src={cluster.uglyTake.imageUri} alt="" style={{ width: '100%', maxHeight: 260, objectFit: 'cover', border: `1px solid ${C.ink}`, margin: '12px 0 18px' }} />
                 )}
@@ -149,4 +162,3 @@ const pageStyle: React.CSSProperties = {
 const mono: React.CSSProperties = { fontFamily: 'IBM Plex Mono, monospace' };
 const backLink: React.CSSProperties = { ...mono, fontSize: 12, letterSpacing: '.1em', textTransform: 'uppercase', color: C.muted, textDecoration: 'none' };
 const colHead: React.CSSProperties = { fontFamily: 'Anton, sans-serif', textTransform: 'uppercase', fontSize: 17, margin: '0 0 14px', paddingBottom: 8, borderBottom: `1px solid ${C.ink}` };
-const satireStamp: React.CSSProperties = { display: 'inline-block', fontFamily: 'Anton, sans-serif', textTransform: 'uppercase', color: C.accent, border: `3px solid ${C.accent}`, padding: '5px 12px', transform: 'rotate(-4deg)', fontSize: 13, letterSpacing: '.14em', marginBottom: 12 };

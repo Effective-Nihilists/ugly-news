@@ -1,6 +1,7 @@
 import React from 'react';
 import { useRouter } from '../router';
 import { navClick } from '../nav';
+import { PressHeader } from '../newsUi';
 
 /** Ugly News article view (route `article/:id`). Newsprint editorial style,
  *  matching the home landing. Fetches the public newsArticleGet endpoint. */
@@ -120,8 +121,8 @@ export default function ArticlePage({ id }: { id: string }): React.ReactElement 
         .ar-back { font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: ${C.ink}; text-decoration: none; }
         .ar-back:hover { color: ${C.accent}; }
       ` }} />
+      <PressHeader active="home" />
       <div style={{ maxWidth: 720, margin: '0 auto', padding: 'clamp(20px,5vw,48px)' }}>
-        <div style={{ height: 6, background: C.ink, marginBottom: 18 }} />
         <a href="/" onClick={navClick(() => router.push('', {}))} className="ar-back">← The Ugly Press</a>
 
         {state === 'loading' && (

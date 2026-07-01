@@ -47,6 +47,10 @@ export interface ClusterFull extends ClusterCard {
   neutralSummary: string | null; framingSummary: string | null;
   sources: ClusterSource[]; coverage: ClusterCoverageItem[]; uglyTake: UglyTake | null;
 }
+export interface UglyTakeCard {
+  clusterId: string; category: string; satireTitle: string;
+  satireImageUri: string | null; satireSnippet: string; lastUpdatedAt: number;
+}
 
 export async function newsRpc<T>(name: string, input: unknown): Promise<T> {
   const res = await fetch(`/api/${name}`, {
@@ -193,7 +197,10 @@ export function TopStoriesRail(): React.ReactElement | null {
             <div style={{ ...kicker, color: C.accent, marginBottom: 6 }}>{c.category}</div>
             <h3 style={{ fontFamily: 'Spectral, serif', fontWeight: 600, fontSize: 18, lineHeight: 1.15, margin: '0 0 12px' }}>{c.title}</h3>
             <BiasBar b={c.biasBreakdown} height={7} />
-            <div style={{ ...kicker, fontSize: 11, marginTop: 8 }}>{c.sourceCount} sources · {factualityLabel(c.factualityAvg)}</div>
+            <div style={{ ...kicker, fontSize: 11, marginTop: 8, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              <span>{c.sourceCount} sources · {factualityLabel(c.factualityAvg)}</span>
+              {c.hasUglyTake && <UglyTakeBadge />}
+            </div>
           </a>
         ))}
       </div>
@@ -215,6 +222,7 @@ function LeadCluster({ c, onOpen }: { c: ClusterCard; onOpen: () => void }): Rea
           <div style={{ display: 'flex', gap: 12, marginTop: 16, alignItems: 'center', flexWrap: 'wrap' }}>
             <button onClick={onOpen} data-id="lead-see-all-sides" style={btn(C)}>See every angle →</button>
             {c.blindspotSide && <BlindspotBadge side={c.blindspotSide} />}
+            {c.hasUglyTake && <UglyTakeBadge />}
           </div>
         </div>
       </div>
@@ -263,4 +271,115 @@ export function btn(c: typeof C, ghost = false): React.CSSProperties {
     border: `2px solid ${c.ink}`,
     background: ghost ? 'transparent' : c.ink, color: ghost ? c.ink : c.paper,
   };
+}
+
+// ─── The rotated SATIRE stamp — shared by every Ugly Take surface. ───────────
+export const satireStamp: React.CSSProperties = {
+  display: 'inline-block', fontFamily: 'Anton, sans-serif', textTransform: 'uppercase',
+  color: C.accent, border: `3px solid ${C.accent}`, padding: '5px 12px',
+  transform: 'rotate(-4deg)', fontSize: 13, letterSpacing: '.14em',
+};
+
+/** Small "⌖ Ugly Take" chip for story cards that have a satire companion. */
+export function UglyTakeBadge(): React.ReactElement {
+  return (
+    <span style={{
+      display: 'inline-block', fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, fontWeight: 600,
+      letterSpacing: '.1em', textTransform: 'uppercase', color: C.accent,
+      border: `1.5px solid ${C.accent}`, padding: '2px 6px', whiteSpace: 'nowrap',
+    }}>⌖ Ugly Take</span>
+  );
+}
+
+// ─── Shared inner-page press header ──────────────────────────────────────────
+type PressTab = 'home' | 'blindspot' | 'satire' | 'podcast' | 'archive';
+
+/** Slim "The Ugly Press" header for the story/blindspot/satire/reader pages, so
+ *  every inner page carries the masthead + "Left. Right. Ugly." + nav. */
+export function PressHeader({ active }: { active?: PressTab }): React.ReactElement {
+  const router = useRouter();
+  const nav: { key: PressTab; label: string; href: string; go: () => void }[] = [
+    { key: 'home', label: 'Front Page', href: '/', go: () => { router.push('', {}); } },
+    { key: 'blindspot', label: 'Blindspot', href: '/blindspot', go: () => { router.push('blindspot', {}); } },
+    { key: 'satire', label: 'Satire', href: '/ugly-takes', go: () => { router.push('ugly-takes', {}); } },
+    { key: 'podcast', label: 'Podcast', href: '/podcast', go: () => { router.push('podcast', {}); } },
+    { key: 'archive', label: 'Archive', href: '/archive', go: () => { router.push('archive', {}); } },
+  ];
+  return (
+    <header style={{ borderTop: `6px solid ${C.ink}`, background: C.paper }}>
+      <div style={{ maxWidth: 1180, margin: '0 auto', padding: '10px clamp(16px,4vw,40px) 0', textAlign: 'center' }}>
+        <a href="/" onClick={navClick(() => { router.push('', {}); })} style={{ textDecoration: 'none', color: C.ink }}>
+          <div style={{ fontFamily: 'Anton, sans-serif', textTransform: 'uppercase', fontSize: 'clamp(22px,3.4vw,30px)', letterSpacing: '.02em' }}>The Ugly Press</div>
+        </a>
+        <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10.5, letterSpacing: '.22em', textTransform: 'uppercase', color: C.muted, marginTop: 2 }}>Left. Right. Ugly.</div>
+        <nav style={{ display: 'flex', gap: 18, justifyContent: 'center', flexWrap: 'wrap', margin: '10px 0 8px' }}>
+          {nav.map((n) => (
+            <a key={n.key} href={n.href} onClick={navClick(n.go)} data-id={`press-nav-${n.key}`} style={{
+              fontFamily: 'IBM Plex Mono, monospace', fontSize: 11.5, letterSpacing: '.12em',
+              textTransform: 'uppercase', textDecoration: 'none',
+              color: active === n.key ? C.ink : C.muted,
+              borderBottom: `2px solid ${active === n.key ? C.accent : 'transparent'}`,
+              paddingBottom: 3,
+            }}>{n.label}</a>
+          ))}
+        </nav>
+      </div>
+      <div style={{ borderBottom: `1px solid ${C.ink}` }} />
+    </header>
+  );
+}
+
+// ─── Front-page satire: the Onion-style feature + a rail of recent takes. ─────
+
+/** One satire card tile (used in the home rail and the Satire Desk grid). */
+export function UglyTakeTile({ take, onOpen }: { take: UglyTakeCard; onOpen: () => void }): React.ReactElement {
+  return (
+    <a href={`/ugly-take/${take.clusterId}`} onClick={navClick(onOpen)} data-id="ugly-take-tile"
+       style={{ textDecoration: 'none', color: C.ink, border: `3px double ${C.ink}`, background: C.paper2, display: 'block', overflow: 'hidden' }}>
+      {take.satireImageUri && (
+        <div style={{ height: 128, background: `center/cover no-repeat url(${take.satireImageUri})`, borderBottom: `1px solid ${C.ink}` }} />
+      )}
+      <div style={{ padding: '14px 16px 18px' }}>
+        <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase', color: C.accent, border: `1.5px solid ${C.accent}`, padding: '2px 6px' }}>⌖ Satire</span>
+        <h3 style={{ fontFamily: 'Anton, sans-serif', textTransform: 'uppercase', fontSize: 19, lineHeight: 1.08, margin: '10px 0 0' }}>{take.satireTitle}</h3>
+      </div>
+    </a>
+  );
+}
+
+/** Home-page "The Ugly Take" block: a big fake lead + a rail of recent takes.
+ *  Fed from HomePage's shared newsUglyTakes fetch (also drives the ticker). */
+export function UglyTakeSection({ takes }: { takes: UglyTakeCard[] }): React.ReactElement | null {
+  const router = useRouter();
+  if (takes.length === 0) return null;
+  const [lead, ...rest] = takes;
+  const deskItems = rest.slice(0, 3);
+  const open = (id: string): void => { router.push('ugly-take/:id', { id }); };
+  return (
+    <section style={{ maxWidth: 1180, margin: '0 auto', padding: '8px clamp(20px,5vw,64px) 0' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '34px 0 14px' }}>
+        <span style={{ fontFamily: 'Anton, sans-serif', textTransform: 'uppercase', fontSize: 26, color: C.accent }}>The Ugly Take</span>
+        <a href="/ugly-takes" onClick={navClick(() => { router.push('ugly-takes', {}); })} style={{ ...kicker, color: C.accent, textDecoration: 'none' }}>the satire desk →</a>
+      </div>
+      {lead && (
+        <a href={`/ugly-take/${lead.clusterId}`} onClick={navClick(() => open(lead.clusterId))} data-id="ugly-take-feature"
+           style={{ textDecoration: 'none', color: C.ink, display: 'block' }}>
+          <article className="uc-lead" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1.1fr)', border: `3px double ${C.ink}`, background: C.paper2 }}>
+            <div style={{ minHeight: 300, borderRight: `3px double ${C.ink}`, background: lead.satireImageUri ? `center/cover no-repeat url(${lead.satireImageUri})` : `repeating-linear-gradient(-45deg, rgba(26,23,20,0.10) 0 2px, transparent 2px 9px), ${C.paper}` }} />
+            <div style={{ padding: '26px 30px', display: 'flex', flexDirection: 'column' }}>
+              <span style={{ ...satireStamp, alignSelf: 'flex-start', marginBottom: 14 }}>⌖ Satire — Not A Real Story</span>
+              <h2 style={{ fontFamily: 'Anton, sans-serif', textTransform: 'uppercase', fontSize: 'clamp(26px,3.2vw,44px)', lineHeight: 1.02, margin: '4px 0 14px' }}>{lead.satireTitle}</h2>
+              <p style={{ fontFamily: 'Spectral, serif', fontSize: 16, lineHeight: 1.5, color: '#2c2722', margin: '0 0 16px' }}>{lead.satireSnippet}</p>
+              <span style={{ ...btn(C), marginTop: 'auto', alignSelf: 'flex-start' }}>Read the Ugly Take →</span>
+            </div>
+          </article>
+        </a>
+      )}
+      {deskItems.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 22, marginTop: 24 }}>
+          {deskItems.map((t) => <UglyTakeTile key={t.clusterId} take={t} onOpen={() => open(t.clusterId)} />)}
+        </div>
+      )}
+    </section>
+  );
 }

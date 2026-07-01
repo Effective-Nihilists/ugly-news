@@ -32,26 +32,46 @@ describe('renderDailyNewsEmail links', () => {
     topCategory: 'World',
   };
 
+  const cluster = (id: string, blindspotSide: string | null = null) => ({
+    title: `Story ${id}`,
+    category: 'World',
+    leftPct: 40,
+    centerPct: 30,
+    rightPct: 30,
+    blindspotSide,
+    sourceCount: 12,
+    factuality: 'High',
+    uri: `${SHORT}${id}code`,
+  });
+
+  const uglyTake = {
+    title: 'Nation Declares War On Mondays',
+    category: 'Politics',
+    snippet: 'deadpan teaser',
+    imageUri: null,
+    uri: `${SHORT}takecode`,
+  };
+
   it('emits only central short links (no bare app URLs → no client 404)', () => {
     const html = renderDailyNewsEmail(
       {
         greeting: 'g',
-        trendingTitle: 't',
-        trendingSubtitle: 'ts',
         pickedTitle: 'p',
         pickedSubtitle: 'ps',
-        categoryPrefix: 'Today in %s',
         seeAll: 'See all %d',
         buttonText: 'Open Ugly News',
       },
       'June 28, 2026',
+      { topStories: [cluster('cl1'), cluster('cl2', 'right')], blindspot: [cluster('bs1', 'left')] },
       articles,
       { title: 'Pod', duration: '5 min', uri: `${SHORT}podcode` },
       `${SHORT}homecode`,
+      uglyTake,
     );
 
     const hrefs = extractHrefs(html);
     expect(hrefs.length).toBeGreaterThan(0);
+    expect(hrefs).toContain(`${SHORT}takecode`); // the Ugly Take block links out
     for (const href of hrefs) {
       expect(href.startsWith(SHORT), `non-short link in email: ${href}`).toBe(true);
     }
