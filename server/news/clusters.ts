@@ -3,6 +3,7 @@ import { collections } from '../../shared/collections';
 import type { FileMarkdown, NewsCluster } from '../../shared/collections';
 import { computeBiasBreakdown, detectBlindspot, toBiasBucket } from '../../shared/news/cluster-logic';
 import { feedIdToSourceId, sourceById } from '../../shared/news/sourceBias';
+import { getDomainRating, normalizeDomain } from './domainBias';
 import type {
   ClusterCardSchema,
   ClusterFullSchema,
@@ -104,41 +105,51 @@ export async function newsClusterGet(
 
   // Dedupe coverage to DISTINCT OUTLETS — a site's multiple articles collapse to
   // one row (with an article count) so the same site isn't counted repeatedly.
+  // Rating resolution: hand-curated feed→source FIRST (best quality), then the
+  // IDIAP domain table (cached) so uncurated domains still land on the bias bar.
   type Cov = ClusterFull['coverage'][number];
   const byOutlet = new Map<string, Cov>();
   for (const f of files) {
     const sid = f.feedId ? feedIdToSourceId[f.feedId] : undefined;
     const src = sid ? sourceById[sid] : undefined;
-    const key = sid ?? `feed:${f.feedId ?? f._id}`;
+    const domain = normalizeDomain(f.sourceUri);
+    const key = sid ?? (domain ? `domain:${domain}` : `feed:${f.feedId ?? f._id}`);
     const existing = byOutlet.get(key);
     if (existing) {
       existing.articleCount += 1;
       if (!existing.uri && f.sourceUri) existing.uri = f.sourceUri;
       continue;
     }
+    let bucket = src ? toBiasBucket(src.biasScore) : null;
+    let factuality: string | null = src?.factuality ?? null;
+    if (!src) {
+      const idiap = await getDomainRating(f.sourceUri);
+      if (idiap) {
+        bucket = toBiasBucket(idiap.biasScore);
+        factuality = idiap.factuality;
+      }
+    }
     byOutlet.set(key, {
       fileId: f._id,
       title: decodeHtmlEntities(f.title ?? 'Untitled'),
       sourceId: sid ?? null,
-      sourceName: src?.name ?? (f.feedId ?? 'Unknown'),
-      bucket: src ? toBiasBucket(src.biasScore) : null,
-      factuality: src?.factuality ?? null,
+      sourceName: src?.name ?? domain ?? f.feedId ?? 'Unknown',
+      bucket,
+      factuality: factuality as Cov['factuality'],
       uri: f.sourceUri ?? null,
       articleCount: 1,
     });
   }
   const coverage = [...byOutlet.values()];
 
-  // Recompute the bias bar from DISTINCT outlets so older clusters (whose stored
-  // breakdown was per-article) render correctly on the page.
+  // Recompute the bias bar from DISTINCT outlets (curated OR IDIAP-rated) so older
+  // clusters (whose stored breakdown was per-article) render correctly.
+  const bucketScore = (b: Cov['bucket']): number | null => (b === 'left' ? -3 : b === 'right' ? 3 : b === 'center' ? 0 : null);
   const biasBreakdown = computeBiasBreakdown(
-    coverage.map((x) => {
-      const s = x.sourceId ? sourceById[x.sourceId] : undefined;
-      return { biasScore: s ? s.biasScore : null, factuality: s ? s.factuality : null };
-    }),
+    coverage.map((x) => ({ biasScore: bucketScore(x.bucket), factuality: null })),
   );
   const blindspotSide = detectBlindspot(biasBreakdown);
-  const sourceCount = coverage.filter((x) => x.sourceId !== null).length;
+  const sourceCount = coverage.filter((x) => x.bucket !== null).length;
 
   const sources = c.sourceIds
     .map((sid) => {
