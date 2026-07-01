@@ -40,6 +40,7 @@ export interface ClusterSource {
 export interface ClusterCoverageItem {
   fileId: string; title: string; sourceId: string | null; sourceName: string;
   bucket: BiasBucket | null; factuality: string | null; uri: string | null;
+  articleCount: number;
 }
 export interface UglyTake { id: string; title: string; markdown: string; imageUri: string | null }
 export interface ClusterFull extends ClusterCard {
@@ -120,12 +121,14 @@ export function BlindspotBadge({ side }: { side: BiasBucket }): React.ReactEleme
   );
 }
 
-export function SourceChip({ name, bucket, factuality }: { name: string; bucket: BiasBucket | null; factuality: string | null }): React.ReactElement {
+export function SourceChip({ name, bucket, factuality, count = 1 }: { name: string; bucket: BiasBucket | null; factuality: string | null; count?: number }): React.ReactElement {
   const color = bucket ? BIAS[bucket] : C.muted;
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: '1px solid rgba(26,23,20,0.2)' }}>
       <span style={{ width: 9, height: 9, background: color, flex: 'none' }} />
-      <span style={{ flex: 1, fontFamily: 'Spectral, serif', fontWeight: 600, fontSize: 16 }}>{name}</span>
+      <span style={{ flex: 1, fontFamily: 'Spectral, serif', fontWeight: 600, fontSize: 16 }}>
+        {name}{count > 1 ? <span style={{ color: C.muted, fontWeight: 400 }}> ×{count}</span> : null}
+      </span>
       <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, letterSpacing: '.06em', color: C.muted, border: `1px solid ${C.muted}`, padding: '2px 6px' }}>{factShort(factuality)}</span>
     </div>
   );

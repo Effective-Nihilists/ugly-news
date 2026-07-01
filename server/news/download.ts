@@ -1,4 +1,5 @@
 import { XMLParser } from 'fast-xml-parser';
+import { franc } from 'franc-min';
 import { dbDefaults } from 'ugly-app/shared';
 import { collections } from '../../shared/collections';
 import type { NewsArticle } from '../../shared/collections';
@@ -190,6 +191,14 @@ export async function dispatchNewsFeedDownload(
 
       const title = decodeHtmlEntities((textOf(item.title) ?? '').trim());
       if (isStringEmpty(title)) continue;
+
+      // English-only. franc returns 'und' below minLength, so short items fail
+      // open (kept); we only drop items detected as a confident non-English
+      // language (e.g. Spanish sports feeds, foreign-language GDELT slips).
+      const lang = franc(`${title}. ${contentMarkdown}`.slice(0, 600), { minLength: 25 });
+      if (lang !== 'eng' && lang !== 'und') {
+        continue;
+      }
 
       const uri = linkOf(item);
       const dateStr = item.isoDate ?? item.published ?? item.pubDate ?? item.updated;

@@ -47,15 +47,20 @@ function toMs(v: unknown, fallback: number): number {
   return fallback;
 }
 
-/** Static bias/factuality rating for each member feed (unrated → nulls). */
-function ratingsForFeeds(feedIds: string[]): MemberSourceRating[] {
-  return feedIds.map((fid) => {
+/** One rating per DISTINCT outlet across the member feeds — a single site
+ *  publishing many articles must not skew the bias bar / factuality. Rated feeds
+ *  dedupe by sourceId; unrated feeds dedupe by feedId (so 5 gdelt articles count
+ *  as one "outlet", not five). */
+function ratingsPerOutlet(feedIds: string[]): MemberSourceRating[] {
+  const byOutlet = new Map<string, MemberSourceRating>();
+  for (const fid of feedIds) {
     const sid = feedIdToSourceId[fid];
+    const key = sid ?? `feed:${fid}`;
+    if (byOutlet.has(key)) continue;
     const src = sid ? sourceById[sid] : undefined;
-    return src
-      ? { biasScore: src.biasScore, factuality: src.factuality }
-      : { biasScore: null, factuality: null };
-  });
+    byOutlet.set(key, src ? { biasScore: src.biasScore, factuality: src.factuality } : { biasScore: null, factuality: null });
+  }
+  return [...byOutlet.values()];
 }
 
 /** Recompute the derived aggregates (bias bar, blindspot, factuality, score)
@@ -66,21 +71,21 @@ function recomputeAggregates(
   firstSeenAt: number,
   engagement: number,
 ): Pick<NewsCluster, 'biasBreakdown' | 'blindspotSide' | 'factualityAvg' | 'score'> {
-  const ratings = ratingsForFeeds(feedIds);
+  const ratings = ratingsPerOutlet(feedIds); // distinct outlets, not per-article
   const biasBreakdown = computeBiasBreakdown(ratings);
   const blindspotSide = detectBlindspot(biasBreakdown);
   const facts = ratings
     .map((r) => r.factuality)
     .filter((f): f is Factuality => f !== null);
   const factualityAvg = averageFactuality(facts);
-  const distinctBuckets =
+  const distinctBucketCount =
     (biasBreakdown.left > 0 ? 1 : 0) +
     (biasBreakdown.center > 0 ? 1 : 0) +
     (biasBreakdown.right > 0 ? 1 : 0);
   const ageHours = (now - firstSeenAt) / (60 * 60 * 1000);
   const score = computeClusterScore({
-    articleCount: feedIds.length,
-    distinctBuckets,
+    articleCount: ratings.length, // breadth = distinct outlets
+    distinctBuckets: distinctBucketCount,
     ageHours,
     engagement,
   });

@@ -1,3 +1,4 @@
+import { franc } from 'franc-min';
 import { dbDefaults } from 'ugly-app/shared';
 import { collections } from '../../shared/collections';
 import type { NewsArticle } from '../../shared/collections';
@@ -95,6 +96,9 @@ export async function dispatchGdeltPull(db: NewsDb, now: number = Date.now()): P
   for (const a of articles) {
     try {
       if (isStringEmpty(a.url) || isStringEmpty(a.title)) continue;
+      // English-only (GDELT's sourcelang:english occasionally slips).
+      const lang = franc(a.title, { minLength: 25 });
+      if (lang !== 'eng' && lang !== 'und') continue;
       const _id = `gdelt_${stableHash(a.url!)}`;
       if (await db.getDoc(collections.newsArticle, _id)) continue;
 

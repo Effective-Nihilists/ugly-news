@@ -114,8 +114,8 @@ export default function ClusterPage({ id }: { id: string }): React.ReactElement 
                         ? <div style={{ ...mono, fontSize: 12, color: C.muted, padding: '9px 0' }}>Largely uncovered</div>
                         : items.map((x) =>
                             x.uri
-                              ? <a key={x.fileId} href={x.uri} target="_blank" rel="noopener noreferrer" data-id="coverage-source-link" style={{ textDecoration: 'none', color: C.ink, display: 'block' }}><SourceChip name={x.sourceName} bucket={x.bucket} factuality={x.factuality} /></a>
-                              : <SourceChip key={x.fileId} name={x.sourceName} bucket={x.bucket} factuality={x.factuality} />,
+                              ? <a key={x.fileId} href={x.uri} target="_blank" rel="noopener noreferrer" data-id="coverage-source-link" style={{ textDecoration: 'none', color: C.ink, display: 'block' }}><SourceChip name={x.sourceName} bucket={x.bucket} factuality={x.factuality} count={x.articleCount} /></a>
+                              : <SourceChip key={x.fileId} name={x.sourceName} bucket={x.bucket} factuality={x.factuality} count={x.articleCount} />,
                           )}
                     </div>
                   );

@@ -1,7 +1,7 @@
 import type { DBObject, TypedDB } from 'ugly-app/shared';
 import { collections } from '../../shared/collections';
 import type { FileMarkdown, NewsCluster } from '../../shared/collections';
-import { toBiasBucket } from '../../shared/news/cluster-logic';
+import { computeBiasBreakdown, detectBlindspot, toBiasBucket } from '../../shared/news/cluster-logic';
 import { feedIdToSourceId, sourceById } from '../../shared/news/sourceBias';
 import type {
   ClusterCardSchema,
@@ -102,10 +102,21 @@ export async function newsClusterGet(
     { $match: { _id: { $in: c.fileIds.slice(0, 80) } } },
   ]);
 
-  const coverage = files.map((f) => {
+  // Dedupe coverage to DISTINCT OUTLETS — a site's multiple articles collapse to
+  // one row (with an article count) so the same site isn't counted repeatedly.
+  type Cov = ClusterFull['coverage'][number];
+  const byOutlet = new Map<string, Cov>();
+  for (const f of files) {
     const sid = f.feedId ? feedIdToSourceId[f.feedId] : undefined;
     const src = sid ? sourceById[sid] : undefined;
-    return {
+    const key = sid ?? `feed:${f.feedId ?? f._id}`;
+    const existing = byOutlet.get(key);
+    if (existing) {
+      existing.articleCount += 1;
+      if (!existing.uri && f.sourceUri) existing.uri = f.sourceUri;
+      continue;
+    }
+    byOutlet.set(key, {
       fileId: f._id,
       title: decodeHtmlEntities(f.title ?? 'Untitled'),
       sourceId: sid ?? null,
@@ -113,8 +124,21 @@ export async function newsClusterGet(
       bucket: src ? toBiasBucket(src.biasScore) : null,
       factuality: src?.factuality ?? null,
       uri: f.sourceUri ?? null,
-    };
-  });
+      articleCount: 1,
+    });
+  }
+  const coverage = [...byOutlet.values()];
+
+  // Recompute the bias bar from DISTINCT outlets so older clusters (whose stored
+  // breakdown was per-article) render correctly on the page.
+  const biasBreakdown = computeBiasBreakdown(
+    coverage.map((x) => {
+      const s = x.sourceId ? sourceById[x.sourceId] : undefined;
+      return { biasScore: s ? s.biasScore : null, factuality: s ? s.factuality : null };
+    }),
+  );
+  const blindspotSide = detectBlindspot(biasBreakdown);
+  const sourceCount = coverage.filter((x) => x.sourceId !== null).length;
 
   const sources = c.sourceIds
     .map((sid) => {
@@ -148,6 +172,9 @@ export async function newsClusterGet(
   return {
     cluster: {
       ...toCard(c),
+      biasBreakdown, // distinct-outlet recompute (overrides the stored per-article value)
+      blindspotSide,
+      sourceCount,
       neutralSummary: c.neutralSummary,
       framingSummary: c.framingSummary,
       sources,

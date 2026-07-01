@@ -89,6 +89,7 @@ const ClusterCoverageItemSchema = z.object({
   bucket: BiasBucketSchema.nullable(),
   factuality: FactualitySchema.nullable(),
   uri: z.string().nullable(),
+  articleCount: z.number(),
 });
 
 const UglyTakeSchema = z.object({
