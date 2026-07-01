@@ -208,10 +208,31 @@ export const newsFeeds: NewsFeed[] = [
   { id: 'ign', name: 'IGN', url: 'https://feeds.ign.com/ign/all', category: 'events' },
   { id: 'stereogum', name: 'Stereogum', url: 'https://www.stereogum.com/feed/', category: 'events' },
 
-  // NOTE: Google News RSS was removed — its item links are CBM…-encoded redirect
-  // URLs that resolve only to Google's own JS page (not the article), so the
-  // scraper produced 0 usable files. Free breadth now comes from GDELT (real
-  // article URLs) + the direct outlet feeds above.
+  // ─── EXPANSION 2026-07-01 (mined from the IDIAP MBFC list, ranked by Majestic
+  //     popularity, high-factuality, verified-live RSS). Strengthens the right. ─
+  // Politics
+  { id: 'time', name: 'Time', url: 'https://time.com/feed/', category: 'politics' },
+  { id: 'latimes', name: 'Los Angeles Times', url: 'https://www.latimes.com/rss2.0.xml', category: 'politics' },
+  { id: 'theatlantic', name: 'The Atlantic', url: 'https://www.theatlantic.com/feed/all/', category: 'politics' },
+  { id: 'newyorker', name: 'The New Yorker', url: 'https://www.newyorker.com/feed/news', category: 'politics' },
+  { id: 'axios', name: 'Axios', url: 'https://api.axios.com/feed/', category: 'politics' },
+  { id: 'globeandmail', name: 'The Globe and Mail', url: 'https://www.theglobeandmail.com/arc/outboundfeeds/rss/category/politics/', category: 'politics' },
+  // World
+  { id: 'abc_au', name: 'ABC News (Australia)', url: 'https://www.abc.net.au/news/feed/51120/rss.xml', category: 'world' },
+  { id: 'wsj', name: 'The Wall Street Journal', url: 'https://feeds.a.dj.com/rss/RSSWorldNews.xml', category: 'world' },
+  { id: 'telegraph', name: 'The Telegraph', url: 'https://www.telegraph.co.uk/rss.xml', category: 'world' },
+  { id: 'jpost', name: 'The Jerusalem Post', url: 'https://www.jpost.com/rss/rssfeedsheadlines.aspx', category: 'world' },
+  { id: 'standard_uk', name: 'Evening Standard', url: 'https://www.standard.co.uk/rss', category: 'world' },
+  // Business
+  { id: 'bloomberg', name: 'Bloomberg', url: 'https://feeds.bloomberg.com/markets/news.rss', category: 'business' },
+  { id: 'ft', name: 'Financial Times', url: 'https://www.ft.com/rss/home', category: 'business' },
+  // Tech
+  { id: 'cnet', name: 'CNET', url: 'https://www.cnet.com/rss/news/', category: 'tech' },
+
+  // NOTE: Google News RSS + GDELT were both removed (Google News = CBM-encoded
+  // redirect URLs the scraper can't resolve; GDELT = intermittent 522 origin
+  // timeouts + 1-req/5s rate limit, verified from the Worker). Breadth now comes
+  // entirely from the direct outlet feeds above (English-filtered at ingest).
 ];
 
 // ============================================================================

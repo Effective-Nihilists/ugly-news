@@ -107,6 +107,25 @@ export const newsSourceSeeds: NewsSourceSeed[] = [
   { id: 'dailycaller', name: 'The Daily Caller', homepage: 'https://dailycaller.com', domains: ['dailycaller.com'], feedIds: ['dailycaller'], bias: 'right', biasScore: 3.5, factuality: 'mixed', owner: 'The Daily Caller', country: 'US' },
   { id: 'federalist', name: 'The Federalist', homepage: 'https://thefederalist.com', domains: ['thefederalist.com'], feedIds: ['federalist'], bias: 'right', biasScore: 3.5, factuality: 'mixed', owner: 'FDRLST Media', country: 'US' },
   { id: 'breitbart', name: 'Breitbart', homepage: 'https://www.breitbart.com', domains: ['breitbart.com'], feedIds: ['breitbart'], bias: 'far-right', biasScore: 4.5, factuality: 'low', owner: 'Breitbart News Network', country: 'US' },
+
+  // ─── Expansion 2026-07-01 (IDIAP-vetted, verified-live feeds) ─────────────
+  // Left / lean-left
+  { id: 'time', name: 'Time', homepage: 'https://time.com', domains: ['time.com'], feedIds: ['time'], bias: 'lean-left', biasScore: -1.5, factuality: 'high', owner: 'Time USA, LLC', country: 'US' },
+  { id: 'latimes', name: 'Los Angeles Times', homepage: 'https://www.latimes.com', domains: ['latimes.com'], feedIds: ['latimes'], bias: 'lean-left', biasScore: -1.5, factuality: 'high', owner: 'Nant Capital (P. Soon-Shiong)', country: 'US' },
+  { id: 'theatlantic', name: 'The Atlantic', homepage: 'https://www.theatlantic.com', domains: ['theatlantic.com'], feedIds: ['theatlantic'], bias: 'lean-left', biasScore: -1.5, factuality: 'high', owner: 'Emerson Collective', country: 'US' },
+  { id: 'newyorker', name: 'The New Yorker', homepage: 'https://www.newyorker.com', domains: ['newyorker.com'], feedIds: ['newyorker'], bias: 'left', biasScore: -2.5, factuality: 'high', owner: 'Condé Nast', country: 'US' },
+  { id: 'axios', name: 'Axios', homepage: 'https://www.axios.com', domains: ['axios.com'], feedIds: ['axios'], bias: 'lean-left', biasScore: -1, factuality: 'high', owner: 'Cox Enterprises', country: 'US' },
+  { id: 'abc_au', name: 'ABC News (Australia)', homepage: 'https://www.abc.net.au/news', domains: ['abc.net.au'], feedIds: ['abc_au'], bias: 'lean-left', biasScore: -1.5, factuality: 'high', owner: 'ABC (Australian public)', country: 'AU' },
+  // Center
+  { id: 'cnet', name: 'CNET', homepage: 'https://www.cnet.com', domains: ['cnet.com'], feedIds: ['cnet'], bias: 'center', biasScore: 0, factuality: 'high', owner: 'Ziff Davis', country: 'US' },
+  { id: 'ft', name: 'Financial Times', homepage: 'https://www.ft.com', domains: ['ft.com'], feedIds: ['ft'], bias: 'center', biasScore: 0, factuality: 'high', owner: 'Nikkei Inc.', country: 'UK' },
+  { id: 'bloomberg', name: 'Bloomberg', homepage: 'https://www.bloomberg.com', domains: ['bloomberg.com'], feedIds: ['bloomberg'], bias: 'lean-left', biasScore: -1, factuality: 'high', owner: 'Bloomberg L.P.', country: 'US' },
+  // Right / lean-right
+  { id: 'wsj', name: 'The Wall Street Journal', homepage: 'https://www.wsj.com', domains: ['wsj.com', 'dj.com'], feedIds: ['wsj'], bias: 'lean-right', biasScore: 1.5, factuality: 'mixed', owner: 'News Corp (Dow Jones)', country: 'US' },
+  { id: 'telegraph', name: 'The Telegraph', homepage: 'https://www.telegraph.co.uk', domains: ['telegraph.co.uk'], feedIds: ['telegraph'], bias: 'right', biasScore: 3, factuality: 'mixed', owner: 'Telegraph Media Group', country: 'UK' },
+  { id: 'globeandmail', name: 'The Globe and Mail', homepage: 'https://www.theglobeandmail.com', domains: ['theglobeandmail.com'], feedIds: ['globeandmail'], bias: 'lean-right', biasScore: 1.5, factuality: 'high', owner: 'The Woodbridge Company', country: 'CA' },
+  { id: 'jpost', name: 'The Jerusalem Post', homepage: 'https://www.jpost.com', domains: ['jpost.com'], feedIds: ['jpost'], bias: 'lean-right', biasScore: 1.5, factuality: 'high', owner: 'Jpost Inc.', country: 'IL' },
+  { id: 'standard_uk', name: 'Evening Standard', homepage: 'https://www.standard.co.uk', domains: ['standard.co.uk'], feedIds: ['standard_uk'], bias: 'lean-right', biasScore: 1.5, factuality: 'mixed', owner: 'Evgeny Lebedev', country: 'UK' },
 ];
 
 /** feedId → sourceId lookup, derived from the seed's `feedIds`. */
