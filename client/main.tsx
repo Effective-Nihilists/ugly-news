@@ -1,4 +1,4 @@
-import { bootstrapApp, FeedbackButton } from 'ugly-app/client';
+import { bootstrapApp } from 'ugly-app/client';
 import { requests } from '../shared/api';
 import en from '../shared/lang/en';
 import { stringsDef } from '../shared/strings';
@@ -10,12 +10,7 @@ bootstrapApp({
   // Apex domain (ugly.press) — adopt an existing ugly.bot session silently.
   silentSso: true,
   RouterProvider,
-  render: () => (
-    <>
-      <RouterView />
-      <FeedbackButton />
-    </>
-  ),
+  render: () => <RouterView />,
   strings: {
     defaultLang: stringsDef.defaultLang,
     langs: stringsDef.langs,

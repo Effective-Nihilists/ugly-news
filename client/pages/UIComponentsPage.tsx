@@ -61,7 +61,6 @@ import {
   StaggeredAnimationContainer,
   Animated,
   useAnimatedValue,
-  FeedbackButton,
   Modal,
 } from 'ugly-app/client';
 import type {
@@ -953,18 +952,6 @@ function AdvancedTab(): React.ReactElement {
               <Text weight="bold" color="white">Animated opacity via useAnimatedValue</Text>
             </Animated.div>
           </div>
-        </Section>
-
-        <Section title="FeedbackButton" description="Built-in user feedback button (always present at bottom-right via AppProvider)">
-          <span style={{ opacity: 0.6, display: 'block', marginBottom: 12 }}>
-            <Text size="sm">
-              The feedback button is automatically added by{' '}
-              <code style={{ fontSize: 12 }}>AppProvider</code> and appears at the
-              bottom-right of every page at{' '}
-              <code style={{ fontSize: 12 }}>[data-id="feedback-button"]</code>.
-            </Text>
-          </span>
-          <FeedbackButton />
         </Section>
 
       </div>
