@@ -2,7 +2,6 @@ import {
   createApp,
   emailSend,
   flushPerf,
-  pushSend,
   recordFeedback,
   recordPerf,
   uglyBotRequest,
@@ -17,13 +16,12 @@ import { messages, requests } from '../shared/api';
 import type { Todo } from '../shared/collections';
 import { collections } from '../shared/collections';
 import { resolveUserEmail } from './news/email';
-import { absolutePushPath } from './news/pushUrl';
 import * as clusters from './news/clusters';
 import * as emailPref from './news/emailPref';
 import * as feed from './news/feed';
 import * as podcast from './news/podcast';
 import * as pub from './news/public';
-import { newsDb, setNewsDb } from './news/db';
+import { newsDb, newsPush, setNewsDb, setNewsPush } from './news/db';
 import { seedNewsSources } from './news/seedSources';
 import { setPerfSink } from './news/perf';
 import { createCronHandlers } from './news/workers';
@@ -65,11 +63,19 @@ const app = createApp(
       return { ok: true };
     },
 
-    sendPush: async (_userId, { targetUserId, title, body, path, query, imageUrl }) => {
+    sendPush: async (_userId, { targetUserId, title, body, page, query, imageUrl }): Promise<{ sent: boolean }> => {
       try {
-        // Absolutize the click-target so the ugly-mobile iOS shell host-matches
-        // the dock app on tap (a relative path falls through to home).
-        const result = await pushSend({ targetUserId, title, body, path: absolutePushPath(path), ...(query ? { query } : {}), ...(imageUrl ? { imageUrl } : {}) });
+        // Route-checked send via the injected push (see setNewsPush below); the
+        // framework resolves `page` against the route table and builds the
+        // absolute URL. A raw/absolute path can no longer be sent.
+        const result = await newsPush()({
+          targetUserId,
+          title,
+          body,
+          page,
+          ...(query ? { query } : {}),
+          ...(imageUrl ? { imageUrl } : {}),
+        });
         return { sent: result.sent };
       } catch (e) {
         console.error(e);
@@ -251,6 +257,11 @@ const app = createApp(
     });
   },
 );
+
+// Route-checked push binding — placed after `app` is fully defined so its type
+// is resolved (referencing `app.pushSend` inside createApp would be circular).
+// The sendPush handler + notifyPodcastReady send through newsPush().
+setNewsPush((input) => app.pushSend(input as Parameters<typeof app.pushSend>[0]));
 
 // eslint-disable-next-line @typescript-eslint/dot-notation
 const port = parseInt(process.env['PORT'] ?? '4321');

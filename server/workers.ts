@@ -16,7 +16,7 @@ import type { RequestHandlers } from 'ugly-app';
 import { messages, requests } from '../shared/api';
 import { collections } from '../shared/collections';
 import { cronTasks } from '../shared/cron';
-import type { NewsDb } from './news/db';
+import { setNewsPush, type NewsDb } from './news/db';
 import * as clusters from './news/clusters';
 import * as emailPref from './news/emailPref';
 import * as feed from './news/feed';
@@ -72,6 +72,10 @@ const app = createWorkersApp(
     cfg.setWorkers(cronTasks, createCronHandlers(wdb));
   },
 );
+
+// Route-checked push binding — the podcast-ready cron (createCronHandlers) sends
+// via newsPush() on Workers too, where there's no setOnAfterStart.
+setNewsPush((input) => app.pushSend(input as Parameters<typeof app.pushSend>[0]));
 
 export default app;
 export { CollectionDO, SessionDO };

@@ -1,9 +1,9 @@
-import { getAdapter, pushSend } from 'ugly-app/server/adapter/workers';
+import { getAdapter } from 'ugly-app/server/adapter/workers';
 import { dbDefaults, visemeNameSet } from 'ugly-app/shared';
 import { collections } from '../../shared/collections';
 import type { FileMarkdown, NewsCluster, NewsPodcast } from '../../shared/collections';
 import type { BiasBreakdown } from '../../shared/news/schemas';
-import { absolutePushPath } from './pushUrl';
+import { newsPush, type NewsDb } from './db';
 import { uglyBotId } from '../../shared/news/Bot';
 import {
   podcastHost1BotId,
@@ -16,7 +16,6 @@ import {
 } from '../../shared/news/NewsPodcast';
 import { concatBytes, createWAVFromPCM } from '../../shared/news/WAV';
 import { genText } from './ai';
-import type { NewsDb } from './db';
 import { todayDateString } from './podcast';
 import {
   generateSegmentTTS,
@@ -394,13 +393,14 @@ export async function notifyPodcastReady(db: NewsDb, podcast: NewsPodcast): Prom
   for (let i = 0; i < subs.length; i += CHUNK) {
     const results = await Promise.all(
       subs.slice(i, i + CHUNK).map((s) =>
-        pushSend({
+        newsPush()({
           targetUserId: s.userId,
           title,
           body,
-          // Absolute so the ugly-mobile iOS shell host-matches the dock app on
-          // tap — a relative "podcast" has no host and falls through to home.
-          path: absolutePushPath('podcast'),
+          // Route-checked: the framework resolves 'podcast' against the route
+          // table and builds the absolute URL so the ugly-mobile iOS shell
+          // host-matches the dock app on tap.
+          page: 'podcast',
           ...(imageUrl ? { imageUrl } : {}),
         })
           .then((r) => (r.sent ? 1 : 0))

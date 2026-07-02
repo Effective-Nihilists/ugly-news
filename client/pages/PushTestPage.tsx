@@ -77,7 +77,7 @@ export default function PushTestPage(): React.ReactElement {
         targetUserId: targetUserId.trim(),
         title: title.trim(),
         body: body.trim(),
-        path: '',
+        page: '',
       });
       const sent = (result as { sent: boolean }).sent;
       addLog(
