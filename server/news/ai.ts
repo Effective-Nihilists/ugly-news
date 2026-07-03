@@ -10,6 +10,9 @@
 // (`AI_PROXY_TOKEN`, minted at publish), exactly the shape AiText/AiImage use
 // in owner mode. Pure `fetch` — bundles for Node and Workers.
 import type { ImageGenModel } from 'ugly-app/shared';
+import { createEmbeddingClient, getAdapter } from 'ugly-app/server/adapter/workers';
+import { base64ToBytes } from '../../shared/news/WAV';
+import type { NewsCategory } from '../../shared/news/types';
 
 export type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
 
@@ -102,10 +105,61 @@ export async function genImage(
     }
     const data = (await res.json()) as { url?: string; base64?: string; mime?: string };
     if (data.url) return data.url;
-    if (data.base64) return `data:${data.mime ?? 'image/png'};base64,${data.base64}`;
+    if (data.base64) return await hostGeneratedImage(data.base64, data.mime ?? 'image/png');
     return null;
   } catch (error) {
     console.warn('[news/ai] genImage failed', error);
+    return null;
+  }
+}
+
+/**
+ * "The Ugly Press" house illustration for a news subject (article title or
+ * cluster headline). Every generated news image shares the paper's editorial
+ * newspaper-brutalist look so the feed reads as one publication, not a grab-bag
+ * of stock photography. Used at DISPLAY-PROMOTION points only (qualifying story
+ * clusters + their Ugly Take) — never eagerly per scraped article — so we spend
+ * one generation per shown story instead of one per article.
+ */
+export async function generateUglyPressImage(
+  subject: string,
+  category: NewsCategory,
+): Promise<string | null> {
+  const prompt = [
+    `Editorial illustration for a satirical newspaper, "The Ugly Press", depicting: ${subject}.`,
+    'Style: bold mid-century editorial newspaper illustration, screen-printed / risograph look, heavy ink linework, visible halftone dot texture, slightly distressed newsprint grain.',
+    'Limited palette: warm cream newsprint background, deep ink black, and a single vermilion red accent.',
+    `Conceptual and a little wry, fitting the ${category} desk. Strong composition, high contrast, flat shapes.`,
+    'Absolutely no text, words, letters, numbers, captions, or logos.',
+  ].join(' ');
+  const negative =
+    'text, words, letters, numbers, captions, watermark, signature, logo, photorealistic, 3d render, glossy, low quality, blurry';
+  return genImage(prompt, { model: 'flux_1_dev', negative });
+}
+
+// The AI image proxy returns raw base64 for models that don't self-host (e.g.
+// flux_1_dev). Persisting that as a `data:` URI bloats every `file` doc by
+// ~300KB and breaks the daily email (Gmail clips messages >~102KB, and clients
+// strip `data:` images). Re-host it in the app's own public R2 bucket —
+// content-addressed by sha256 so identical renders dedupe — and return the
+// same-origin URL, exactly like podcast audio / the TTS cache. On any storage
+// failure we drop the (decorative) image rather than fall back to a data URI.
+async function hostGeneratedImage(base64: string, mime: string): Promise<string | null> {
+  try {
+    const bytes = base64ToBytes(base64);
+    // Copy into a plain ArrayBuffer so digest() accepts it (Uint8Array may be
+    // backed by SharedArrayBuffer, which isn't a BufferSource).
+    const ab = new ArrayBuffer(bytes.byteLength);
+    new Uint8Array(ab).set(bytes);
+    const digest = await crypto.subtle.digest('SHA-256', ab);
+    const hash = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+    const ext = mime.includes('png') ? 'png' : mime.includes('webp') ? 'webp' : 'jpg';
+    const key = `gen-images/${hash}.${ext}`;
+    const storage = getAdapter().storage;
+    await storage.put('public', key, bytes, mime);
+    return storage.url('public', key);
+  } catch (error) {
+    console.warn('[news/ai] genImage: R2 upload failed — dropping image', error);
     return null;
   }
 }
@@ -116,8 +170,6 @@ export async function genImage(
 // the key held centrally in ugly.bot, and meters/bills the call against the
 // app's account (same platform pattern as bahai-app). `createEmbeddingClient`
 // from the workers adapter is a thin fetch wrapper over `uglyBotRequest`.
-import { createEmbeddingClient } from 'ugly-app/server/adapter/workers';
-
 const EMBED_DIMS = 512;
 let embeddingClient: ReturnType<typeof createEmbeddingClient> | null = null;
 

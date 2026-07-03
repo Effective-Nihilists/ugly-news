@@ -6,7 +6,7 @@ import { feedIdToSourceId, sourceById } from '../../shared/news/sourceBias';
 import { uglyBotId } from '../../shared/news/Bot';
 import type { BiasBucket } from '../../shared/news/schemas';
 import type { NewsCategory } from '../../shared/news/types';
-import { genImage, genText, truncateToApproximateTokens } from './ai';
+import { generateUglyPressImage, genText, truncateToApproximateTokens } from './ai';
 import type { NewsDb } from './db';
 import { enqueueTask } from './queue';
 
@@ -136,10 +136,22 @@ export async function dispatchClusterSynthesize(db: NewsDb, clusterId: string): 
     console.log(`[cluster-synth] done ${clusterId}: neutral=${neutral ? `${neutral.length}c` : 'null'} framing=${framing ? `${framing.length}c` : 'null'}`);
   }
 
+  // Backfill ONE generated "Ugly Press" image for the story, only when no member
+  // article supplied an RSS image. This is the single place a generated news
+  // image is actually shown (the top-stories rail's topImageUri), so we spend
+  // one generation per qualifying story instead of one per scraped article. The
+  // synthesized-guard (early-return above) keeps this once-per-cluster.
+  let topImageUri = c.topImageUri;
+  if (!topImageUri) {
+    topImageUri = await generateUglyPressImage(c.title, c.category);
+    if (topImageUri) console.log(`[cluster-synth] generated top image for ${clusterId}`);
+  }
+
   await db.setDoc(collections.newsCluster, {
     ...c,
     neutralSummary: neutral ?? c.neutralSummary,
     framingSummary: framing ?? c.framingSummary,
+    topImageUri,
     synthesizedAt: Date.now(),
     ...dbDefaults(),
     created: (c as { created?: Date }).created ?? new Date(),
@@ -195,15 +207,10 @@ export async function dispatchClusterSatirize(db: NewsDb, clusterId: string): Pr
   const now = Date.now();
   const title = satireTitle(markdown);
   const category: NewsCategory = c.category;
-  const image = await genImage(
-    [
-      `Editorial illustration for a satirical newspaper, "The Ugly Press", depicting: ${title}.`,
-      'Style: bold mid-century editorial newspaper illustration, screen-printed / risograph look, heavy ink linework, visible halftone dot texture.',
-      'Limited palette: warm cream newsprint background, deep ink black, single vermilion red accent. Conceptual and wry.',
-      'Absolutely no text, words, letters, numbers, captions, or logos.',
-    ].join(' '),
-    { model: 'flux_1_dev', negative: 'text, words, letters, numbers, captions, watermark, logo, photorealistic, 3d render, blurry' },
-  );
+  // Reuse the cluster's top image (guaranteed by dispatchClusterSynthesize for
+  // qualifying clusters) rather than minting a second one. Only generate here if
+  // it's still missing — satire can fire before synthesis for some clusters.
+  const image = c.topImageUri ?? (await generateUglyPressImage(title, category));
 
   const satireFileId = `satire_${c._id}`;
   const file: FileMarkdown & { _id: string } = {
