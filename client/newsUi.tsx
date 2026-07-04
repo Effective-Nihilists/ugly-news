@@ -244,16 +244,29 @@ export function BlindspotStrip(): React.ReactElement | null {
   if (!items || items.length === 0) return null;
   return (
     <section style={{ maxWidth: 1180, margin: '0 auto', padding: '0 clamp(20px,5vw,64px)' }}>
+      {/* Layout lives in classes (not inline) so the mobile media query can override it:
+          on narrow screens the row wraps — title full-width on top, badge+stats below —
+          instead of squeezing the title into a sliver and clipping the stats off-screen. */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        .bs-row { display: flex; gap: 14px; align-items: center; padding: 16px 18px; }
+        .bs-title { flex: 1; min-width: 0; }
+        .bs-stats { white-space: nowrap; }
+        @media (max-width: 640px) {
+          .bs-row { flex-wrap: wrap; row-gap: 10px; }
+          .bs-title { flex: 1 1 100%; order: -1; }
+          .bs-stats { margin-left: auto; }
+        }
+      ` }} />
       <div style={{ border: `3px double ${C.ink}`, margin: '34px 0' }}>
         <div style={{ background: C.accent, color: C.paper, fontFamily: 'Anton, sans-serif', textTransform: 'uppercase', letterSpacing: '.06em', padding: '10px 18px', fontSize: 18, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>▟ The Blindspot</span>
           <span style={{ ...kicker, color: C.paper, opacity: 0.85 }}>what one side isn't telling you</span>
         </div>
         {items.map((c, i) => (
-          <a key={c.id} href={`/story/${c.id}`} onClick={navClick(() => { router.push('story/:id', { id: c.id }); })} data-id="blindspot-row" style={{ display: 'flex', gap: 14, alignItems: 'center', padding: '16px 18px', borderBottom: i < items.length - 1 ? '1px solid rgba(26,23,20,0.25)' : 'none', textDecoration: 'none', color: C.ink }}>
+          <a key={c.id} href={`/story/${c.id}`} onClick={navClick(() => { router.push('story/:id', { id: c.id }); })} data-id="blindspot-row" className="bs-row" style={{ borderBottom: i < items.length - 1 ? '1px solid rgba(26,23,20,0.25)' : 'none', textDecoration: 'none', color: C.ink }}>
             {c.blindspotSide && <BlindspotBadge side={c.blindspotSide} />}
-            <h4 style={{ flex: 1, fontFamily: 'Spectral, serif', fontWeight: 600, fontSize: 19, margin: 0 }}>{c.title}</h4>
-            <span style={{ ...kicker, fontSize: 12, whiteSpace: 'nowrap' }}>{c.biasBreakdown.left}L · {c.biasBreakdown.center}C · {c.biasBreakdown.right}R →</span>
+            <h4 className="bs-title" style={{ fontFamily: 'Spectral, serif', fontWeight: 600, fontSize: 19, margin: 0 }}>{c.title}</h4>
+            <span className="bs-stats" style={{ ...kicker, fontSize: 12 }}>{c.biasBreakdown.left}L · {c.biasBreakdown.center}C · {c.biasBreakdown.right}R →</span>
           </a>
         ))}
         <a href="/blindspot" onClick={navClick(() => { router.push('blindspot', {}); })} data-id="see-all-blindspots" style={{ display: 'block', textAlign: 'center', padding: '12px 18px', ...kicker, fontSize: 12, color: C.accent, textDecoration: 'none', borderTop: '1px solid rgba(26,23,20,0.25)' }}>
