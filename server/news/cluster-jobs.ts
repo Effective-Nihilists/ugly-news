@@ -1,7 +1,7 @@
 import { dbDefaults } from 'ugly-app/shared';
 import { collections } from '../../shared/collections';
 import type { FileMarkdown, NewsCluster } from '../../shared/collections';
-import { toBiasBucket } from '../../shared/news/cluster-logic';
+import { isSubstantiveSummary, toBiasBucket } from '../../shared/news/cluster-logic';
 import { feedIdToSourceId, sourceById } from '../../shared/news/sourceBias';
 import { uglyBotId } from '../../shared/news/Bot';
 import type { BiasBucket } from '../../shared/news/schemas';
@@ -42,9 +42,17 @@ export async function dispatchClusterSweep(db: NewsDb, now: number = Date.now())
     { limit: 200 },
   );
 
-  // Synthesis: multi-side clusters that haven't been summarized yet.
+  // Synthesis: multi-side clusters missing a substantive neutral OR framing summary.
+  // Keying on isSubstantiveSummary (not `=== null`) means clusters whose summaries the
+  // AI proxy previously returned truncated/empty ("A **") get re-synthesized instead of
+  // being stuck with garbage forever.
   const toSynth = recent
-    .filter((c) => c.neutralSummary === null && c.articleCount >= 2 && distinctBuckets(c.biasBreakdown) >= 2)
+    .filter(
+      (c) =>
+        (!isSubstantiveSummary(c.neutralSummary) || !isSubstantiveSummary(c.framingSummary)) &&
+        c.articleCount >= 2 &&
+        distinctBuckets(c.biasBreakdown) >= 2,
+    )
     .slice(0, SYNTH_MAX_PER_SWEEP);
   for (const c of toSynth) await enqueueTask('clusterSynthesize', { clusterId: c._id });
 
@@ -98,7 +106,7 @@ export async function dispatchClusterSynthesize(db: NewsDb, clusterId: string): 
     return;
   }
   const c = cluster as NewsCluster & { _id: string };
-  if (c.neutralSummary && c.synthesizedAt) {
+  if (isSubstantiveSummary(c.neutralSummary) && isSubstantiveSummary(c.framingSummary) && c.synthesizedAt) {
     console.log(`[cluster-synth] ${clusterId} already synthesized — skipping`);
     return;
   }
@@ -114,26 +122,19 @@ export async function dispatchClusterSynthesize(db: NewsDb, clusterId: string): 
   const context = buildCoverageContext(files);
 
   const [neutral, framing] = await Promise.all([
-    genText(
-      [
-        { role: 'system', content: NEUTRAL_PROMPT },
-        { role: 'user', content: `Story: ${c.title}\n\n${context}` },
-      ],
-      { model: 'deepseek_v4_flash', temperature: 0.3, maxTokens: 500 },
-    ),
-    genText(
-      [
-        { role: 'system', content: FRAMING_PROMPT },
-        { role: 'user', content: `Story: ${c.title}\n\n${context}` },
-      ],
-      { model: 'deepseek_v4_flash', temperature: 0.4, maxTokens: 320 },
-    ),
+    genSummary(NEUTRAL_PROMPT, c.title, context, { temperature: 0.3, maxTokens: 500 }),
+    genSummary(FRAMING_PROMPT, c.title, context, { temperature: 0.4, maxTokens: 320 }),
   ]);
 
+  // Only persist substantive output; keep whatever was there otherwise (null or old
+  // garbage — the sweep re-picks non-substantive clusters, so they retry next time).
+  const nextNeutral = neutral ?? c.neutralSummary;
+  const nextFraming = framing ?? c.framingSummary;
+  const bothGood = isSubstantiveSummary(nextNeutral) && isSubstantiveSummary(nextFraming);
   if (!neutral && !framing) {
-    console.error(`[cluster-synth] BOTH genText calls returned null for ${clusterId} — AI proxy down or rate-limited; leaving cluster unsynthesized`);
+    console.error(`[cluster-synth] both summaries non-substantive for ${clusterId} after retry — AI proxy down/truncating; leaving for next sweep`);
   } else {
-    console.log(`[cluster-synth] done ${clusterId}: neutral=${neutral ? `${neutral.length}c` : 'null'} framing=${framing ? `${framing.length}c` : 'null'}`);
+    console.log(`[cluster-synth] ${clusterId}: neutral=${nextNeutral ? `${nextNeutral.length}c` : 'null'} framing=${nextFraming ? `${nextFraming.length}c` : 'null'} synthesized=${bothGood}`);
   }
 
   // Backfill ONE generated "Ugly Press" image for the story, only when no member
@@ -149,13 +150,42 @@ export async function dispatchClusterSynthesize(db: NewsDb, clusterId: string): 
 
   await db.setDoc(collections.newsCluster, {
     ...c,
-    neutralSummary: neutral ?? c.neutralSummary,
-    framingSummary: framing ?? c.framingSummary,
+    neutralSummary: nextNeutral,
+    framingSummary: nextFraming,
     topImageUri,
-    synthesizedAt: Date.now(),
+    // Only mark synthesized once BOTH summaries are real, so a partial result stays
+    // eligible for re-synthesis on the next sweep instead of being frozen as done.
+    synthesizedAt: bothGood ? Date.now() : (c.synthesizedAt ?? null),
     ...dbDefaults(),
     created: (c as { created?: Date }).created ?? new Date(),
   });
+}
+
+/**
+ * genText for a cluster summary, retried once when the proxy returns truncated/empty
+ * output (see isSubstantiveSummary). Returns a substantive string, or null if both
+ * attempts fail — in which case the caller leaves the cluster for the next sweep.
+ */
+async function genSummary(
+  system: string,
+  title: string,
+  context: string,
+  opts: { temperature: number; maxTokens: number },
+): Promise<string | null> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const out = await genText(
+      [
+        { role: 'system', content: system },
+        { role: 'user', content: `Story: ${title}\n\n${context}` },
+      ],
+      { model: 'deepseek_v4_flash', temperature: opts.temperature, maxTokens: opts.maxTokens },
+    );
+    if (isSubstantiveSummary(out)) return out;
+    if (attempt === 0) {
+      console.warn(`[cluster-synth] non-substantive summary (${(out ?? '').length}c) — retrying once`);
+    }
+  }
+  return null;
 }
 
 const SATIRE_PROMPT = `You are a headline writer for "The Ugly Press" satire desk — deadpan, AP-style, in the tradition of The Onion. From a REAL news story, write a SATIRICAL companion piece that parodies how the news is reported. Rules:

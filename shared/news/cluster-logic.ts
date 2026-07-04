@@ -194,3 +194,18 @@ export function computeClusterScore(input: ClusterScoreInput): number {
   const engagement = Math.log2(input.engagement + 1);
   return breadth + spread + recency + engagement;
 }
+
+/**
+ * Minimum trimmed length for an AI-generated cluster summary to count as real
+ * content. The synthesis proxy (deepseek_v4_flash) intermittently returns
+ * truncated/empty output — observed prod values like "A **" (4c) and
+ * "**Left:** Left-leaning outlets frame the" (40c) — while genuine summaries run
+ * 139–1000c. Anything shorter is treated as MISSING so it neither renders on the
+ * story page nor sticks in the DB (it gets re-synthesized on the next sweep).
+ */
+export const MIN_SUMMARY_CHARS = 80;
+
+/** True when `s` is a substantive summary (see MIN_SUMMARY_CHARS), not truncated/empty. */
+export function isSubstantiveSummary(s: string | null | undefined): boolean {
+  return (s ?? '').trim().length >= MIN_SUMMARY_CHARS;
+}

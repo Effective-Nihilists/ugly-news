@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  MIN_SUMMARY_CHARS,
   assignToCluster,
+  isSubstantiveSummary,
   averageFactuality,
   clusterAcceptsArticle,
   computeBiasBreakdown,
@@ -161,5 +163,29 @@ describe('computeClusterScore', () => {
     const big = computeClusterScore({ articleCount: 30, distinctBuckets: 3, ageHours: 1, engagement: 50 });
     const small = computeClusterScore({ articleCount: 2, distinctBuckets: 1, ageHours: 40, engagement: 0 });
     expect(big).toBeGreaterThan(small);
+  });
+});
+
+describe('isSubstantiveSummary', () => {
+  it('rejects null, undefined, and empty', () => {
+    expect(isSubstantiveSummary(null)).toBe(false);
+    expect(isSubstantiveSummary(undefined)).toBe(false);
+    expect(isSubstantiveSummary('')).toBe(false);
+    expect(isSubstantiveSummary('   ')).toBe(false);
+  });
+
+  it('rejects the observed truncated/garbage outputs', () => {
+    // Real broken prod values from clus_file_foxnews_politics_291e1dc1 and peers.
+    expect(isSubstantiveSummary('A **')).toBe(false);
+    expect(isSubstantiveSummary('A')).toBe(false);
+    expect(isSubstantiveSummary('**Left:** Left-leaning outlets frame the')).toBe(false); // 40c
+  });
+
+  it('accepts real summaries at/above the threshold', () => {
+    const real =
+      'A shock poll shows Talarico tied with Paxton in the Texas Senate race, ' +
+      'threatening the GOP stronghold. Multiple outlets confirm the numbers.';
+    expect(real.length).toBeGreaterThanOrEqual(MIN_SUMMARY_CHARS);
+    expect(isSubstantiveSummary(real)).toBe(true);
   });
 });

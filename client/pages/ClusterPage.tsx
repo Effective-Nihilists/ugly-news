@@ -1,6 +1,7 @@
 import React from 'react';
 import { useRouter } from '../router';
 import { navClick } from '../nav';
+import { isSubstantiveSummary } from '../../shared/news/cluster-logic';
 import {
   BiasBar,
   BiasLegend,
@@ -95,18 +96,18 @@ export default function ClusterPage({ id }: { id: string }): React.ReactElement 
             </section>
 
             {/* WHAT HAPPENED / HOW EACH SIDE FRAMES IT */}
-            {(cluster.neutralSummary || cluster.framingSummary) ? (
+            {(isSubstantiveSummary(cluster.neutralSummary) || isSubstantiveSummary(cluster.framingSummary)) ? (
               <section className="uc-two" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', border: `3px double ${C.ink}`, marginBottom: 28 }}>
                 <div className="uc-what" style={{ padding: '22px 24px', borderRight: `3px double ${C.ink}` }}>
                   <h3 style={colHead}>What Happened</h3>
-                  {cluster.neutralSummary
-                    ? <div className="uc-body" dangerouslySetInnerHTML={{ __html: renderMarkdown(cluster.neutralSummary) }} />
+                  {isSubstantiveSummary(cluster.neutralSummary)
+                    ? <div className="uc-body" dangerouslySetInnerHTML={{ __html: renderMarkdown(cluster.neutralSummary!) }} />
                     : <p style={{ ...mono, color: C.muted }}>The wire desk is still writing the neutral account.</p>}
                 </div>
                 <div style={{ padding: '22px 24px' }}>
                   <h3 style={colHead}>How Each Side Frames It</h3>
-                  {cluster.framingSummary
-                    ? <div className="uc-body uc-frame" dangerouslySetInnerHTML={{ __html: renderMarkdown(cluster.framingSummary) }} />
+                  {isSubstantiveSummary(cluster.framingSummary)
+                    ? <div className="uc-body uc-frame" dangerouslySetInnerHTML={{ __html: renderMarkdown(cluster.framingSummary!) }} />
                     : <p style={{ ...mono, color: C.muted }}>Needs coverage from more than one side.</p>}
                 </div>
               </section>
