@@ -52,6 +52,34 @@ describe('renderDailyNewsEmail links', () => {
     uri: `${SHORT}takecode`,
   };
 
+  it('never inlines a data: URI image (Gmail clips >102KB emails → blank Ugly Take)', () => {
+    // Satire thumbnails are AI-generated and stored as ~300KB base64 data: URIs.
+    // Embedding one in <img src> blows past Gmail's ~102KB clip threshold and is
+    // blocked by most clients, so the whole Ugly Take section renders blank.
+    const bigData = `data:image/jpeg;base64,${'A'.repeat(300_000)}`;
+    const html = renderDailyNewsEmail(
+      {
+        greeting: 'g',
+        pickedTitle: 'p',
+        pickedSubtitle: 'ps',
+        seeAll: 'See all %d',
+        buttonText: 'Open Ugly News',
+      },
+      'June 28, 2026',
+      { topStories: [cluster('cl1')], blindspot: [] },
+      { ...articles, pickedForYou: [{ ...article('p1'), thumbnailUri: bigData }] },
+      { title: 'Pod', duration: '5 min', uri: `${SHORT}podcode` },
+      `${SHORT}homecode`,
+      { ...uglyTake, imageUri: bigData },
+    );
+
+    expect(html).not.toContain('data:image');
+    expect(html.length).toBeLessThan(100_000); // stays under Gmail's clip threshold
+    // The Ugly Take text still renders even with the image dropped.
+    expect(html).toContain('Nation Declares War On Mondays');
+    expect(html).toContain('deadpan teaser');
+  });
+
   it('emits only central short links (no bare app URLs → no client 404)', () => {
     const html = renderDailyNewsEmail(
       {

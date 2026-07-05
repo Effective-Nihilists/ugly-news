@@ -41,6 +41,14 @@ export async function resolveUserEmail(userId: string): Promise<string | null> {
   return data.email ?? null;
 }
 
+// Email images must be publicly-hosted URLs. AI-generated satire thumbnails are
+// stored as ~300KB base64 `data:` URIs — inlining one blows past Gmail's ~102KB
+// clip threshold (blanking the section after it) and is stripped by most clients.
+// Drop anything that isn't an http(s) URL so the text still renders.
+function emailImage(uri: string | null | undefined): string | null {
+  return uri && /^https?:\/\//i.test(uri) ? uri : null;
+}
+
 export interface NewsEmailArticle {
   fileId: string;
   title: string;
@@ -55,7 +63,7 @@ async function fileToEmailArticle(
 ): Promise<NewsEmailArticle> {
   const title = file.title ?? '';
   const summary = (file.text ?? '').slice(0, 200);
-  const thumbnailUri = file.thumbnail?.uri ?? null;
+  const thumbnailUri = emailImage(file.thumbnail?.uri);
   return {
     fileId: file._id,
     title,
@@ -229,7 +237,7 @@ export async function selectEmailUglyTake(db: NewsDb, now: number): Promise<Emai
   const body = (f.markdown ?? '').replace(/^\s*#[^\n]*\n/, '');
   const snippet = body.replace(/[#>*_`[\]]/g, '').replace(/\s+/g, ' ').trim().slice(0, 160);
   const title = f.title ?? 'The Ugly Take';
-  const imageUri = f.thumbnail?.uri ?? null;
+  const imageUri = emailImage(f.thumbnail?.uri);
   return {
     title,
     category: c.category,
@@ -288,8 +296,9 @@ function clusterCard(c: EmailCluster): string {
 
 /** Email-safe "The Ugly Take" satire block — unmistakably labeled. */
 function uglyTakeBlock(t: EmailUglyTake): string {
-  const img = t.imageUri
-    ? `<img src="${t.imageUri}" alt="" width="100%" style="max-height:200px;object-fit:cover;border:1px solid ${INK};margin-bottom:12px"/>`
+  const src = emailImage(t.imageUri);
+  const img = src
+    ? `<img src="${src}" alt="" width="100%" style="max-height:200px;object-fit:cover;border:1px solid ${INK};margin-bottom:12px"/>`
     : '';
   return `<div style="background:${ACCENT};color:${PAPER};font-family:${HEAD};font-size:16px;text-transform:uppercase;letter-spacing:1px;padding:10px 14px;margin:22px 0 12px">&#8982; The Ugly Take &mdash; satire, not a real story</div>
     <div style="margin:0 0 16px;padding:18px;background:${PAPER2};border:2px solid ${INK}">
@@ -302,8 +311,9 @@ function uglyTakeBlock(t: EmailUglyTake): string {
 }
 
 function card(a: NewsEmailArticle): string {
-  const img = a.thumbnailUri
-    ? `<img src="${a.thumbnailUri}" alt="" width="100%" style="max-height:200px;object-fit:cover;border:1px solid ${INK}"/>`
+  const src = emailImage(a.thumbnailUri);
+  const img = src
+    ? `<img src="${src}" alt="" width="100%" style="max-height:200px;object-fit:cover;border:1px solid ${INK}"/>`
     : '';
   return `<div style="margin:0 0 16px;padding:16px;background:${PAPER2};border:2px solid ${INK}">
     ${img}
