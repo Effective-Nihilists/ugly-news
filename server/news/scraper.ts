@@ -45,7 +45,7 @@ const SCRAPE_TIMEOUT_MS = 10_000;
 
 async function crawlbaseFetch(url: string): Promise<string | null> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), SCRAPE_TIMEOUT_MS);
+  const timer = setTimeout(() => { controller.abort(); }, SCRAPE_TIMEOUT_MS);
   try {
     const res = await fetch(url, {
       signal: controller.signal,

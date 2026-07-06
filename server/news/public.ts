@@ -132,7 +132,7 @@ export async function newsLatest(
     userId: uglyBotId,
     type: 'markdown',
   };
-  if (input.category) fileMatch['category'] = input.category;
+  if (input.category) fileMatch.category = input.category;
   // Pull a wider recent window, then diversify so the front page isn't
   // monopolized by whichever feed synced last (e.g. an all-techcrunch run).
   // Round-robin across feeds and float image-bearing stories up — a news
@@ -149,7 +149,7 @@ export async function newsLatest(
 
   // Fallback: raw articles (skip ads / unscraped-empty).
   const artMatch: Record<string, unknown> = { scrapeStatus: { $ne: 'ad' } };
-  if (input.category) artMatch['categories'] = input.category;
+  if (input.category) artMatch.categories = input.category;
   const articles = await db.getQuery<NewsArticle & { _id: string; created?: unknown }>(
     'newsArticle',
     [{ $match: artMatch }, { $sort: { created: -1 } }],
@@ -171,7 +171,7 @@ export async function newsArchive(
   const limit = Math.min(Math.max(input.limit ?? 30, 1), 60);
   const skip = Math.max(input.skip ?? 0, 0);
   const filter: Record<string, unknown> = { public: true, userId: uglyBotId, type: 'markdown' };
-  if (input.category) filter['category'] = input.category;
+  if (input.category) filter.category = input.category;
   const q = input.query?.trim();
 
   if (q) {
@@ -256,7 +256,7 @@ export async function newsArticleGet(
   }
   const a = await db.getDoc(collections.newsArticle, input.id);
   if (a) {
-    const card = articleToCard(a as NewsArticle & { _id: string; created?: unknown });
+    const card = articleToCard(a);
     const art = a as NewsArticle;
     return {
       article: {

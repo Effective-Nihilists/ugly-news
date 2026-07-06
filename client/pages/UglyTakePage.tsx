@@ -25,7 +25,7 @@ export default function UglyTakePage({ id }: { id: string }): React.ReactElement
     newsRpc<{ cluster: ClusterFull | null }>('newsClusterGet', { id })
       .then((r) => {
         if (!alive) return;
-        if (r.cluster && r.cluster.uglyTake) { setCluster(r.cluster); setState('ready'); }
+        if (r.cluster?.uglyTake) { setCluster(r.cluster); setState('ready'); }
         else setState('missing');
       })
       .catch(() => { if (alive) setState('missing'); });

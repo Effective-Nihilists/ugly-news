@@ -375,7 +375,7 @@ export function UglyTakeSection({ takes }: { takes: UglyTakeCard[] }): React.Rea
         <a href="/ugly-takes" onClick={navClick(() => { router.push('ugly-takes', {}); })} style={{ ...kicker, color: C.accent, textDecoration: 'none' }}>the satire desk →</a>
       </div>
       {lead && (
-        <a href={`/ugly-take/${lead.clusterId}`} onClick={navClick(() => open(lead.clusterId))} data-id="ugly-take-feature"
+        <a href={`/ugly-take/${lead.clusterId}`} onClick={navClick(() => { open(lead.clusterId); })} data-id="ugly-take-feature"
            style={{ textDecoration: 'none', color: C.ink, display: 'block' }}>
           <article className="uc-lead" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1.1fr)', border: `3px double ${C.ink}`, background: C.paper2 }}>
             <div style={{ minHeight: 300, borderRight: `3px double ${C.ink}`, background: lead.satireImageUri ? `center/cover no-repeat url(${lead.satireImageUri})` : `repeating-linear-gradient(-45deg, rgba(26,23,20,0.10) 0 2px, transparent 2px 9px), ${C.paper}` }} />
@@ -390,7 +390,7 @@ export function UglyTakeSection({ takes }: { takes: UglyTakeCard[] }): React.Rea
       )}
       {deskItems.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 22, marginTop: 24 }}>
-          {deskItems.map((t) => <UglyTakeTile key={t.clusterId} take={t} onOpen={() => open(t.clusterId)} />)}
+          {deskItems.map((t) => <UglyTakeTile key={t.clusterId} take={t} onOpen={() => { open(t.clusterId); }} />)}
         </div>
       )}
     </section>

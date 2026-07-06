@@ -131,7 +131,7 @@ export function PodcastStage({
       {/* Controls */}
       <div style={{ background: C.paper, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 14 }}>
         <button
-          onClick={() => player.togglePlayPause()}
+          onClick={() => { player.togglePlayPause(); }}
           aria-label={player.isPlaying ? 'Pause' : 'Play'}
           style={{ flexShrink: 0, width: 48, height: 48, borderRadius: '50%', border: 'none', background: C.ink, color: C.paper, fontSize: 18, cursor: 'pointer' }}
         >
@@ -143,7 +143,7 @@ export function PodcastStage({
             min={0}
             max={player.durationMs || 1}
             value={Math.min(player.currentTimeMs, player.durationMs || 1)}
-            onChange={(e) => player.seekTo(Number(e.target.value))}
+            onChange={(e) => { player.seekTo(Number(e.target.value)); }}
             style={{ width: '100%', accentColor: C.accent, cursor: 'pointer' }}
           />
           <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: C.muted, marginTop: 2 }}>
@@ -161,7 +161,7 @@ export function PodcastStage({
             return (
               <button
                 key={a.fileId}
-                onClick={() => player.seekToArticle(i)}
+                onClick={() => { player.seekToArticle(i); }}
                 title={a.title}
                 style={{
                   fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, letterSpacing: '0.04em',

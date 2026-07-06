@@ -73,8 +73,8 @@ export class PodcastSceneManager {
   private lightingOptions: Required<LightingOptions> = { ...DEFAULT_LIGHTING };
 
   // Avatar management
-  private avatars: Map<string, AvatarModel> = new Map();
-  private avatarPositions: Map<string, AvatarPosition> = new Map();
+  private avatars = new Map<string, AvatarModel>();
+  private avatarPositions = new Map<string, AvatarPosition>();
 
   // Camera controller
   private cameraController: PodcastCameraController | null = null;
@@ -521,15 +521,6 @@ export class PodcastSceneManager {
   }
 
   /**
-   * Focus camera based on content analysis (legacy - uses keyword detection)
-   * Automatically determines close-up vs normal shot and transition speed
-   * @deprecated Use focusCameraFromScript instead
-   */
-  focusCameraForContent(speakerHost: 'host1' | 'host2', text: string): void {
-    this.cameraController?.setFocusForContent(speakerHost, text);
-  }
-
-  /**
    * Start song performance mode on all loaded avatars.
    * Enables dance loops and beat-synced head nodding, matching the video exporter.
    */
@@ -777,7 +768,7 @@ export class PodcastSceneManager {
         if ((object as THREE.Mesh).material) {
           const material = (object as THREE.Mesh).material;
           if (Array.isArray(material)) {
-            material.forEach((m) => m.dispose());
+            material.forEach((m) => { m.dispose(); });
           } else {
             material.dispose();
           }

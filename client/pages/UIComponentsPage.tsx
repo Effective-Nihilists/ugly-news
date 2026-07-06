@@ -520,7 +520,7 @@ function ListsTab(): React.ReactElement {
   const flatListRef = useRef<FlatListHandle>(null);
   const [animatedItems, setAnimatedItems] = useState(['Alpha', 'Beta', 'Gamma']);
   const [presenceItems, setPresenceItems] = useState(['One', 'Two', 'Three', 'Four']);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-arguments
+   
   const [cardItems] = useState<CardStackItem<{ label: string }>[]>([
     { id: '1', data: { label: 'Card One' } },
     { id: '2', data: { label: 'Card Two' } },

@@ -18,6 +18,7 @@ export default [
       'vitest.config.ts',
       'playwright.config.ts',
       'tests/**',
+      'scripts/**',
     ],
   },
   {

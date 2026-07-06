@@ -308,7 +308,7 @@ async function generatePodcastAudio(
     if (wa?.phoneticDetails) {
       for (const detail of wa.phoneticDetails) {
         for (const phone of detail.phones ?? []) {
-          if (visemeNameSet.has(phone.visemeSymbol as never)) {
+          if (visemeNameSet.has(phone.visemeSymbol)) {
             allVisemes.push({
               speakerId,
               name: phone.visemeSymbol as PodcastViseme['name'],
@@ -404,7 +404,7 @@ export async function notifyPodcastReady(db: NewsDb, podcast: NewsPodcast): Prom
           ...(imageUrl ? { imageUrl } : {}),
         })
           .then((r) => (r.sent ? 1 : 0))
-          .catch((e) => {
+          .catch((e: unknown) => {
             console.warn(`[news] podcast push failed for ${s.userId}`, e);
             return 0;
           }),

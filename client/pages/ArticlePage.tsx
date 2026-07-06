@@ -82,7 +82,9 @@ export default function ArticlePage({ id }: { id: string }): React.ReactElement 
         if (r.article) { setArticle(r.article); setState('ready'); }
         else setState('missing');
       })
-      .catch(() => alive && setState('missing'));
+      .catch(() => {
+        if (alive) setState('missing');
+      });
     return () => { alive = false; };
   }, [id]);
 
@@ -123,7 +125,7 @@ export default function ArticlePage({ id }: { id: string }): React.ReactElement 
       ` }} />
       <PressHeader active="home" />
       <div style={{ maxWidth: 720, margin: '0 auto', padding: 'clamp(20px,5vw,48px)' }}>
-        <a href="/" onClick={navClick(() => router.push('', {}))} className="ar-back">← The Ugly Press</a>
+        <a href="/" onClick={navClick(() => { router.push('', {}); })} className="ar-back">← The Ugly Press</a>
 
         {state === 'loading' && (
           <p style={{ fontFamily: 'IBM Plex Mono, monospace', color: C.muted, marginTop: 40 }}>
@@ -132,7 +134,7 @@ export default function ArticlePage({ id }: { id: string }): React.ReactElement 
         )}
         {state === 'missing' && (
           <p style={{ fontFamily: 'Spectral, serif', fontSize: 20, marginTop: 40 }}>
-            This story has gone to press elsewhere. <a href="/" onClick={navClick(() => router.push('', {}))} style={{ color: C.accent }}>Back to the front page →</a>
+            This story has gone to press elsewhere. <a href="/" onClick={navClick(() => { router.push('', {}); })} style={{ color: C.accent }}>Back to the front page →</a>
           </p>
         )}
         {state === 'ready' && article && (
@@ -151,7 +153,7 @@ export default function ArticlePage({ id }: { id: string }): React.ReactElement 
             {article.clusterId && (
               <a
                 href={`/story/${article.clusterId}`}
-                onClick={navClick(() => router.push('story/:id', { id: article.clusterId! }))}
+                onClick={navClick(() => { router.push('story/:id', { id: article.clusterId! }); })}
                 data-id="see-all-sides"
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, border: `2px solid ${C.ink}`, background: C.accent, color: C.paper, textDecoration: 'none', padding: '12px 16px', marginBottom: 22, fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, letterSpacing: '.1em', textTransform: 'uppercase' }}
               >
@@ -165,7 +167,7 @@ export default function ArticlePage({ id }: { id: string }): React.ReactElement 
             <div className="ar-body" dangerouslySetInnerHTML={{ __html: renderMarkdown(article.markdown) }} />
             {article.sourceUri && (
               <p style={{ marginTop: 28, fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: C.muted }}>
-                <a href={article.sourceUri} target="_blank" rel="noopener" style={{ color: C.accent }}>
+                <a href={article.sourceUri} target="_blank" rel="noopener noreferrer" style={{ color: C.accent }}>
                   Read the original source →
                 </a>
               </p>

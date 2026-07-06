@@ -368,7 +368,7 @@ function STTSection({ socket }: { socket: UglyBotSocket }) {
   }
 
   // Cleanup on unmount
-  useEffect(() => { // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {  
     return () => {
       recorderRef.current?.stop();
       mic.stop();
@@ -683,7 +683,7 @@ function TTSSection({ socket }: { socket: UglyBotSocket }) {
     setCurrentWord('');
   }
 
-  useEffect(() => { // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {  
     return () => {
       if (streamIdRef.current) {
         socket.send('tts:cancel', { streamId: streamIdRef.current });

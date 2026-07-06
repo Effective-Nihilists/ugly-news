@@ -139,7 +139,7 @@ export async function newsSavedGet(
 ): Promise<NewsSavedGetOutput> {
   const match: Record<string, unknown> = { userId };
   if (isDefined(input.beforeSavedAt)) {
-    match['savedAt'] = { $lt: input.beforeSavedAt };
+    match.savedAt = { $lt: input.beforeSavedAt };
   }
   const saved = await db.getQuery<UserNewsSaved>(
     'userNewsSaved',
@@ -220,7 +220,7 @@ export async function newsFeedGet(
   // Shuffle and take CANDIDATE_POOL_SIZE for random diversity
   for (let i = recentPool.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [recentPool[i]!, recentPool[j]!] = [recentPool[j]!, recentPool[i]!];
+    [recentPool[i], recentPool[j]] = [recentPool[j]!, recentPool[i]!];
   }
   const recentCandidates = recentPool.slice(0, CANDIDATE_POOL_SIZE);
   const clusters: InterestCluster[] = userPreference?.clusters ?? [];
@@ -296,10 +296,10 @@ export async function newsSearch(
   const botIds = [uglyBotId];
   const match: Record<string, unknown> = { public: true, userId: { $in: botIds } };
   if (isDefined(input.categories) && input.categories.length > 0) {
-    match['tags'] = { $in: input.categories };
+    match.tags = { $in: input.categories };
   }
   const searchRegex = { $regex: input.query, $options: 'i' };
-  match['$or'] = [{ title: searchRegex }, { text: searchRegex }];
+  match.$or = [{ title: searchRegex }, { text: searchRegex }];
 
   const files = await db.getQuery<{ _id: string }>(
     'file',

@@ -67,7 +67,7 @@ export default function PodcastPage(): React.ReactElement {
         else if (p.generationStatus === 'failed') setStatus('failed');
         else setStatus('recording');
       })
-      .catch(() => setStatus('none'));
+      .catch(() => { setStatus('none'); });
   }, []);
 
   React.useEffect(() => { load(); }, [load]);
@@ -77,7 +77,7 @@ export default function PodcastPage(): React.ReactElement {
   React.useEffect(() => {
     if (status !== 'recording') return;
     const id = setInterval(load, 15_000);
-    return () => clearInterval(id);
+    return () => { clearInterval(id); };
   }, [status, load]);
 
   const activeSegIdx = React.useMemo(() => {
@@ -143,8 +143,8 @@ export default function PodcastPage(): React.ReactElement {
       <div style={{ maxWidth: 860, margin: '0 auto', padding: 'clamp(20px,5vw,48px)' }}>
         <div style={{ height: 6, background: C.ink, marginBottom: 16 }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-          <a href="/" onClick={navClick(() => router.push('', {}))} className="pp-back">← The Ugly Press</a>
-          <a href="/archive?tab=podcasts" onClick={navClick(() => router.push('archive', { tab: 'podcasts' }))} className="pp-back">All episodes →</a>
+          <a href="/" onClick={navClick(() => { router.push('', {}); })} className="pp-back">← The Ugly Press</a>
+          <a href="/archive?tab=podcasts" onClick={navClick(() => { router.push('archive', { tab: 'podcasts' }); })} className="pp-back">All episodes →</a>
         </div>
 
         <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, letterSpacing: '0.22em', textTransform: 'uppercase', color: C.accent, margin: '22px 0 6px' }}>
@@ -169,7 +169,7 @@ export default function PodcastPage(): React.ReactElement {
               Today’s broadcast hasn’t been recorded yet. The hosts run every morning — check back shortly,
               or read the front page in the meantime.
             </p>
-            <a href="/#front" onClick={navClick(() => router.push('', {}))} className="pp-back" style={{ display: 'inline-block', marginTop: 14, color: C.accent }}>
+            <a href="/#front" onClick={navClick(() => { router.push('', {}); })} className="pp-back" style={{ display: 'inline-block', marginTop: 14, color: C.accent }}>
               ← Back to the headlines
             </a>
           </div>
@@ -219,7 +219,7 @@ export default function PodcastPage(): React.ReactElement {
                     min={0}
                     max={durMs || 1}
                     value={Math.min(posMs, durMs || 1)}
-                    onChange={(e) => seekMs(Number(e.target.value))}
+                    onChange={(e) => { seekMs(Number(e.target.value)); }}
                   />
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: C.muted, marginTop: 6 }}>
                     <span>{fmtTime(posMs)}</span>
@@ -230,10 +230,10 @@ export default function PodcastPage(): React.ReactElement {
               <audio
                 ref={audioRef}
                 src={podcast.audioUri}
-                onPlay={() => setPlaying(true)}
-                onPause={() => setPlaying(false)}
-                onTimeUpdate={(e) => setPosMs(e.currentTarget.currentTime * 1000)}
-                onEnded={() => setPlaying(false)}
+                onPlay={() => { setPlaying(true); }}
+                onPause={() => { setPlaying(false); }}
+                onTimeUpdate={(e) => { setPosMs(e.currentTarget.currentTime * 1000); }}
+                onEnded={() => { setPlaying(false); }}
                 preload="metadata"
               />
             </div>
@@ -248,7 +248,7 @@ export default function PodcastPage(): React.ReactElement {
                   <div
                     key={i}
                     className={`pp-seg${i === activeSegIdx ? ' active' : ''}`}
-                    onClick={() => seekMs(s.startTimeMs)}
+                    onClick={() => { seekMs(s.startTimeMs); }}
                     style={{ padding: '8px 6px', marginBottom: 2 }}
                   >
                     <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: C.accent, marginRight: 8 }}>
@@ -273,7 +273,7 @@ export default function PodcastPage(): React.ReactElement {
                     <a
                       key={a.fileId}
                       href={`/article/${a.fileId}`}
-                      onClick={navClick(() => router.push('article/:id', { id: a.fileId }))}
+                      onClick={navClick(() => { router.push('article/:id', { id: a.fileId }); })}
                       className="pp-art"
                       style={active ? { background: 'rgba(214,38,29,0.06)' } : undefined}
                     >

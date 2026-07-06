@@ -57,7 +57,7 @@ export async function newsPodcastGetDefault(
   // show an empty "not recorded yet" state, fall back to the most recent
   // complete episode so there's always something to play.
   let podcast = today;
-  if (!podcast || podcast.generationStatus !== 'complete') {
+  if (podcast?.generationStatus !== 'complete') {
     // Only default (public) episodes exist, so an empty match + newest-first is
     // the proven query shape — matching null JSONB fields (e.g. `userId: null`)
     // in $match is unreliable in the framework's filter layer. Filter to the
@@ -86,7 +86,7 @@ export async function newsPodcastList(
   input: NewsPodcastListInput,
 ): Promise<NewsPodcastListOutput> {
   const match: Record<string, unknown> = {};
-  if (input.beforeDate) match['date'] = { $lt: input.beforeDate };
+  if (input.beforeDate) match.date = { $lt: input.beforeDate };
   const podcasts = await db.getQuery<NewsPodcast & { _id: string }>(
     'newsPodcast',
     [{ $match: match }, { $sort: { date: -1 } }],

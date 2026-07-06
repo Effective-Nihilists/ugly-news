@@ -26,9 +26,9 @@ export class Renderer extends THREE.WebGLRenderer {
         height: context.drawingBufferHeight,
         style: {},
 
-        addEventListener: (() => {}) as any,
+        addEventListener: (() => undefined) as (...args: never[]) => void,
 
-        removeEventListener: (() => {}) as any,
+        removeEventListener: (() => undefined) as (...args: never[]) => void,
         clientHeight: context.drawingBufferHeight,
       } as HTMLCanvasElement);
 

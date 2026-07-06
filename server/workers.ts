@@ -27,7 +27,7 @@ import { createCronHandlers } from './news/workers';
 function wdb(): NewsDb {
   const db = getAppContext().typedDb;
   if (!db) throw new Error('[news/workers] typedDb not ready');
-  return db as unknown as NewsDb;
+  return db as NewsDb;
 }
 
 const requestHandlers: Partial<RequestHandlers<typeof requests>> = {

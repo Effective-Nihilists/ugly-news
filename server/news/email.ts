@@ -4,7 +4,7 @@ import type { FileMarkdown, NewsCluster } from '../../shared/collections';
 import { uglyBotId } from '../../shared/news/Bot';
 import { rankAndDiversifyArticles } from '../../shared/news/ranking';
 import type { InterestCluster } from '../../shared/news/schemas';
-import { getTimezonesAtLocalHour, type Timezone } from '../../shared/news/Timezone';
+import { getTimezonesAtLocalHour } from '../../shared/news/Timezone';
 import { newsPodcastGet, todayDateString } from './podcast';
 import { enqueueTask } from './queue';
 import type { NewsDb } from './db';
@@ -230,7 +230,7 @@ export async function selectEmailUglyTake(db: NewsDb, now: number): Promise<Emai
     { limit: 1 },
   );
   const c = rows[0];
-  if (!c || !c.uglyTakeFileId) return null;
+  if (!c?.uglyTakeFileId) return null;
   const sf = await db.getDoc(collections.file, c.uglyTakeFileId);
   if (!sf) return null;
   const f = sf as FileMarkdown;
@@ -386,7 +386,7 @@ export async function dispatchUserPrivateNewsEmail(
   input: { userId: string; now: number },
 ): Promise<void> {
   const pref = await db.getDoc(collections.userNewsEmailPref, input.userId);
-  if (!pref || !pref.emailAllowed) return;
+  if (!pref?.emailAllowed) return;
 
   const [articles, clusters, uglyTake] = await Promise.all([
     selectDailyEmailArticles(db, input.userId, input.now),
@@ -402,7 +402,7 @@ export async function dispatchUserPrivateNewsEmail(
   // Attach today's default podcast if complete.
   const { podcast } = await newsPodcastGet(db, { date: todayDateString(input.now) });
   const podcastData =
-    podcast && podcast.generationStatus === 'complete'
+    podcast?.generationStatus === 'complete'
       ? {
           title: podcast.title,
           duration: `${Math.round(podcast.durationMs / 60000)} min`,
@@ -429,7 +429,7 @@ export async function dispatchUserPrivateNewsEmail(
 
 /** Hourly: enqueue the daily email for every opted-in user whose local time is 8am. */
 export async function userEmailHourly(db: NewsDb, now: number): Promise<void> {
-  const eightAm = getTimezonesAtLocalHour(now, 8) as Timezone[];
+  const eightAm = getTimezonesAtLocalHour(now, 8);
   if (eightAm.length === 0) return;
   const prefs = await db.getDocs(collections.userNewsEmailPref, {
     timezone: { $in: eightAm },

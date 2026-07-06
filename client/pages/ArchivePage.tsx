@@ -88,7 +88,7 @@ function groupByDate<T>(items: T[], ms: (t: T) => number): { label: string; rows
   for (const it of items) {
     const label = dateLabel(ms(it));
     const last = groups[groups.length - 1];
-    if (last && last.label === label) last.rows.push(it);
+    if (last?.label === label) last.rows.push(it);
     else groups.push({ label, rows: [it] });
   }
   return groups;
@@ -154,8 +154,8 @@ export default function ArchivePage(): React.ReactElement {
 
   // Debounce the search box.
   React.useEffect(() => {
-    const id = setTimeout(() => setDebounced(query.trim()), 300);
-    return () => clearTimeout(id);
+    const id = setTimeout(() => { setDebounced(query.trim()); }, 300);
+    return () => { clearTimeout(id); };
   }, [query]);
 
   // (Re)load page 0 whenever the tab or search term changes.
@@ -213,7 +213,7 @@ export default function ArchivePage(): React.ReactElement {
     <a
       key={a.id}
       href={`/article/${a.id}`}
-      onClick={navClick(() => router.push('article/:id', { id: a.id }))}
+      onClick={navClick(() => { router.push('article/:id', { id: a.id }); })}
       className="ar-card ar-link"
       style={{
         display: 'grid',
@@ -269,7 +269,7 @@ export default function ArchivePage(): React.ReactElement {
       <div style={{ maxWidth: 1040, margin: '0 auto', padding: 'clamp(18px,4vw,40px) clamp(18px,5vw,56px) 80px' }}>
         {/* Masthead */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-          <a href="/" onClick={navClick(() => router.push('', {}))} className="ar-link" style={mono(12, C.ink)}>← The Ugly Press</a>
+          <a href="/" onClick={navClick(() => { router.push('', {}); })} className="ar-link" style={mono(12, C.ink)}>← The Ugly Press</a>
           <span style={mono(11)}>The Archive</span>
         </div>
         <div style={{ height: 6, background: C.ink, marginBottom: 6 }} />
@@ -288,8 +288,8 @@ export default function ArchivePage(): React.ReactElement {
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 18 }}>
-          <button className={`ar-tab ${tab === 'stories' ? 'active' : ''}`} onClick={() => setTab('stories')}>Stories</button>
-          <button className={`ar-tab ${tab === 'podcasts' ? 'active' : ''}`} onClick={() => setTab('podcasts')}>Podcasts</button>
+          <button className={`ar-tab ${tab === 'stories' ? 'active' : ''}`} onClick={() => { setTab('stories'); }}>Stories</button>
+          <button className={`ar-tab ${tab === 'podcasts' ? 'active' : ''}`} onClick={() => { setTab('podcasts'); }}>Podcasts</button>
         </div>
 
         {/* Search row — reserve the same height on both tabs so toggling
@@ -300,7 +300,7 @@ export default function ArchivePage(): React.ReactElement {
             <input
               className="ar-search"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => { setQuery(e.target.value); }}
               placeholder="Search the stories…"
               aria-label="Search stories"
             />
@@ -348,7 +348,7 @@ export default function ArchivePage(): React.ReactElement {
                   <a
                     key={p.id}
                     href="/podcast"
-                    onClick={navClick(() => router.push('podcast', {}))}
+                    onClick={navClick(() => { router.push('podcast', {}); })}
                     className="ar-card ar-link"
                     style={{
                       display: 'grid',

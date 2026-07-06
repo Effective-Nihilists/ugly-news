@@ -14,7 +14,7 @@ export const ImagePublicSchema = z
     sizes: z.array(z.number()).optional(),
     blurhash: z.string().optional(),
   })
-  .passthrough();
+  .loose();
 export type ImagePublic = z.infer<typeof ImagePublicSchema>;
 
 // ─── News categories ───────────────────────────────────────────────────────

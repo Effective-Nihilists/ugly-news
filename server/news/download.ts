@@ -98,11 +98,11 @@ const NAMED_ENTITIES: Record<string, string> = {
 };
 
 export function decodeHtmlEntities(input: string): string {
-  if (!input || input.indexOf('&') === -1) return input;
+  if (!input?.includes('&')) return input;
   return input
-    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => codePoint(parseInt(hex, 16)))
-    .replace(/&#(\d+);/g, (_, dec) => codePoint(parseInt(dec, 10)))
-    .replace(/&([a-zA-Z][a-zA-Z0-9]+);/g, (m, name) =>
+    .replace(/&#x([0-9a-fA-F]+);/g, (_m: string, hex: string) => codePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_m: string, dec: string) => codePoint(parseInt(dec, 10)))
+    .replace(/&([a-zA-Z][a-zA-Z0-9]+);/g, (m: string, name: string) =>
       Object.prototype.hasOwnProperty.call(NAMED_ENTITIES, name) ? NAMED_ENTITIES[name]! : m,
     );
 }
@@ -173,7 +173,7 @@ export async function dispatchNewsFeedDownload(
   for (const item of items) {
     try {
       const guidText =
-        textOf(item.guid as unknown) ??
+        textOf(item.guid) ??
         (typeof item.guid === 'string' ? item.guid : undefined);
       const rawGuid = guidText ?? item.id ?? item.isoDate ?? item.pubDate ?? item.published;
       if (!isDefined(rawGuid)) continue;

@@ -201,7 +201,7 @@ const app = createApp(
     // Note: ConversationDeps.db is set lazily since `app` isn't assigned yet during createApp.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const convDeps: any = { db: null, collections: {}, userGet: () => null, userPrivateGet: () => null };
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+     
     const convServer = enableConversations(configurator, {
       conversationCollection: 'conversation',
       messageCollection: 'message',
@@ -211,7 +211,7 @@ const app = createApp(
             model: 'gemini_2_5_flash',
             messages: [
               ...session.messages.map((m) => ({
-                role: m.role as 'user' | 'assistant' | 'system',
+                role: m.role,
                 content: m.text,
               })),
               { role: 'user' as const, content: userMessage },

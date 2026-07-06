@@ -14,7 +14,7 @@ import { createEmbeddingClient, getAdapter } from 'ugly-app/server/adapter/worke
 import { base64ToBytes } from '../../shared/news/WAV';
 import type { NewsCategory } from '../../shared/news/types';
 
-export type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
+export interface ChatMessage { role: 'system' | 'user' | 'assistant'; content: string }
 
 // NOTE: must match the live host. `api.ugly.bot` does NOT resolve — verified
 // against the proxy; the working host is `ugly.bot/v1/ai` (same default
@@ -30,7 +30,7 @@ function aiProxy(): { baseUrl: string; token: string } {
   return { baseUrl, token };
 }
 
-type ContentPart = { type: string; text?: string; thinking?: string };
+interface ContentPart { type: string; text?: string; thinking?: string }
 /** The proxy returns `message.content` as a string OR an array of parts
  *  (gpt → string; reasoning models → [{type:'thinking'}, {type:'text'}]). */
 function extractContent(data: unknown): string {

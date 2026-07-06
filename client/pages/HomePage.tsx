@@ -35,7 +35,7 @@ const STYLE = `
 @keyframes un-eq { 0%,100% { transform: scaleY(0.35); } 50% { transform: scaleY(1); } }
 @keyframes un-onair { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
 
-.un-eq-bar { width: 4px; background: ${'#d6261d'}; transform-origin: bottom; animation: un-eq 0.9s ease-in-out infinite; }
+.un-eq-bar { width: 4px; background: #d6261d; transform-origin: bottom; animation: un-eq 0.9s ease-in-out infinite; }
 .un-pod-cta { transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease; }
 .un-pod-cta:hover { transform: translate(-2px,-2px); box-shadow: 5px 5px 0 #d6261d; }
 .un-pod-play { transition: transform 0.18s ease, background 0.2s ease; }
@@ -133,14 +133,18 @@ function FrontPage(): React.ReactElement | null {
   React.useEffect(() => {
     let alive = true;
     rpc<{ items: NewsCard[] }>('newsLatest', { limit: 13 })
-      .then((r) => alive && setItems(r.items))
-      .catch(() => alive && setFailed(true));
+      .then((r) => {
+        if (alive) setItems(r.items);
+      })
+      .catch(() => {
+        if (alive) setFailed(true);
+      });
     return () => { alive = false; };
   }, []);
 
   // Hide the whole section until we have stories — keeps the marketing page
   // intact on a cold cache, shows the real paper once articles exist.
-  if (failed || (items && items.length === 0)) return null;
+  if (failed || (items?.length === 0)) return null;
 
   // A front-page lead should be visual — pick the first image-bearing story as
   // the lead (fall back to the newest) so the hero never renders imageless.
@@ -173,7 +177,7 @@ function FrontPage(): React.ReactElement | null {
         }}
       >
         <span>Off the wire — latest</span>
-        <a href="/archive" onClick={navClick(() => router.push('archive', {}))} className="un-link" style={{ color: C.accent, textDecoration: 'none' }}>Full archive →</a>
+        <a href="/archive" onClick={navClick(() => { router.push('archive', {}); })} className="un-link" style={{ color: C.accent, textDecoration: 'none' }}>Full archive →</a>
       </div>
 
       {!items && (
@@ -187,7 +191,7 @@ function FrontPage(): React.ReactElement | null {
         >
           {/* Lead story — flex column whose image fills the cell the grid
               stretches to the secondary column's height (kills the empty gap). */}
-          <a href={`/article/${lead.id}`} onClick={navClick(() => router.push('article/:id', { id: lead.id }))} className="un-card un-lead un-fade" style={{ textDecoration: 'none', color: C.ink, display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <a href={`/article/${lead.id}`} onClick={navClick(() => { router.push('article/:id', { id: lead.id }); })} className="un-card un-lead un-fade" style={{ textDecoration: 'none', color: C.ink, display: 'flex', flexDirection: 'column', height: '100%' }}>
             <div
               style={{
                 position: 'relative',
@@ -244,7 +248,7 @@ function FrontPage(): React.ReactElement | null {
               <a
                 key={a.id}
                 href={`/article/${a.id}`}
-                onClick={navClick(() => router.push('article/:id', { id: a.id }))}
+                onClick={navClick(() => { router.push('article/:id', { id: a.id }); })}
                 className="un-card un-row un-fade"
                 style={{
                   textDecoration: 'none',
@@ -312,9 +316,9 @@ function PodcastSpotlight(): React.ReactElement {
   const ready = !!pod && pod.generationStatus === 'complete' && !!pod.audioUri;
   const mins = pod ? Math.max(1, Math.round(pod.durationMs / 60000)) : 0;
   const thumbs = (pod?.articles ?? []).filter((a) => a.imageUri).slice(0, 4);
-  const title = ready ? pod!.title : 'Two hosts. No sympathy.';
+  const title = ready ? pod.title : 'Two hosts. No sympathy.';
   const statusLabel = ready
-    ? `${mins} min · ${pod!.articles.length} stories`
+    ? `${mins} min · ${pod.articles.length} stories`
     : pod
       ? 'Today’s episode is recording…'
       : 'A fresh episode every morning';
@@ -351,7 +355,7 @@ function PodcastSpotlight(): React.ReactElement {
         {/* Play button → podcast page */}
         <a
           href="/podcast"
-          onClick={navClick(() => router.push('podcast', {}))}
+          onClick={navClick(() => { router.push('podcast', {}); })}
           aria-label="Play today’s podcast"
           style={{
             flexShrink: 0,
@@ -418,7 +422,7 @@ function PodcastSpotlight(): React.ReactElement {
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
             <a
               href="/podcast"
-              onClick={navClick(() => router.push('podcast', {}))}
+              onClick={navClick(() => { router.push('podcast', {}); })}
               className="un-pod-cta"
               style={{
                 fontFamily: 'IBM Plex Mono, monospace',
@@ -518,7 +522,7 @@ function EmailSignup(): React.ReactElement {
 
   React.useEffect(() => {
     if (!loggedIn) return;
-    rpc<EmailPref>('newsEmailPrefGet', {}).then(setPref).catch(() => setPref({ emailAllowed: false, timezone: tz, lang: 'en' }));
+    rpc<EmailPref>('newsEmailPrefGet', {}).then(setPref).catch(() => { setPref({ emailAllowed: false, timezone: tz, lang: 'en' }); });
   }, [loggedIn, tz]);
 
   async function subscribe(next: boolean): Promise<void> {
@@ -780,7 +784,7 @@ function Hero({ name }: { name?: string | undefined }): React.ReactElement {
           <a href="#front" className="un-cta">
             Read today →
           </a>
-          <a href="/podcast" onClick={navClick(() => router.push('podcast', {}))} className="un-cta ghost">
+          <a href="/podcast" onClick={navClick(() => { router.push('podcast', {}); })} className="un-cta ghost">
             <PlayIcon size={14} /> Today’s podcast
           </a>
           <a href="#daily" className="un-cta ghost">
@@ -903,7 +907,7 @@ function Sections(): React.ReactElement {
               </a>
             )}
             {i === 1 && (
-              <a href="/podcast" onClick={navClick(() => router.push('podcast', {}))} className="un-link" style={{ display: 'inline-block', marginTop: 14, fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.ink }}>
+              <a href="/podcast" onClick={navClick(() => { router.push('podcast', {}); })} className="un-link" style={{ display: 'inline-block', marginTop: 14, fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.ink }}>
                 Open the podcast →
               </a>
             )}
@@ -1063,7 +1067,7 @@ export default function HomePage(): React.ReactElement {
         }}
       >
         <span>
-          The Ugly Press · <a className="un-link" href="/ugly-takes" onClick={navClick(() => router.push('ugly-takes', {}))} style={{ color: C.ink }}>Satire</a> · <a className="un-link" href="/archive" onClick={navClick(() => router.push('archive', {}))} style={{ color: C.ink }}>Archive</a> · <a className="un-link" href="/podcast" onClick={navClick(() => router.push('podcast', {}))} style={{ color: C.ink }}>Podcast</a>
+          The Ugly Press · <a className="un-link" href="/ugly-takes" onClick={navClick(() => { router.push('ugly-takes', {}); })} style={{ color: C.ink }}>Satire</a> · <a className="un-link" href="/archive" onClick={navClick(() => { router.push('archive', {}); })} style={{ color: C.ink }}>Archive</a> · <a className="un-link" href="/podcast" onClick={navClick(() => { router.push('podcast', {}); })} style={{ color: C.ink }}>Podcast</a>
         </span>
         <span>
           Printed by{' '}

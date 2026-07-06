@@ -105,7 +105,7 @@ export default function CollabTestPage(): React.ReactElement {
       cancelled = true;
       (socket.emit as (type: string, data: object) => void)('collab:leave', { docId });
     };
-  }, [socket, docId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [socket, docId]);  
 
   function handleDisconnect(): void {
     (socket.emit as (type: string, data: object) => void)('collab:leave', { docId });
