@@ -24,10 +24,13 @@ export const cronTasks = defineWorkers({
     schedule: '0 * * * *',
     description: 'Enqueue daily news email for users at 8am local time',
   }),
-  // Every 30 min: gate + fan out cluster synthesis (neutral + framing) and the
-  // Ugly Take satire for clusters that crossed the thresholds.
+  // Hourly: gate + fan out cluster synthesis (neutral + framing) and the Ugly
+  // Take satire for clusters that crossed the thresholds. Folded onto the same
+  // 0 * * * * trigger as newsHourly/userEmailHourly so it adds ZERO extra Neon
+  // wakes (was */30 → 48 wakes/day). The once-per-cluster synthesizedAt guard
+  // makes the extra ≤30 min of latency harmless.
   clusterSweep: defineWorker({
-    schedule: '*/30 * * * *',
+    schedule: '0 * * * *',
     description: 'Enqueue synthesis + satire for qualifying story clusters',
     timeout: 30_000,
   }),
