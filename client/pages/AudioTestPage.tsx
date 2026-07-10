@@ -378,6 +378,7 @@ function STTSection({ socket }: { socket: UglyBotSocket }) {
       unsubAll();
       socket.release();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- unmount-only teardown of the live mic/socket; depending on mic/socket would tear down an in-progress recording whenever they change.
   }, []);
 
   return (
@@ -692,6 +693,7 @@ function TTSSection({ socket }: { socket: UglyBotSocket }) {
       socket.release();
       ttsAudio.close();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- unmount-only teardown of the live TTS socket/audio; depending on socket/ttsAudio would close an in-progress stream whenever they change.
   }, []);
 
   return (
