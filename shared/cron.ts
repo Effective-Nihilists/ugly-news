@@ -36,6 +36,22 @@ export const cronTasks = defineWorkers({
   }),
 
   // ── Queue-only jobs (fan-out) ────────────────────────────────────────────
+  // The sweep used to enqueue all ~16 synth/satire jobs at once. The Cloudflare
+  // queue consumer auto-scales concurrent invocations, so that burst hit the AI
+  // proxy in parallel and drew 429s that outlasted the per-call backoff. Instead
+  // the sweep now enqueues ONE `clusterSweepStep` carrying the whole work list;
+  // each step does exactly one AI op and re-enqueues the remainder, so dispatch
+  // is strictly serial (concurrency 1) with no burst, while each job keeps its
+  // own 60s budget.
+  clusterSweepStep: defineWorker({
+    description: 'Process one queued cluster synth/satire op, then chain the rest',
+    input: z.object({
+      queue: z.array(
+        z.object({ type: z.enum(['synth', 'satire']), clusterId: z.string() }),
+      ),
+    }),
+    timeout: 60_000,
+  }),
   clusterSynthesize: defineWorker({
     description: 'Generate neutral + per-side framing summaries for a cluster',
     input: z.object({ clusterId: z.string() }),

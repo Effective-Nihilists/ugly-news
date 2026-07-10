@@ -8,7 +8,12 @@ import { todayDateString } from './podcast';
 import { dispatchArticleScrape } from './scraper';
 import { dispatchPodcastGenerate } from './podcast-generate';
 import { dispatchUserPrivateNewsEmail, userEmailHourly } from './email';
-import { dispatchClusterSatirize, dispatchClusterSweep, dispatchClusterSynthesize } from './cluster-jobs';
+import {
+  dispatchClusterSatirize,
+  dispatchClusterSweep,
+  dispatchClusterSweepStep,
+  dispatchClusterSynthesize,
+} from './cluster-jobs';
 
 // Build the worker handler map. Shared by the Node entry (server/index.ts) and
 // the Cloudflare Workers entry (server/workers.ts) so cron + queue behavior is
@@ -40,6 +45,9 @@ export function createCronHandlers(getDb: () => NewsDb): WorkerHandlers<typeof c
     newsFeedDownload: async ({ feedId }) => {
       const feed = findFeed(feedId);
       if (feed) await dispatchNewsFeedDownload(getDb(), feed);
+    },
+    clusterSweepStep: async ({ queue }) => {
+      await dispatchClusterSweepStep(getDb(), queue);
     },
     clusterSynthesize: async ({ clusterId }) => {
       await dispatchClusterSynthesize(getDb(), clusterId);

@@ -54,7 +54,6 @@ export async function dispatchClusterSweep(db: NewsDb, now: number = Date.now())
         distinctBuckets(c.biasBreakdown) >= 2,
     )
     .slice(0, SYNTH_MAX_PER_SWEEP);
-  for (const c of toSynth) await enqueueTask('clusterSynthesize', { clusterId: c._id });
 
   // Satire: the most prominent clusters without an Ugly Take yet. Prefer ones
   // that already have a neutral summary (richer context → sharper jokes), but
@@ -64,12 +63,59 @@ export async function dispatchClusterSweep(db: NewsDb, now: number = Date.now())
     ...eligible.filter((c) => c.neutralSummary !== null),
     ...eligible.filter((c) => c.neutralSummary === null),
   ].slice(0, SATIRE_MAX_PER_SWEEP);
-  for (const c of toSatire) await enqueueTask('clusterSatirize', { clusterId: c._id });
+
+  // One serial work list instead of ~16 parallel queue messages. Synthesis
+  // first so a fresh neutral summary can feed that cluster's satire prompt.
+  const queue: SweepItem[] = [
+    ...toSynth.map((c): SweepItem => ({ type: 'synth', clusterId: c._id })),
+    ...toSatire.map((c): SweepItem => ({ type: 'satire', clusterId: c._id })),
+  ];
 
   console.log(
-    `[cluster-sweep] recent=${recent.length} enqueued synthesize=${toSynth.length} satirize=${toSatire.length} ` +
+    `[cluster-sweep] recent=${recent.length} queued synthesize=${toSynth.length} satirize=${toSatire.length} ` +
       `(synth ids: ${toSynth.map((c) => c._id).join(',') || '-'}; satire ids: ${toSatire.map((c) => c._id).join(',') || '-'})`,
   );
+
+  if (queue.length > 0) await enqueueTask('clusterSweepStep', { queue });
+}
+
+export interface SweepItem {
+  type: 'synth' | 'satire';
+  clusterId: string;
+}
+
+/**
+ * Process the head of the sweep work list, then re-enqueue the tail — a strictly
+ * serial chain (concurrency 1) that replaces the old parallel fan-out, so the
+ * hourly sweep never bursts the AI proxy.
+ *
+ * A failed item must not break the chain: the underlying dispatchers already
+ * swallow AI failures (they leave the cluster for the next sweep), but we also
+ * catch here so a thrown error can't bubble to the queue handler — which would
+ * `m.retry()` the whole step and re-process the head. The chain always advances
+ * by dropping the head and enqueuing the tail.
+ */
+export async function dispatchClusterSweepStep(
+  db: NewsDb,
+  queue: SweepItem[],
+): Promise<void> {
+  const [head, ...rest] = queue;
+  if (!head) return;
+
+  try {
+    if (head.type === 'synth') {
+      await dispatchClusterSynthesize(db, head.clusterId);
+    } else {
+      await dispatchClusterSatirize(db, head.clusterId);
+    }
+  } catch (e) {
+    console.error(
+      `[cluster-sweep-step] ${head.type} ${head.clusterId} threw — dropping and continuing`,
+      e,
+    );
+  }
+
+  if (rest.length > 0) await enqueueTask('clusterSweepStep', { queue: rest });
 }
 
 const NEUTRAL_PROMPT = `You are a wire-service editor. From the same story reported by multiple outlets across the political spectrum, write a STRICTLY NEUTRAL "what happened" account.
