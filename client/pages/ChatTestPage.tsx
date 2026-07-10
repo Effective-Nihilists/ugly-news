@@ -125,7 +125,7 @@ export default function ChatTestPage(): React.ReactElement {
     <PageLayout
       header={
         <div>
-          <a href="/test">← Tests</a>
+          <a href="/test" data-id="tests">← Tests</a>
         </div>
       }
     >
@@ -203,7 +203,7 @@ export default function ChatTestPage(): React.ReactElement {
                 label="Message"
                 value={message}
                 onChange={setMessage}
-                placeholder={subscribed ? 'Type a message…' : 'Connecting…'}
+                placeholder={subscribed ? 'Type a message…' : 'Connecting…'} data-id="message"
               />
             </div>
             <Button

@@ -86,7 +86,7 @@ export default function AITestPage(): React.ReactElement {
     <PageLayout
       header={
         <div>
-          <a href="/test">← Tests</a>
+          <a href="/test" data-id="tests">← Tests</a>
         </div>
       }
     >
@@ -96,7 +96,7 @@ export default function AITestPage(): React.ReactElement {
         {/* Mode toggle */}
         <div>
           {(['text', 'image'] as Mode[]).map((m) => (
-            <button key={m} onClick={() => { setMode(m); }}>
+            <button key={m} onClick={() => { setMode(m); }} data-id="button">
               {m}
             </button>
           ))}
@@ -114,7 +114,7 @@ export default function AITestPage(): React.ReactElement {
                   } else {
                     setImageModel(e.target.value as ImageGenModel);
                   }
-                }}
+                }} data-id="select"
               >
                 {models.map((m) => (
                   <option key={m} value={m}>
@@ -130,10 +130,10 @@ export default function AITestPage(): React.ReactElement {
               onChange={setPrompt}
               placeholder={
                 mode === 'text' ? 'Ask something…' : 'Describe an image…'
-              }
+              } data-id="prompt"
             />
 
-            <Button onClick={() => { void handleRun(); }} disabled={loading || !prompt.trim()}>
+            <Button onClick={() => { void handleRun(); }} disabled={loading || !prompt.trim()} data-id="button-2">
               {loading ? 'Running…' : 'Run'}
             </Button>
           </div>

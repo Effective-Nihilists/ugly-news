@@ -33,7 +33,7 @@ export default function BlindspotPage(): React.ReactElement {
       ` }} />
       <PressHeader active="blindspot" />
       <div style={{ maxWidth: 1040, margin: '0 auto', padding: 'clamp(18px,4vw,40px)' }}>
-        <a href="/" onClick={navClick(() => { router.push('', {}); })} style={backLink}>‹ back to front page</a>
+        <a href="/" onClick={navClick(() => { router.push('', {}); })} style={backLink} data-id="back-to-front-page">‹ back to front page</a>
 
         <header style={{ textAlign: 'center', padding: '14px 0 6px' }}>
           <div style={{ fontFamily: 'Anton, sans-serif', textTransform: 'uppercase', color: C.accent, fontSize: 'clamp(40px,8vw,86px)', lineHeight: 0.9 }}>The Blindspot</div>

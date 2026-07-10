@@ -144,14 +144,14 @@ export default function ChatDemoPage(): React.ReactElement {
             <Button
               size="sm"
               variant={mode === 'basic' ? 'primary' : 'secondary'}
-              onClick={() => { setMode('basic'); }}
+              onClick={() => { setMode('basic'); }} data-id="basic-text"
             >
               Basic Text
             </Button>
             <Button
               size="sm"
               variant={mode === 'markdown' ? 'primary' : 'secondary'}
-              onClick={() => { setMode('markdown'); }}
+              onClick={() => { setMode('markdown'); }} data-id="full-markdown"
             >
               Full Markdown
             </Button>

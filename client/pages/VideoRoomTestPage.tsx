@@ -138,7 +138,7 @@ export default function VideoRoomTestPage(): React.ReactElement {
     <PageLayout
       header={
         <div>
-          <a href="/test">← Tests</a>
+          <a href="/test" data-id="tests">← Tests</a>
         </div>
       }
     >
@@ -153,7 +153,7 @@ export default function VideoRoomTestPage(): React.ReactElement {
                 label="Room ID"
                 value={roomId}
                 onChange={setRoomId}
-                placeholder="test-room-1"
+                placeholder="test-room-1" data-id="room-id"
               />
             </div>
             {!joined ? (

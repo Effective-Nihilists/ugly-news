@@ -126,7 +126,7 @@ export default function KagiTestPage(): React.ReactElement {
     <PageLayout
       header={
         <div>
-          <a href="/test">← Tests</a>
+          <a href="/test" data-id="tests">← Tests</a>
         </div>
       }
     >
@@ -144,7 +144,7 @@ export default function KagiTestPage(): React.ReactElement {
               }}
               style={{
                 fontWeight: mode === m.key ? 'bold' : 'normal',
-              }}
+              }} data-id="label"
             >
               {m.label}
             </button>
@@ -158,7 +158,7 @@ export default function KagiTestPage(): React.ReactElement {
                 label="URL (leave empty to summarize text)"
                 value={url}
                 onChange={setUrl}
-                placeholder="https://example.com/article"
+                placeholder="https://example.com/article" data-id="url-leave-empty-to"
               />
             )}
 
@@ -171,11 +171,11 @@ export default function KagiTestPage(): React.ReactElement {
                   mode === 'summarize'
                     ? 'Paste text to summarize…'
                     : 'Search query…'
-                }
+                } data-id="input"
               />
             )}
 
-            <Button onClick={() => { void handleRun(); }} disabled={!canRun}>
+            <Button onClick={() => { void handleRun(); }} disabled={!canRun} data-id="button">
               {loading ? 'Running…' : 'Run'}
             </Button>
           </div>
@@ -208,7 +208,7 @@ export default function KagiTestPage(): React.ReactElement {
             {searchResult.items.map((item, i) => (
               <Card key={i}>
                 <div>
-                  <a href={item.url} target="_blank" rel="noreferrer">
+                  <a href={item.url} target="_blank" rel="noreferrer" data-id="a">
                     <strong>{item.title}</strong>
                   </a>
                   <p style={{ fontSize: '0.85em', opacity: 0.7 }}>
@@ -240,7 +240,7 @@ export default function KagiTestPage(): React.ReactElement {
                           border: 'none',
                           cursor: 'pointer',
                           textDecoration: 'underline',
-                        }}
+                        }} data-id="button-2"
                       >
                         {r}
                       </button>

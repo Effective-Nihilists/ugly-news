@@ -10,7 +10,7 @@ export default function StringsTestPage(): React.ReactElement {
     <PageLayout
       header={
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 24px' }}>
-          <a href="/test">← Test Pages</a>
+          <a href="/test" data-id="test-pages">← Test Pages</a>
           <span data-id="strings-title" style={{ fontSize: '1.125rem', fontWeight: 'bold' }}>
             {strings.appName ?? 'Strings'}
           </span>

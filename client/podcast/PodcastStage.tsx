@@ -133,7 +133,7 @@ export function PodcastStage({
         <button
           onClick={() => { player.togglePlayPause(); }}
           aria-label={player.isPlaying ? 'Pause' : 'Play'}
-          style={{ flexShrink: 0, width: 48, height: 48, borderRadius: '50%', border: 'none', background: C.ink, color: C.paper, fontSize: 18, cursor: 'pointer' }}
+          style={{ flexShrink: 0, width: 48, height: 48, borderRadius: '50%', border: 'none', background: C.ink, color: C.paper, fontSize: 18, cursor: 'pointer' }} data-id="button"
         >
           {player.isPlaying ? '❙❙' : '▶'}
         </button>
@@ -144,7 +144,7 @@ export function PodcastStage({
             max={player.durationMs || 1}
             value={Math.min(player.currentTimeMs, player.durationMs || 1)}
             onChange={(e) => { player.seekTo(Number(e.target.value)); }}
-            style={{ width: '100%', accentColor: C.accent, cursor: 'pointer' }}
+            style={{ width: '100%', accentColor: C.accent, cursor: 'pointer' }} data-id="input"
           />
           <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: C.muted, marginTop: 2 }}>
             <span>{fmt(player.currentTimeMs)}</span>
@@ -169,7 +169,7 @@ export function PodcastStage({
                   border: `1px solid ${active ? C.accent : 'rgba(26,23,20,0.3)'}`,
                   background: active ? C.accent : 'transparent', color: active ? C.paper : C.ink,
                   maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}
+                }} data-id="title"
               >
                 {i + 1}. {a.title}
               </button>

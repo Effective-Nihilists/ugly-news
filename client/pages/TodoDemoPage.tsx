@@ -97,8 +97,8 @@ export default function TodoDemoPage(): React.ReactElement {
       header={
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Text weight="bold">Todo Demo</Text>
-          <a href="/test" style={{ textDecoration: 'none' }}>
-            <Button variant="secondary">← Tests</Button>
+          <a href="/test" style={{ textDecoration: 'none' }} data-id="a">
+            <Button variant="secondary" data-id="tests">← Tests</Button>
           </a>
         </div>
       }
@@ -133,11 +133,11 @@ export default function TodoDemoPage(): React.ReactElement {
                 borderRadius: 6,
                 border: '1px solid #ccc',
                 fontSize: 14,
-              }}
+              }} data-id="what-needs-to-be"
             />
             <Button
               onClick={() => void handleCreate()}
-              disabled={!inputText.trim()}
+              disabled={!inputText.trim()} data-id="add"
             >
               Add
             </Button>
@@ -173,14 +173,14 @@ export default function TodoDemoPage(): React.ReactElement {
                   cursor: 'pointer',
                   background: selectedId === todo._id ? 'rgba(0,0,0,0.05)' : 'transparent',
                   opacity: todo.done ? 0.55 : 1,
-                }}
+                }} data-id="div"
               >
                 <input
                   type="checkbox"
                   checked={todo.done}
                   onChange={() => { void handleToggle(todo._id); }}
                   onClick={(e) => { e.stopPropagation(); }}
-                  style={{ cursor: 'pointer', flexShrink: 0 }}
+                  style={{ cursor: 'pointer', flexShrink: 0 }} data-id="input"
                 />
                 <span
                   style={{
@@ -197,7 +197,7 @@ export default function TodoDemoPage(): React.ReactElement {
                   onClick={(e?: React.MouseEvent) => {
                     e?.stopPropagation();
                     void handleDelete(todo._id);
-                  }}
+                  }} data-id="delete"
                 >
                   Delete
                 </Button>

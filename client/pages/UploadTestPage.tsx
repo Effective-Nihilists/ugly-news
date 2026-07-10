@@ -71,7 +71,7 @@ export default function UploadTestPage(): React.ReactElement {
     <PageLayout
       header={
         <div>
-          <a href="/test">← Tests</a>
+          <a href="/test" data-id="tests">← Tests</a>
         </div>
       }
     >
@@ -96,7 +96,7 @@ export default function UploadTestPage(): React.ReactElement {
               type="file"
               onChange={handleFileChange}
               disabled={uploading}
-              style={{ marginTop: 8 }}
+              style={{ marginTop: 8 }} data-id="input"
             />
           </div>
         </Card>
@@ -123,7 +123,7 @@ export default function UploadTestPage(): React.ReactElement {
                   <strong>{entry.name}</strong> — {formatSize(entry.size)} — {entry.type || 'unknown type'}
                 </div>
                 <div style={{ fontSize: '0.85em', wordBreak: 'break-all' }}>
-                  <a href={entry.url} target="_blank" rel="noreferrer">{entry.url}</a>
+                  <a href={entry.url} target="_blank" rel="noreferrer" data-id="url">{entry.url}</a>
                 </div>
                 {entry.type.startsWith('image/') && (
                   <img

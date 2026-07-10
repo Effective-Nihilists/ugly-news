@@ -44,12 +44,12 @@ export default function UglyTakePage({ id }: { id: string }): React.ReactElement
       ` }} />
       <PressHeader active="satire" />
       <div style={{ maxWidth: 760, margin: '0 auto', padding: 'clamp(18px,4vw,40px)' }}>
-        <a href="/ugly-takes" onClick={navClick(() => { router.push('ugly-takes', {}); })} style={backLink}>‹ The Satire Desk</a>
+        <a href="/ugly-takes" onClick={navClick(() => { router.push('ugly-takes', {}); })} style={backLink} data-id="the-satire-desk">‹ The Satire Desk</a>
 
         {state === 'loading' && <p style={{ ...mono, color: C.muted, marginTop: 40 }}>Consulting the satire desk…</p>}
         {state === 'missing' && (
           <p style={{ fontFamily: 'Spectral, serif', fontSize: 20, marginTop: 40 }}>
-            No Ugly Take here. <a href="/ugly-takes" onClick={navClick(() => { router.push('ugly-takes', {}); })} style={{ color: C.accent }}>Back to the Satire Desk →</a>
+            No Ugly Take here. <a href="/ugly-takes" onClick={navClick(() => { router.push('ugly-takes', {}); })} style={{ color: C.accent }} data-id="back-to-the-satire">Back to the Satire Desk →</a>
           </p>
         )}
 

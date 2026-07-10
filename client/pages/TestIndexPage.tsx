@@ -26,7 +26,7 @@ export default function TestIndexPage(): React.ReactElement {
     <PageLayout
       header={
         <div>
-          <a href="/">← Home</a>
+          <a href="/" data-id="home">← Home</a>
         </div>
       }
     >
@@ -37,7 +37,7 @@ export default function TestIndexPage(): React.ReactElement {
             <a
               key={page.path}
               href={page.path}
-              style={{ textDecoration: 'none', color: 'inherit' }}
+              style={{ textDecoration: 'none', color: 'inherit' }} data-id="a"
             >
               <Card>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

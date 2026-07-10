@@ -97,7 +97,7 @@ export default function PushTestPage(): React.ReactElement {
     <PageLayout
       header={
         <div>
-          <a href="/test">← Tests</a>
+          <a href="/test" data-id="tests">← Tests</a>
         </div>
       }
     >
@@ -110,11 +110,11 @@ export default function PushTestPage(): React.ReactElement {
             Status: {registered === null ? 'unknown' : registered ? 'registered' : 'not registered'}
           </p>
           <div style={{ display: 'flex', gap: 8 }}>
-            <Button onClick={() => { void handleInit(); }} disabled={loading}>
+            <Button onClick={() => { void handleInit(); }} disabled={loading} data-id="check-status">
               Check Status
             </Button>
             {registered === false && (
-              <Button onClick={() => { void handleRegister(); }} disabled={loading}>
+              <Button onClick={() => { void handleRegister(); }} disabled={loading} data-id="register-for-push">
                 Register for Push
               </Button>
             )}
@@ -127,13 +127,13 @@ export default function PushTestPage(): React.ReactElement {
             label="Target User ID"
             value={targetUserId}
             onChange={setTargetUserId}
-            placeholder="user ID to send to"
+            placeholder="user ID to send to" data-id="target-user-id"
           />
-          <Input label="Title" value={title} onChange={setTitle} />
-          <Input label="Body" value={body} onChange={setBody} />
+          <Input label="Title" value={title} onChange={setTitle} data-id="title" />
+          <Input label="Body" value={body} onChange={setBody} data-id="body" />
           <Button
             onClick={() => { void handleSend(); }}
-            disabled={loading || !targetUserId.trim() || !title.trim()}
+            disabled={loading || !targetUserId.trim() || !title.trim()} data-id="button"
           >
             {loading ? 'Sending...' : 'Send Push'}
           </Button>

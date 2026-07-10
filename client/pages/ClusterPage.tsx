@@ -56,12 +56,12 @@ export default function ClusterPage({ id }: { id: string }): React.ReactElement 
       ` }} />
       <PressHeader active="home" />
       <div style={{ maxWidth: 940, margin: '0 auto', padding: 'clamp(18px,4vw,40px)' }}>
-        <a href="/" onClick={navClick(() => { router.push('', {}); })} style={backLink}>‹ back to front page</a>
+        <a href="/" onClick={navClick(() => { router.push('', {}); })} style={backLink} data-id="back-to-front-page">‹ back to front page</a>
 
         {state === 'loading' && <p style={{ ...mono, color: C.muted, marginTop: 40 }}>Pulling every angle…</p>}
         {state === 'missing' && (
           <p style={{ fontFamily: 'Spectral, serif', fontSize: 20, marginTop: 40 }}>
-            This story has gone to press elsewhere. <a href="/" onClick={navClick(() => { router.push('', {}); })} style={{ color: C.accent }}>Back to the front page →</a>
+            This story has gone to press elsewhere. <a href="/" onClick={navClick(() => { router.push('', {}); })} style={{ color: C.accent }} data-id="back-to-the-front">Back to the front page →</a>
           </p>
         )}
 

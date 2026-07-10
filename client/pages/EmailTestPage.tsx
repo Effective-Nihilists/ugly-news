@@ -65,7 +65,7 @@ export default function EmailTestPage(): React.ReactElement {
     <PageLayout
       header={
         <div>
-          <a href="/test">← Tests</a>
+          <a href="/test" data-id="tests">← Tests</a>
         </div>
       }
     >
@@ -82,7 +82,7 @@ export default function EmailTestPage(): React.ReactElement {
                 value={userId}
                 onChange={(e) => { setUserId(e.target.value); }}
                 placeholder="User ID to send email to"
-                style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #444' }}
+                style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #444' }} data-id="user-id-to-send"
               />
             </label>
             <label>
@@ -92,7 +92,7 @@ export default function EmailTestPage(): React.ReactElement {
                 value={subject}
                 onChange={(e) => { setSubject(e.target.value); }}
                 placeholder="Email subject"
-                style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #444' }}
+                style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #444' }} data-id="email-subject"
               />
             </label>
             <label>
@@ -102,7 +102,7 @@ export default function EmailTestPage(): React.ReactElement {
                 value={replyId}
                 onChange={(e) => { setReplyId(e.target.value); }}
                 placeholder="e.g. order-123"
-                style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #444' }}
+                style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #444' }} data-id="e-g-order-123"
               />
               <div style={{ fontSize: '0.8em', color: '#888', marginTop: 2 }}>
                 Sets the +tag in the from address for reply correlation
@@ -114,10 +114,10 @@ export default function EmailTestPage(): React.ReactElement {
                 value={html}
                 onChange={(e) => { setHtml(e.target.value); }}
                 rows={6}
-                style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #444', fontFamily: 'monospace', fontSize: '0.9em' }}
+                style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #444', fontFamily: 'monospace', fontSize: '0.9em' }} data-id="textarea"
               />
             </label>
-            <Button onClick={() => { void handleSend(); }} disabled={sending || !userId.trim()}>
+            <Button onClick={() => { void handleSend(); }} disabled={sending || !userId.trim()} data-id="button">
               {sending ? 'Sending…' : 'Send Email'}
             </Button>
           </div>

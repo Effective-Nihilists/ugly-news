@@ -248,11 +248,11 @@ function InputsTab(): React.ReactElement {
 
         <Section title="Button" description="Primary, secondary, and error variants">
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <Button variant="primary">Primary</Button>
-            <Button variant="secondary">Secondary</Button>
-            <Button variant="error">Error</Button>
-            <Button variant="ghost">Ghost</Button>
-            <Button variant="primary" disabled>Disabled</Button>
+            <Button variant="primary" data-id="primary">Primary</Button>
+            <Button variant="secondary" data-id="secondary">Secondary</Button>
+            <Button variant="error" data-id="error">Error</Button>
+            <Button variant="ghost" data-id="ghost">Ghost</Button>
+            <Button variant="primary" disabled data-id="disabled">Disabled</Button>
           </div>
         </Section>
 
@@ -260,7 +260,7 @@ function InputsTab(): React.ReactElement {
           <Input
             value={inputVal}
             onChange={(value) => { setInputVal(value); }}
-            placeholder="Type something..."
+            placeholder="Type something..." data-id="type-something"
           />
           {inputVal && (
             <span style={{ marginTop: 6, display: 'block' }}>
@@ -280,7 +280,7 @@ function InputsTab(): React.ReactElement {
               }
               setValidatedVal(value);
             }}
-            placeholder="Min 3 characters"
+            placeholder="Min 3 characters" data-id="min-3-characters"
           />
         </Section>
 
@@ -302,7 +302,7 @@ function InputsTab(): React.ReactElement {
                 background: 'transparent',
                 color: 'inherit',
                 boxSizing: 'border-box',
-              }}
+              }} data-id="click-to-see-focus"
             />
           </AnimatedInputWrapper>
         </Section>
@@ -315,7 +315,7 @@ function InputsTab(): React.ReactElement {
               { value: 'a', label: 'Option A' },
               { value: 'b', label: 'Option B' },
               { value: 'c', label: 'Option C' },
-            ]}
+            ]} data-id="enum-input"
           />
           <span style={{ marginTop: 6, opacity: 0.5, display: 'block' }}>
             <Text size="xs">Selected: {enumVal}</Text>
@@ -362,7 +362,7 @@ function InputsTab(): React.ReactElement {
               { value: 'delta', text: 'Delta', description: 'Fourth option' },
             ]}
             value={selectVal}
-            onChange={setSelectVal}
+            onChange={setSelectVal} data-id="select-view"
           />
           {selectVal && (
             <span style={{ marginTop: 6, opacity: 0.5, display: 'block' }}>
@@ -380,7 +380,7 @@ function InputsTab(): React.ReactElement {
               border: '1px solid rgba(0,0,0,0.1)',
               textAlign: 'center',
               cursor: 'pointer',
-            }}
+            }} data-id="pressable"
           >
             <Text weight="medium">{pressed ? 'Pressed! (tap again to reset)' : 'Tap me'}</Text>
           </Pressable>
@@ -417,7 +417,7 @@ function FeedbackTab(): React.ReactElement {
       <div style={{ maxWidth: 640, margin: '0 auto', padding: '16px 16px 48px' }}>
 
         <Section title="Modal" description="Overlay dialog with backdrop dismiss">
-          <Button variant="primary" onClick={() => { setShowModal(true); }}>Open Modal</Button>
+          <Button variant="primary" onClick={() => { setShowModal(true); }} data-id="open-modal">Open Modal</Button>
           {showModal && (
             <Modal onClose={() => { setShowModal(false); }}>
               <div style={{ padding: 24, maxWidth: 360 }}>
@@ -428,7 +428,7 @@ function FeedbackTab(): React.ReactElement {
                   </Text>
                 </span>
                 <div style={{ marginTop: 16 }}>
-                  <Button variant="secondary" onClick={() => { setShowModal(false); }}>Close</Button>
+                  <Button variant="secondary" onClick={() => { setShowModal(false); }} data-id="close">Close</Button>
                 </div>
               </div>
             </Modal>
@@ -436,7 +436,7 @@ function FeedbackTab(): React.ReactElement {
         </Section>
 
         <Section title="AlertPopup / alertShowMessage" description="Imperative top-banner alert (no JSX state required)">
-          <Button variant="secondary" onClick={() => { alertShowMessage('Hello from alertShowMessage!'); }}>
+          <Button variant="secondary" onClick={() => { alertShowMessage('Hello from alertShowMessage!'); }} data-id="show-alert">
             Show Alert
           </Button>
         </Section>
@@ -451,12 +451,12 @@ function FeedbackTab(): React.ReactElement {
                 { value: 'success', label: 'Success' },
                 { value: 'warning', label: 'Warning' },
                 { value: 'error', label: 'Error' },
-              ]}
+              ]} data-id="enum-input-2"
             />
             <Button
               variant="primary"
               onClick={() => { setShowToast(true); }}
-              disabled={showToast}
+              disabled={showToast} data-id="show-toast"
             >
               Show Toast
             </Button>
@@ -487,7 +487,7 @@ function FeedbackTab(): React.ReactElement {
 
         <Section title="CelebrationOverlay" description="Fullscreen celebration animation">
           <div style={{ position: 'relative', minHeight: 80 }}>
-            <Button variant="primary" onClick={() => { setShowCelebration(true); }}>
+            <Button variant="primary" onClick={() => { setShowCelebration(true); }} data-id="celebrate">
               Celebrate!
             </Button>
             <CelebrationOverlay
@@ -502,7 +502,7 @@ function FeedbackTab(): React.ReactElement {
         <Section title="Confetti" description="10 canvas-confetti presets — fire and forget">
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {confettiFns.map(({ label, fn }) => (
-              <Button key={label} variant="secondary" onClick={() => { fn(); }}>
+              <Button key={label} variant="secondary" onClick={() => { fn(); }} data-id="button">
                 {label}
               </Button>
             ))}
@@ -558,14 +558,14 @@ function ListsTab(): React.ReactElement {
               onClick={() => {
                 const next = `Item ${Date.now() % 10000}`;
                 setAnimatedItems((prev) => [next, ...prev]);
-              }}
+              }} data-id="add-item"
             >
               Add Item
             </Button>
             <Button
               variant="secondary"
               onClick={() => { setAnimatedItems((prev) => prev.slice(1)); }}
-              disabled={animatedItems.length === 0}
+              disabled={animatedItems.length === 0} data-id="remove-first"
             >
               Remove First
             </Button>
@@ -586,7 +586,7 @@ function ListsTab(): React.ReactElement {
             <Button
               variant="secondary"
               onClick={() => { setPresenceItems((prev) => prev.slice(1)); }}
-              disabled={presenceItems.length === 0}
+              disabled={presenceItems.length === 0} data-id="remove-first-2"
             >
               Remove First
             </Button>
@@ -611,7 +611,7 @@ function ListsTab(): React.ReactElement {
             )}
           />
           {presenceItems.length === 0 && (
-            <Button variant="secondary" onClick={() => { setPresenceItems(['One', 'Two', 'Three', 'Four']); }}>
+            <Button variant="secondary" onClick={() => { setPresenceItems(['One', 'Two', 'Three', 'Four']); }} data-id="reset">
               Reset
             </Button>
           )}
@@ -645,8 +645,8 @@ function ListsTab(): React.ReactElement {
                 <div style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: 16 }}>
                   <Text size="lg" weight="bold">{item.label}</Text>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <Button variant="error" onClick={actions.dislike}>✕ Pass</Button>
-                    <Button variant="primary" onClick={actions.like}>✓ Like</Button>
+                    <Button variant="error" onClick={actions.dislike} data-id="pass">✕ Pass</Button>
+                    <Button variant="primary" onClick={actions.like} data-id="like">✓ Like</Button>
                   </div>
                 </div>
               )}
@@ -747,7 +747,7 @@ function NavigationTab(): React.ReactElement {
             <div style={{ padding: 16, textAlign: 'center' }}>
               <Text size="lg" weight="bold">Wizard completed!</Text>
               <div style={{ marginTop: 12 }}>
-                <Button variant="secondary" onClick={() => { setWizardDone(false); setWizardStep(0); }}>
+                <Button variant="secondary" onClick={() => { setWizardDone(false); setWizardStep(0); }} data-id="reset-2">
                   Reset
                 </Button>
               </div>
@@ -873,7 +873,7 @@ function AdvancedTab(): React.ReactElement {
                 )}
                 <Button
                   variant="secondary"
-                  onClick={() => { setDrawingDone(false); setDrawnImage(null); }}
+                  onClick={() => { setDrawingDone(false); setDrawnImage(null); }} data-id="draw-again"
                 >
                   Draw Again
                 </Button>
@@ -920,7 +920,7 @@ function AdvancedTab(): React.ReactElement {
 
         <Section title="StaggeredAnimationContainer" description="Staggered entry animation for a group of children">
           <div style={{ marginBottom: 10 }}>
-            <Button variant="secondary" onClick={() => { setStaggerKey((k) => k + 1); }}>
+            <Button variant="secondary" onClick={() => { setStaggerKey((k) => k + 1); }} data-id="replay">
               Replay
             </Button>
           </div>
@@ -938,7 +938,7 @@ function AdvancedTab(): React.ReactElement {
 
         <Section title="Animated + useAnimatedValue" description="Animate any CSS property with spring physics">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <Button variant="secondary" onClick={toggleOpacity}>
+            <Button variant="secondary" onClick={toggleOpacity} data-id="toggle-opacity">
               {isHidden ? 'Fade in' : 'Fade out'}
             </Button>
             <Animated.div
@@ -981,7 +981,7 @@ export default function UIComponentsPage(): React.ReactElement {
       header={
         <div>
           <div style={{ padding: '12px 16px 4px' }}>
-            <a href="/test" style={{ fontSize: 13, opacity: 0.5, textDecoration: 'none' }}>← Tests</a>
+            <a href="/test" style={{ fontSize: 13, opacity: 0.5, textDecoration: 'none' }} data-id="tests">← Tests</a>
           </div>
           <div style={{ padding: '4px 16px 8px' }}>
             <Text size="xl" weight="bold">UI Components</Text>

@@ -321,7 +321,7 @@ export function PressHeader({ active }: { active?: PressTab }): React.ReactEleme
   return (
     <header style={{ borderTop: `6px solid ${C.ink}`, background: C.paper }}>
       <div style={{ maxWidth: 1180, margin: '0 auto', padding: '10px clamp(16px,4vw,40px) 0', textAlign: 'center' }}>
-        <a href="/" onClick={navClick(() => { router.push('', {}); })} style={{ textDecoration: 'none', color: C.ink }}>
+        <a href="/" onClick={navClick(() => { router.push('', {}); })} style={{ textDecoration: 'none', color: C.ink }} data-id="a">
           <div style={{ fontFamily: 'Anton, sans-serif', textTransform: 'uppercase', fontSize: 'clamp(22px,3.4vw,30px)', letterSpacing: '.02em' }}>The Ugly Press</div>
         </a>
         <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10.5, letterSpacing: '.22em', textTransform: 'uppercase', color: C.muted, marginTop: 2 }}>Left. Right. Ugly.</div>
@@ -372,7 +372,7 @@ export function UglyTakeSection({ takes }: { takes: UglyTakeCard[] }): React.Rea
     <section style={{ maxWidth: 1180, margin: '0 auto', padding: '8px clamp(20px,5vw,64px) 0' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '34px 0 14px' }}>
         <span style={{ fontFamily: 'Anton, sans-serif', textTransform: 'uppercase', fontSize: 26, color: C.accent }}>The Ugly Take</span>
-        <a href="/ugly-takes" onClick={navClick(() => { router.push('ugly-takes', {}); })} style={{ ...kicker, color: C.accent, textDecoration: 'none' }}>the satire desk →</a>
+        <a href="/ugly-takes" onClick={navClick(() => { router.push('ugly-takes', {}); })} style={{ ...kicker, color: C.accent, textDecoration: 'none' }} data-id="the-satire-desk">the satire desk →</a>
       </div>
       {lead && (
         <a href={`/ugly-take/${lead.clusterId}`} onClick={navClick(() => { open(lead.clusterId); })} data-id="ugly-take-feature"

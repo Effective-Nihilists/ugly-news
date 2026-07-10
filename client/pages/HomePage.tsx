@@ -177,7 +177,7 @@ function FrontPage(): React.ReactElement | null {
         }}
       >
         <span>Off the wire — latest</span>
-        <a href="/archive" onClick={navClick(() => { router.push('archive', {}); })} className="un-link" style={{ color: C.accent, textDecoration: 'none' }}>Full archive →</a>
+        <a href="/archive" onClick={navClick(() => { router.push('archive', {}); })} className="un-link" style={{ color: C.accent, textDecoration: 'none' }} data-id="full-archive">Full archive →</a>
       </div>
 
       {!items && (
@@ -191,7 +191,7 @@ function FrontPage(): React.ReactElement | null {
         >
           {/* Lead story — flex column whose image fills the cell the grid
               stretches to the secondary column's height (kills the empty gap). */}
-          <a href={`/article/${lead.id}`} onClick={navClick(() => { router.push('article/:id', { id: lead.id }); })} className="un-card un-lead un-fade" style={{ textDecoration: 'none', color: C.ink, display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <a href={`/article/${lead.id}`} onClick={navClick(() => { router.push('article/:id', { id: lead.id }); })} className="un-card un-lead un-fade" style={{ textDecoration: 'none', color: C.ink, display: 'flex', flexDirection: 'column', height: '100%' }} data-id="a">
             <div
               style={{
                 position: 'relative',
@@ -259,7 +259,7 @@ function FrontPage(): React.ReactElement | null {
                   padding: '14px 0',
                   borderTop: i === 0 ? 'none' : `1px solid rgba(26,23,20,0.18)`,
                   animationDelay: `${0.05 * i}s`,
-                }}
+                }} data-id="a-2"
               >
                 <div>
                   {a.category && (
@@ -369,7 +369,7 @@ function PodcastSpotlight(): React.ReactElement {
             textDecoration: 'none',
             boxShadow: `0 0 0 4px ${C.ink}, 0 0 0 6px ${C.accent}`,
           }}
-          className="un-pod-play"
+          className="un-pod-play" data-id="play-todays-podcast"
         >
           <PlayIcon style={{ width: 'clamp(28px,4.4vw,42px)', height: 'clamp(28px,4.4vw,42px)', marginLeft: '8%' }} />
         </a>
@@ -437,7 +437,7 @@ function PodcastSpotlight(): React.ReactElement {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 10,
-              }}
+              }} data-id="a-3"
             >
               {ready ? 'Listen now' : 'Open the podcast'} →
             </a>
@@ -550,7 +550,7 @@ function EmailSignup(): React.ReactElement {
       <div style={{ marginTop: 14 }}>
         <button style={btn} onClick={openLogin}
           onMouseEnter={(e) => (e.currentTarget.style.background = C.accent)}
-          onMouseLeave={(e) => (e.currentTarget.style.background = C.ink)}>
+          onMouseLeave={(e) => (e.currentTarget.style.background = C.ink)} data-id="sign-in-with-ugly">
           Sign in with ugly.bot →
         </button>
         <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10.5, letterSpacing: '0.06em', color: C.muted, marginTop: 8 }}>
@@ -572,7 +572,7 @@ function EmailSignup(): React.ReactElement {
             ★ Subscribed — 8 a.m. {pref.timezone} + podcast ping
           </div>
           <button style={{ ...btn, background: 'transparent', color: C.ink, boxShadow: `inset 0 0 0 2px ${C.ink}` }} disabled={busy}
-            onClick={() => { void subscribe(false); }}>
+            onClick={() => { void subscribe(false); }} data-id="button">
             {busy ? '…' : 'Unsubscribe'}
           </button>
         </>
@@ -581,7 +581,7 @@ function EmailSignup(): React.ReactElement {
           <button style={btn} disabled={busy}
             onClick={() => { void subscribe(true); }}
             onMouseEnter={(e) => (e.currentTarget.style.background = C.accent)}
-            onMouseLeave={(e) => (e.currentTarget.style.background = C.ink)}>
+            onMouseLeave={(e) => (e.currentTarget.style.background = C.ink)} data-id="button-2">
             {busy ? 'Subscribing…' : 'Email me at 8 a.m. →'}
           </button>
           <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10.5, letterSpacing: '0.06em', color: C.muted, marginTop: 8 }}>
@@ -781,13 +781,13 @@ function Hero({ name }: { name?: string | undefined }): React.ReactElement {
           hour, plus a daily podcast and a personal edition in your inbox.
         </p>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <a href="#front" className="un-cta">
+          <a href="#front" className="un-cta" data-id="read-today">
             Read today →
           </a>
-          <a href="/podcast" onClick={navClick(() => { router.push('podcast', {}); })} className="un-cta ghost">
+          <a href="/podcast" onClick={navClick(() => { router.push('podcast', {}); })} className="un-cta ghost" data-id="todays-podcast">
             <PlayIcon size={14} /> Today’s podcast
           </a>
-          <a href="#daily" className="un-cta ghost">
+          <a href="#daily" className="un-cta ghost" data-id="get-the-8-a">
             Get the 8 a.m.
           </a>
         </div>
@@ -902,12 +902,12 @@ function Sections(): React.ReactElement {
               {s.body}
             </p>
             {i === 0 && (
-              <a href="#front" className="un-link" style={{ display: 'inline-block', marginTop: 14, fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.ink }}>
+              <a href="#front" className="un-link" style={{ display: 'inline-block', marginTop: 14, fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.ink }} data-id="read-the-wire">
                 Read the wire →
               </a>
             )}
             {i === 1 && (
-              <a href="/podcast" onClick={navClick(() => { router.push('podcast', {}); })} className="un-link" style={{ display: 'inline-block', marginTop: 14, fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.ink }}>
+              <a href="/podcast" onClick={navClick(() => { router.push('podcast', {}); })} className="un-link" style={{ display: 'inline-block', marginTop: 14, fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.ink }} data-id="open-the-podcast">
                 Open the podcast →
               </a>
             )}
@@ -1067,11 +1067,11 @@ export default function HomePage(): React.ReactElement {
         }}
       >
         <span>
-          The Ugly Press · <a className="un-link" href="/ugly-takes" onClick={navClick(() => { router.push('ugly-takes', {}); })} style={{ color: C.ink }}>Satire</a> · <a className="un-link" href="/archive" onClick={navClick(() => { router.push('archive', {}); })} style={{ color: C.ink }}>Archive</a> · <a className="un-link" href="/podcast" onClick={navClick(() => { router.push('podcast', {}); })} style={{ color: C.ink }}>Podcast</a>
+          The Ugly Press · <a className="un-link" href="/ugly-takes" onClick={navClick(() => { router.push('ugly-takes', {}); })} style={{ color: C.ink }} data-id="satire">Satire</a> · <a className="un-link" href="/archive" onClick={navClick(() => { router.push('archive', {}); })} style={{ color: C.ink }} data-id="archive">Archive</a> · <a className="un-link" href="/podcast" onClick={navClick(() => { router.push('podcast', {}); })} style={{ color: C.ink }} data-id="podcast">Podcast</a>
         </span>
         <span>
           Printed by{' '}
-          <a className="un-link" href="https://ugly.bot" style={{ color: C.ink }}>
+          <a className="un-link" href="https://ugly.bot" style={{ color: C.ink }} data-id="ugly-bot">
             ugly.bot
           </a>
         </span>

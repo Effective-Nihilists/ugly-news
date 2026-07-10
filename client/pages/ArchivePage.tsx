@@ -222,7 +222,7 @@ export default function ArchivePage(): React.ReactElement {
         padding: '16px 0',
         borderBottom: `1px solid rgba(26,23,20,0.16)`,
         alignItems: 'start',
-      }}
+      }} data-id="a"
     >
       <div>
         {a.category && <div style={{ ...mono(10.5, C.accent), letterSpacing: '0.16em', marginBottom: 5 }}>{a.category}</div>}
@@ -269,7 +269,7 @@ export default function ArchivePage(): React.ReactElement {
       <div style={{ maxWidth: 1040, margin: '0 auto', padding: 'clamp(18px,4vw,40px) clamp(18px,5vw,56px) 80px' }}>
         {/* Masthead */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-          <a href="/" onClick={navClick(() => { router.push('', {}); })} className="ar-link" style={mono(12, C.ink)}>← The Ugly Press</a>
+          <a href="/" onClick={navClick(() => { router.push('', {}); })} className="ar-link" style={mono(12, C.ink)} data-id="the-ugly-press">← The Ugly Press</a>
           <span style={mono(11)}>The Archive</span>
         </div>
         <div style={{ height: 6, background: C.ink, marginBottom: 6 }} />
@@ -288,8 +288,8 @@ export default function ArchivePage(): React.ReactElement {
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 18 }}>
-          <button className={`ar-tab ${tab === 'stories' ? 'active' : ''}`} onClick={() => { setTab('stories'); }}>Stories</button>
-          <button className={`ar-tab ${tab === 'podcasts' ? 'active' : ''}`} onClick={() => { setTab('podcasts'); }}>Podcasts</button>
+          <button className={`ar-tab ${tab === 'stories' ? 'active' : ''}`} onClick={() => { setTab('stories'); }} data-id="stories">Stories</button>
+          <button className={`ar-tab ${tab === 'podcasts' ? 'active' : ''}`} onClick={() => { setTab('podcasts'); }} data-id="podcasts">Podcasts</button>
         </div>
 
         {/* Search row — reserve the same height on both tabs so toggling
@@ -302,7 +302,7 @@ export default function ArchivePage(): React.ReactElement {
               value={query}
               onChange={(e) => { setQuery(e.target.value); }}
               placeholder="Search the stories…"
-              aria-label="Search stories"
+              aria-label="Search stories" data-id="search-stories"
             />
           ) : (
             <p style={{ ...mono(11), width: '100%', textAlign: 'center', margin: 0 }}>
@@ -357,7 +357,7 @@ export default function ArchivePage(): React.ReactElement {
                       padding: '18px 0',
                       borderBottom: `1px solid rgba(26,23,20,0.16)`,
                       alignItems: 'center',
-                    }}
+                    }} data-id="a-2"
                   >
                     <div style={{ width: 54, height: 54, borderRadius: '50%', background: C.accent, color: C.paper, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
                       <PlayIcon size={18} style={{ marginLeft: 2 }} />
@@ -374,7 +374,7 @@ export default function ArchivePage(): React.ReactElement {
 
             {hasMore && (
               <div style={{ textAlign: 'center', marginTop: 34 }}>
-                <button className="ar-more" disabled={loading} onClick={() => { void loadMore(); }}>Load more →</button>
+                <button className="ar-more" disabled={loading} onClick={() => { void loadMore(); }} data-id="load-more">Load more →</button>
               </div>
             )}
           </div>

@@ -388,7 +388,7 @@ function STTSection({ socket }: { socket: UglyBotSocket }) {
           <button
             key={m}
             onClick={() => { if (!listening) setSTTMode(m); }}
-            style={{ fontWeight: sttMode === m ? 'bold' : 'normal' }}
+            style={{ fontWeight: sttMode === m ? 'bold' : 'normal' }} data-id="button"
           >
             {m === 'continuous' ? 'Continuous (VAD)' : 'Push to Talk'}
           </button>
@@ -400,7 +400,7 @@ function STTSection({ socket }: { socket: UglyBotSocket }) {
         <label>Visualizer: </label>
         <select
           value={vizType}
-          onChange={(e) => { setVizType(e.target.value as VizType); }}
+          onChange={(e) => { setVizType(e.target.value as VizType); }} data-id="select"
         >
           {vizOptions.map((v) => (
             <option key={v.key} value={v.key}>{v.label}</option>
@@ -701,7 +701,7 @@ function TTSSection({ socket }: { socket: UglyBotSocket }) {
         <label>Visualizer: </label>
         <select
           value={vizType}
-          onChange={(e) => { setVizType(e.target.value as VizType); }}
+          onChange={(e) => { setVizType(e.target.value as VizType); }} data-id="select-2"
         >
           {vizOptions.map((v) => (
             <option key={v.key} value={v.key}>{v.label}</option>
@@ -720,19 +720,19 @@ function TTSSection({ socket }: { socket: UglyBotSocket }) {
           label="Text to speak"
           value={text}
           onChange={setText}
-          placeholder="Enter text for TTS…"
+          placeholder="Enter text for TTS…" data-id="text-to-speak"
         />
         <Input
           label="Voice ID (optional)"
           value={voice}
           onChange={setVoice}
-          placeholder="e.g. inworld-alex"
+          placeholder="e.g. inworld-alex" data-id="voice-id-optional"
         />
         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-          <Button onClick={() => { void handlePlay(); }} disabled={playing || !text.trim()}>
+          <Button onClick={() => { void handlePlay(); }} disabled={playing || !text.trim()} data-id="button-2">
             {playing ? 'Playing…' : 'Play'}
           </Button>
-          {playing && <Button onClick={handleStop}>Stop</Button>}
+          {playing && <Button onClick={handleStop} data-id="stop">Stop</Button>}
         </div>
       </div>
 
@@ -791,7 +791,7 @@ export default function AudioTestPage(): React.ReactElement {
     <PageLayout
       header={
         <div>
-          <a href="/test">← Tests</a>
+          <a href="/test" data-id="tests">← Tests</a>
         </div>
       }
     >
@@ -807,7 +807,7 @@ export default function AudioTestPage(): React.ReactElement {
             <button
               key={t.key}
               onClick={() => { setTab(t.key); }}
-              style={{ fontWeight: tab === t.key ? 'bold' : 'normal' }}
+              style={{ fontWeight: tab === t.key ? 'bold' : 'normal' }} data-id="label"
             >
               {t.label}
             </button>
