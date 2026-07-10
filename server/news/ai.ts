@@ -30,6 +30,59 @@ function aiProxy(): { baseUrl: string; token: string } {
   return { baseUrl, token };
 }
 
+// Bursty cron sweeps are the root cause of the `[cluster-*]` "genText returned
+// null" / "both summaries non-substantive" errors: the hourly `newsHourly` tick
+// fires feed downloads (→ per-article scrape genText+genImage) AND the cluster
+// sweep (up to 8 synth × 2 genText + 8 satire × 1 genText, plus images) at the
+// same instant. That flood of parallel proxy calls trips ugly.bot's rate
+// limiter → HTTP 429 ("Rate limit exceeded"), and we used to give up on the
+// first 429. Retry transient failures with exponential backoff + FULL jitter so
+// the retries de-correlate and land after the limit window instead of hammering
+// it again immediately. 4 attempts / ~≤7s worst case fits the 60s queue-job
+// budget (even doubled by genSummary's substantive-retry loop).
+const AI_MAX_ATTEMPTS = 4;
+
+/** Transient statuses worth retrying (rate limit / timeout / server blip). A
+ *  permanent 4xx (400/401/403) is NOT retried — it would just fail again. */
+function isRetryableStatus(status: number): boolean {
+  return status === 408 || status === 429 || status >= 500;
+}
+
+/** Sleep for exponential backoff with full jitter. `attempt` is 1-based. */
+async function backoffDelay(attempt: number): Promise<void> {
+  const base = Math.min(500 * 2 ** (attempt - 1), 4000); // 500, 1000, 2000, 4000…
+  const delay = base + Math.random() * base; // full jitter → [base, 2·base)
+  await new Promise((resolve) => setTimeout(resolve, delay));
+}
+
+/**
+ * POST JSON to an AI-proxy endpoint, retrying transient 429/5xx responses and
+ * network errors with exponential backoff + jitter. Returns the final `Response`
+ * (its body untouched, so the caller parses it) — which may still be `!ok` on a
+ * permanent 4xx or after exhausting retries — or `null` if every attempt threw
+ * before producing a response.
+ */
+async function postAi(baseUrl: string, path: string, token: string, body: unknown): Promise<Response | null> {
+  let lastRes: Response | null = null;
+  for (let attempt = 1; attempt <= AI_MAX_ATTEMPTS; attempt++) {
+    try {
+      const res = await fetch(`${baseUrl}${path}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (res.ok || !isRetryableStatus(res.status)) return res;
+      lastRes = res;
+      console.warn(`[news/ai] ${path} ${res.status} (attempt ${attempt}/${AI_MAX_ATTEMPTS})${attempt < AI_MAX_ATTEMPTS ? ' — backing off' : ' — giving up'}`);
+    } catch (error) {
+      lastRes = null;
+      console.warn(`[news/ai] ${path} network error (attempt ${attempt}/${AI_MAX_ATTEMPTS})`, error);
+    }
+    if (attempt < AI_MAX_ATTEMPTS) await backoffDelay(attempt);
+  }
+  return lastRes;
+}
+
 interface ContentPart { type: string; text?: string; thinking?: string }
 /** The proxy returns `message.content` as a string OR an array of parts
  *  (gpt → string; reasoning models → [{type:'thinking'}, {type:'text'}]). */
@@ -55,27 +108,24 @@ export async function genText(
 ): Promise<string | null> {
   const { baseUrl, token } = aiProxy();
   if (!token) { console.warn('[news/ai] genText: AI_PROXY_TOKEN not set'); return null; }
+  const res = await postAi(baseUrl, '/text', token, {
+    model: opts.model,
+    messages,
+    userId: 'uglyBot',
+    options: {
+      ...(opts.temperature !== undefined ? { temperature: opts.temperature } : {}),
+      ...(opts.maxTokens !== undefined ? { maxTokens: opts.maxTokens } : {}),
+    },
+  });
+  if (!res) { console.warn('[news/ai] genText: no response after retries'); return null; }
+  if (!res.ok) {
+    console.warn(`[news/ai] genText ${res.status}: ${(await res.text().catch(() => '')).slice(0, 200)}`);
+    return null;
+  }
   try {
-    const res = await fetch(`${baseUrl}/text`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: opts.model,
-        messages,
-        userId: 'uglyBot',
-        options: {
-          ...(opts.temperature !== undefined ? { temperature: opts.temperature } : {}),
-          ...(opts.maxTokens !== undefined ? { maxTokens: opts.maxTokens } : {}),
-        },
-      }),
-    });
-    if (!res.ok) {
-      console.warn(`[news/ai] genText ${res.status}: ${(await res.text().catch(() => '')).slice(0, 200)}`);
-      return null;
-    }
     return extractContent(await res.json()) || null;
   } catch (error) {
-    console.warn('[news/ai] genText failed', error);
+    console.warn('[news/ai] genText: failed to parse response', error);
     return null;
   }
 }
@@ -88,27 +138,24 @@ export async function genImage(
   const { baseUrl, token } = aiProxy();
   if (!token) { console.warn('[news/ai] genImage: AI_PROXY_TOKEN not set'); return null; }
   const fullPrompt = opts?.negative ? `${prompt}\n\nAvoid: ${opts.negative}` : prompt;
+  const res = await postAi(baseUrl, '/image', token, {
+    model: opts?.model ?? 'flux_1_dev',
+    prompt: fullPrompt,
+    userId: 'uglyBot',
+    options: { aspectRatio: 'landscape_16_9' },
+  });
+  if (!res) { console.warn('[news/ai] genImage: no response after retries'); return null; }
+  if (!res.ok) {
+    console.warn(`[news/ai] genImage ${res.status}: ${(await res.text().catch(() => '')).slice(0, 200)}`);
+    return null;
+  }
   try {
-    const res = await fetch(`${baseUrl}/image`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: opts?.model ?? 'flux_1_dev',
-        prompt: fullPrompt,
-        userId: 'uglyBot',
-        options: { aspectRatio: 'landscape_16_9' },
-      }),
-    });
-    if (!res.ok) {
-      console.warn(`[news/ai] genImage ${res.status}: ${(await res.text().catch(() => '')).slice(0, 200)}`);
-      return null;
-    }
     const data = (await res.json()) as { url?: string; base64?: string; mime?: string };
     if (data.url) return data.url;
     if (data.base64) return await hostGeneratedImage(data.base64, data.mime ?? 'image/png');
     return null;
   } catch (error) {
-    console.warn('[news/ai] genImage failed', error);
+    console.warn('[news/ai] genImage: failed to parse response', error);
     return null;
   }
 }
