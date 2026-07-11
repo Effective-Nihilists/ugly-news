@@ -8,6 +8,7 @@ import { todayDateString } from './podcast';
 import { dispatchArticleScrape } from './scraper';
 import { dispatchPodcastGenerate } from './podcast-generate';
 import { dispatchUserPrivateNewsEmail, userEmailHourly } from './email';
+import { runNewsRetention } from './retention';
 import {
   dispatchClusterSatirize,
   dispatchClusterSweep,
@@ -39,6 +40,9 @@ export function createCronHandlers(getDb: () => NewsDb): WorkerHandlers<typeof c
     },
     clusterSweep: async () => {
       await dispatchClusterSweep(getDb());
+    },
+    pruneOldNews: async () => {
+      await runNewsRetention(getDb(), Date.now());
     },
 
     // ── Queue-only jobs ──────────────────────────────────────────────────

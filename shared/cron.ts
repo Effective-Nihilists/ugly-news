@@ -34,6 +34,19 @@ export const cronTasks = defineWorkers({
     description: 'Enqueue synthesis + satire for qualifying story clusters',
     timeout: 30_000,
   }),
+  // Daily: enforce the rolling retention window — prune article/file/cluster
+  // rows older than RETENTION_DAYS (see server/news/retention.ts) so the corpus
+  // stays bounded and well under D1's 10 GB ceiling. Deliberately shares
+  // podcastDaily's already-registered 0 10 * * * Cloudflare trigger: the
+  // scheduled() dispatcher runs EVERY worker whose schedule matches the fired
+  // cron, so this adds ZERO new triggers and ZERO extra Neon wakes. (A brand-new
+  // distinct schedule string risks not being registered as a CF trigger — the
+  // same reason clusterSweep was folded onto an existing hourly trigger.)
+  pruneOldNews: defineWorker({
+    schedule: '0 10 * * *',
+    description: 'Prune news content older than the rolling retention window (90d)',
+    timeout: 60_000,
+  }),
 
   // ── Queue-only jobs (fan-out) ────────────────────────────────────────────
   // The sweep used to enqueue all ~16 synth/satire jobs at once. The Cloudflare

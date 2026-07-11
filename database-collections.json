@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-06T01:42:41.969Z",
+  "generatedAt": "2026-07-11T22:54:13.072Z",
   "source": "shared/collections.ts",
   "collections": {
     "perfLog": {
@@ -524,6 +524,11 @@
             "fields": {
               "scrapedAt": -1
             }
+          },
+          {
+            "fields": {
+              "created": -1
+            }
           }
         ]
       },
@@ -990,6 +995,11 @@
           {
             "fields": {
               "feedId": 1
+            }
+          },
+          {
+            "fields": {
+              "created": -1
             }
           }
         ]

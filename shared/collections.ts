@@ -85,7 +85,9 @@ export const collections = defineCollections({
   newsArticle: {
     schema: NewsArticleSchema,
     meta: { cache: false, trackable: false, public: false, cascadeFrom: null },
-    indexes: [{ fields: { feedId: 1 } }, { fields: { scrapedAt: -1 } }],
+    // `created` (system column) index backs the retention prune's `created < cutoff`
+    // filter (see server/news/retention.ts) — perf + future D1 getDocs safety.
+    indexes: [{ fields: { feedId: 1 } }, { fields: { scrapedAt: -1 } }, { fields: { created: -1 } }],
   },
   // Outlet bias/factuality/ownership registry (small, read often → cache;
   // publicly readable so the bias bar + source chips can render unauthenticated).
@@ -116,7 +118,9 @@ export const collections = defineCollections({
       search: { fields: ['title', 'text'], language: 'english' },
       vector: { dimensions: 512, from: 'embedding' },
     },
-    indexes: [{ fields: { type: 1 } }, { fields: { feedId: 1 } }],
+    // `created` (system column) index backs the retention prune's `created < cutoff`
+    // filter (see server/news/retention.ts) — perf + future D1 getDocs safety.
+    indexes: [{ fields: { type: 1 } }, { fields: { feedId: 1 } }, { fields: { created: -1 } }],
   },
   userFilePreference: {
     schema: UserFilePreferenceSchema,
