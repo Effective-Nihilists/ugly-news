@@ -1,5 +1,4 @@
 import * as cheerio from 'cheerio';
-import { getAdapter } from 'ugly-app/server/adapter/workers';
 import { dbDefaults } from 'ugly-app/shared';
 import { collections } from '../../shared/collections';
 import type { FileMarkdown, NewsArticle } from '../../shared/collections';
@@ -196,7 +195,7 @@ export async function dispatchArticleScrape(db: NewsDb, articleId: string): Prom
     public: true,
     indexable: true,
     indexed: isDefined(embedding),
-    embedding: embedding ?? null,
+    embedded: isDefined(embedding),
     likeCount: 0,
     dislikeCount: 0,
     viewCount: 0,
@@ -204,32 +203,13 @@ export async function dispatchArticleScrape(db: NewsDb, articleId: string): Prom
     ...dbDefaults(),
     created: article.created,
   };
-  await db.setDoc(collections.file, file, { skipIfExists: true });
-
-  // WORKAROUND: the framework's vector-column materialization (DB.js
-  // syncDocVector, driven by the collection's `vector: { from: 'embedding' }`)
-  // silently no-ops on the Workers/Neon runtime — the embedding stays in the
-  // JSON `data.embedding` blob and the indexed pgvector `embedding` COLUMN
-  // (which feed ranking, hybrid search, AND the daily email all query) stays
-  // null. Materialize it ourselves via the proven raw-SQL adapter path (see
-  // feed.ts), mirroring the framework's strip-the-blob behavior. Idempotent and
-  // guarded, so it's a no-op once the upstream ugly-app fix lands.
-  if (isDefined(embedding)) {
-    try {
-      await getAdapter().db.query(
-        `UPDATE "file"
-            SET embedding = (data->>'embedding')::vector(512),
-                data = data - 'embedding'
-          WHERE _id = $1
-            AND embedding IS NULL
-            AND jsonb_typeof(data->'embedding') = 'array'
-            AND jsonb_array_length(data->'embedding') = 512`,
-        [fileId],
-      );
-    } catch (err) {
-      console.warn(`[news] embedding column materialize failed for ${fileId}`, err);
-    }
-  }
+  // The 512-dim embedding rides OUT-OF-BAND to Cloudflare Vectorize (keyed by
+  // _id) via the `vec` option — never in the doc JSON. `skipIfExists` keeps the
+  // insert idempotent; the vector is written with the first insert.
+  await db.setDoc(collections.file, file, {
+    skipIfExists: true,
+    ...(isDefined(embedding) ? { vec: embedding } : {}),
+  });
 
   await db.setDoc(collections.newsArticle, {
     ...article,

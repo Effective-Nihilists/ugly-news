@@ -308,7 +308,6 @@ export async function dispatchClusterSatirize(db: NewsDb, clusterId: string): Pr
     public: false,
     indexable: false,
     indexed: false,
-    embedding: null,
     likeCount: 0,
     dislikeCount: 0,
     viewCount: 0,

@@ -349,7 +349,11 @@ export const FileMarkdownSchema = z.object({
   // Search / ranking
   indexable: z.boolean().default(true),
   indexed: z.boolean().default(false),
-  embedding: z.array(z.number()).nullable().optional(),
+  // The 512-dim article embedding lives OUT-OF-BAND in Cloudflare Vectorize
+  // (keyed by _id), written via setDoc(..., { vec }) — never in the doc JSON.
+  // `embedded` is a lightweight marker so feed/email candidate queries can
+  // filter to files that have a vector without reading Vectorize.
+  embedded: z.boolean().optional(),
   public: z.boolean().default(true),
   // Engagement counters (for ranking + email "trending")
   likeCount: z.number().default(0),

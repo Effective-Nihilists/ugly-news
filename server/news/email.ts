@@ -101,11 +101,14 @@ export async function selectDailyEmailArticles(
   const userPreference = await db.getDoc(collections.userFilePreference, userId);
   const clusters: InterestCluster[] = userPreference?.clusters ?? [];
 
+  // `created` is a top-level column surfaced as epoch-ms (bind a number, not a
+  // Date). `embedded` marks files whose 512-dim vector lives out-of-band in
+  // Cloudflare Vectorize; read those vectors back with getVecs for the ranking.
   const allRecent = await db.getDocs(collections.file, {
     public: true,
     userId: uglyBotId,
-    created: { $gt: new Date(now - twoDays) },
-    embedding: { $exists: true, $ne: null },
+    created: { $gt: now - twoDays },
+    embedded: true,
   });
   const files = [...allRecent].sort(() => Math.random() - 0.5).slice(0, 200) as (FileMarkdown & {
     _id: string;
@@ -114,10 +117,11 @@ export async function selectDailyEmailArticles(
     return { hero: null, trending: [], pickedForYou: [], categorySpotlight: [], totalUnread: 0, topCategory: 'News' };
   }
 
+  const vecs = await db.getVecs(collections.file, files.map((f) => f._id));
   const candidates = files.map((f) => ({
     id: f._id,
-    embedding: f.embedding ?? [],
-    created: f.created instanceof Date ? f.created.getTime() : (f.created as unknown as number),
+    embedding: vecs[f._id] ?? [],
+    created: Number(f.created),
   }));
   const ranked = rankAndDiversifyArticles(candidates, clusters, 10, now);
   const fileMap = new Map(files.map((f) => [f._id, f]));

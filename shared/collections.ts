@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { InferDocType } from 'ugly-app/shared';
-import { defineCollections } from 'ugly-app/shared';
+import { d1, defineCollections } from 'ugly-app/shared';
 import {
   FileMarkdownSchema,
   NewsArticleSchema,
@@ -56,51 +56,61 @@ export type CollabDoc = InferDocType<typeof CollabDocSchema>;
 //                  subscriptions. Example: trackKeys: ['chatId'] enables
 //                  socket.trackDocs(collections.message, { keys: { chatId: '...' } }, cb)
 //
+// Every collection persists on Cloudflare D1 (SQLite). Unlike Neon's GIN
+// fallback, D1 THROWS on a structured getDocs/find filter or sort over an
+// undeclared index, so each field a non-ranked getDocs/find touches — plus every
+// trackKey (clients subscribe by trackKey) — is indexed below. Ranked reads
+// (getDocs { search } / { near }) and getQuery are index-exempt.
+// `created`/`updated`/`_id`/`version` are top-level columns and never need one.
+//
 // After adding a collection, run: npm run db:schema-gen && npm run db:migrate
 export const collections = defineCollections({
   todo: {
     schema: TodoSchema,
-    meta: { cache: false, trackable: true, public: false, cascadeFrom: null, trackKeys: ['userId'] },
+    meta: { db: d1, cache: false, trackable: true, public: false, cascadeFrom: null, trackKeys: ['userId'] },
+    indexes: [{ fields: { userId: 1 } }],
   },
   conversation: {
     schema: ConversationSchema,
-    meta: { cache: false, trackable: false, public: false, cascadeFrom: null },
+    meta: { db: d1, cache: false, trackable: false, public: false, cascadeFrom: null },
   },
   message: {
     schema: MessageSchema,
-    meta: { cache: false, trackable: false, public: false, cascadeFrom: 'conversation', trackKeys: ['conversationId'] },
+    meta: { db: d1, cache: false, trackable: false, public: false, cascadeFrom: 'conversation', trackKeys: ['conversationId'] },
+    // trackKey conversationId; also the cascade-from-conversation child lookup.
+    indexes: [{ fields: { conversationId: 1 } }],
   },
   collabDoc: {
     schema: CollabDocSchema,
-    meta: { cache: false, trackable: false, public: false, cascadeFrom: null },
+    meta: { db: d1, cache: false, trackable: false, public: false, cascadeFrom: null },
   },
 
   // ─── News ──────────────────────────────────────────────────────────────
   // RSS feed registry (small, read often → cache; publicly readable).
   newsFeed: {
     schema: NewsFeedDocSchema,
-    meta: { cache: true, trackable: false, public: true, cascadeFrom: null },
+    meta: { db: d1, cache: true, trackable: false, public: true, cascadeFrom: null },
   },
   // Raw scraped articles (intermediate; the user-facing article is the `file`).
   newsArticle: {
     schema: NewsArticleSchema,
-    meta: { cache: false, trackable: false, public: false, cascadeFrom: null },
+    meta: { db: d1, cache: false, trackable: false, public: false, cascadeFrom: null },
     // `created` (system column) index backs the retention prune's `created < cutoff`
-    // filter (see server/news/retention.ts) — perf + future D1 getDocs safety.
+    // filter (see server/news/retention.ts).
     indexes: [{ fields: { feedId: 1 } }, { fields: { scrapedAt: -1 } }, { fields: { created: -1 } }],
   },
   // Outlet bias/factuality/ownership registry (small, read often → cache;
   // publicly readable so the bias bar + source chips can render unauthenticated).
   newsSource: {
     schema: NewsSourceSchema,
-    meta: { cache: true, trackable: false, public: true, cascadeFrom: null },
+    meta: { db: d1, cache: true, trackable: false, public: true, cascadeFrom: null },
   },
   // Story clusters — the "same story across many outlets" unit that powers The
   // Spread / The Blindspot / The Ugly Take. Publicly readable; trackable so the
   // home rail can live-update as coverage grows.
   newsCluster: {
     schema: NewsClusterSchema,
-    meta: { cache: false, trackable: true, public: true, cascadeFrom: null },
+    meta: { db: d1, cache: false, trackable: true, public: true, cascadeFrom: null },
     indexes: [
       { fields: { category: 1 } },
       { fields: { lastUpdatedAt: -1 } },
@@ -112,54 +122,72 @@ export const collections = defineCollections({
   file: {
     schema: FileMarkdownSchema,
     meta: {
-      cache: false, trackable: true, public: true, cascadeFrom: null,
-      // Postgres FTS (generated tsvector column) + pgvector (embedding column,
-      // materialized from the doc's `embedding` field the scraper fills).
+      db: d1, cache: false, trackable: true, public: true, cascadeFrom: null,
+      // In-D1 SQLite FTS5 over title/text.
       search: { fields: ['title', 'text'], language: 'english' },
-      vector: { dimensions: 512, from: 'embedding' },
+      // 512-dim article embedding OUT-OF-BAND in Cloudflare Vectorize (keyed by
+      // _id), written via setDoc(..., { vec }); queried with getDocs({ near })
+      // and read back with getVecs. `filterable` mirrors these fields as
+      // Vectorize metadata so the ANN pre-filters on public/userId/type/category
+      // and — crucially — the numeric `created` epoch-ms RANGE that bounds the
+      // feed's two-week time window.
+      vector: {
+        dimensions: 512,
+        filterable: ['public', 'userId', 'type', 'category', 'created'],
+      },
     },
-    // `created` (system column) index backs the retention prune's `created < cutoff`
-    // filter (see server/news/retention.ts) — perf + future D1 getDocs safety.
-    indexes: [{ fields: { type: 1 } }, { fields: { feedId: 1 } }, { fields: { created: -1 } }],
+    // Structured (non-ranked) getDocs cover: feed/email candidate reads
+    // { public, userId, embedded, created } and podcast selection { type, feedId }.
+    // `created` is a top-level column (retention prune + sort), no index needed.
+    indexes: [
+      { fields: { type: 1 } },
+      { fields: { feedId: 1 } },
+      { fields: { created: -1 } },
+      { fields: { public: 1, userId: 1, embedded: 1 } },
+    ],
   },
   userFilePreference: {
     schema: UserFilePreferenceSchema,
-    meta: { cache: false, trackable: false, public: false, cascadeFrom: null, trackKeys: ['userId'] },
+    meta: { db: d1, cache: false, trackable: false, public: false, cascadeFrom: null, trackKeys: ['userId'] },
+    indexes: [{ fields: { userId: 1 } }],
   },
   newsPodcast: {
     schema: NewsPodcastSchema,
-    meta: { cache: false, trackable: true, public: true, cascadeFrom: null },
+    meta: { db: d1, cache: false, trackable: true, public: true, cascadeFrom: null },
     indexes: [{ fields: { date: -1 } }],
   },
   // ─── Per-user news state ─────────────────────────────────────────────────
   userNewsRead: {
     schema: UserNewsReadSchema,
-    meta: { cache: false, trackable: false, public: false, cascadeFrom: null, trackKeys: ['userId'] },
+    meta: { db: d1, cache: false, trackable: false, public: false, cascadeFrom: null, trackKeys: ['userId'] },
     indexes: [{ fields: { userId: 1 } }],
   },
   userNewsSaved: {
     schema: UserNewsSavedSchema,
-    meta: { cache: false, trackable: true, public: false, cascadeFrom: null, trackKeys: ['userId'] },
+    meta: { db: d1, cache: false, trackable: true, public: false, cascadeFrom: null, trackKeys: ['userId'] },
     indexes: [{ fields: { userId: 1, savedAt: -1 } }],
   },
   userNewsReaction: {
     schema: UserNewsReactionSchema,
-    meta: { cache: false, trackable: false, public: false, cascadeFrom: null, trackKeys: ['userId'] },
+    meta: { db: d1, cache: false, trackable: false, public: false, cascadeFrom: null, trackKeys: ['userId'] },
     indexes: [{ fields: { userId: 1 } }],
   },
   userNewsSourceFollow: {
     schema: UserNewsSourceFollowSchema,
-    meta: { cache: false, trackable: false, public: false, cascadeFrom: null, trackKeys: ['userId'] },
+    meta: { db: d1, cache: false, trackable: false, public: false, cascadeFrom: null, trackKeys: ['userId'] },
     indexes: [{ fields: { userId: 1 } }],
   },
   userNewsPreference: {
     schema: UserNewsPreferenceSchema,
-    meta: { cache: false, trackable: false, public: false, cascadeFrom: null, trackKeys: ['userId'] },
+    meta: { db: d1, cache: false, trackable: false, public: false, cascadeFrom: null, trackKeys: ['userId'] },
+    indexes: [{ fields: { userId: 1 } }],
   },
   userNewsEmailPref: {
     schema: UserNewsEmailPrefSchema,
-    meta: { cache: false, trackable: false, public: false, cascadeFrom: null, trackKeys: ['userId'] },
-    indexes: [{ fields: { timezone: 1 } }],
+    meta: { db: d1, cache: false, trackable: false, public: false, cascadeFrom: null, trackKeys: ['userId'] },
+    // userEmailHourly filters { timezone, emailAllowed }; podcast dispatch filters
+    // { emailAllowed }; trackKey subscription reads by userId.
+    indexes: [{ fields: { timezone: 1, emailAllowed: 1 } }, { fields: { userId: 1 } }],
   },
 });
 

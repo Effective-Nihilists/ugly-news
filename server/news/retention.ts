@@ -25,9 +25,10 @@ export const RETENTION_MS = RETENTION_DAYS * 24 * 60 * 60 * 1000;
  *
  * PRUNED (grows without bound):
  *  - newsArticle — raw scraped articles, by system `created` (scrape/insert time).
- *  - file        — user-facing markdown articles + their FTS/pgvector rows, by
- *                  system `created`. (On D1+Vectorize the row delete will NOT
- *                  remove the external Vectorize vector — see migration note.)
+ *  - file        — user-facing markdown articles + their FTS/vector rows, by
+ *                  system `created`. On D1 the framework's deleteQuery fans out
+ *                  per-doc to Vectorize (deleteVector → deleteByIds), so the
+ *                  external vector is removed with the row — no orphans.
  *  - newsCluster — story clusters, by domain `lastUpdatedAt` (bumped as fresh
  *                  coverage arrives, so a still-active cluster is retained even
  *                  if it was first seen >90d ago).

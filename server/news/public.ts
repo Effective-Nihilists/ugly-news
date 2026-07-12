@@ -175,14 +175,15 @@ export async function newsArchive(
   const q = input.query?.trim();
 
   if (q) {
-    // Hybrid semantic + full-text search, both Postgres-native via getDocs:
-    //  - `near`: a 512-dim OpenAI query embedding ranked against the `embedding`
-    //    column (HNSW cosine) — catches meaning with no keyword overlap
-    //    ("tensions in the middle east" → Lebanon/Iran stories).
-    //  - `search`: the generated `tsvector` column (GIN + ts_rank). OR-join the
-    //    significant terms so websearch_to_tsquery doesn't AND them to zero.
-    // When both are present the framework blends ts_rank + cosine; the FTS arm
-    // boosts exact-keyword hits without hard-filtering the semantic matches.
+    // Hybrid semantic + full-text search via one getDocs call:
+    //  - `near`: a 512-dim OpenAI query embedding ranked against the file's
+    //    Cloudflare Vectorize vector (cosine) — catches meaning with no keyword
+    //    overlap ("tensions in the middle east" → Lebanon/Iran stories). The
+    //    filter's public/userId/type/category ride as Vectorize metadata
+    //    pre-filters (declared in the collection's vector.filterable).
+    //  - `search`: the in-D1 SQLite FTS5 index over ['title','text']. OR-join the
+    //    significant terms so the query doesn't AND them to zero.
+    // When both are present the framework fuses FTS5 + Vectorize with RRF (k=60).
     // If the query embedding is unavailable we degrade to FTS-only.
     const terms = queryTerms(q);
     const search = terms.length ? terms.join(' OR ') : q;

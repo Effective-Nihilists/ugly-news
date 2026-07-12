@@ -1,6 +1,5 @@
 import type { DBObject, TypedDB } from 'ugly-app/shared';
 import { dbDefaults } from 'ugly-app/shared';
-import { getAdapter } from 'ugly-app/server/adapter/workers';
 import { collections } from '../../shared/collections';
 import type {
   FileMarkdown,
@@ -192,30 +191,41 @@ export async function newsFeedGet(
   }
 
   const twoWeeksAgo = now - 14 * 24 * 60 * 60 * 1000;
-  // Embeddings live in the pgvector `embedding` COLUMN (the framework strips the
-  // blob copy), so read it via raw SQL — getQuery only sees the JSON `data`.
-  // `created` is the table column (timestamptz), surfaced as epoch-ms.
-  const [userPreference, candidateRows] = await Promise.all([
+  // Candidate pool: recent public bot articles that carry an embedding. The
+  // 512-dim vectors live OUT-OF-BAND in Cloudflare Vectorize (never in the doc
+  // JSON), so we filter to files marked `embedded` and read the vectors back
+  // with getVecs for the JS cluster ranking below. The `created >= twoWeeksAgo`
+  // bound is the whole point — a bounded time-window read; `created` is a
+  // top-level column surfaced as epoch-ms.
+  const [userPreference, candidateFiles] = await Promise.all([
     db.getDoc(collections.userFilePreference, userId),
-    getAdapter().db.query<{ _id: string; embedding: string; created: string }>(
-      `SELECT _id,
-              embedding::text AS embedding,
-              (extract(epoch from created) * 1000)::bigint AS created
-         FROM "file"
-        WHERE data->>'public' = 'true'
-          AND data->>'userId' = ANY($1)
-          AND embedding IS NOT NULL
-          AND created >= to_timestamp($2 / 1000.0)
-        ORDER BY created DESC
-        LIMIT $3`,
-      [botIds, twoWeeksAgo, CANDIDATE_POOL_SIZE * 2],
+    db.getDocs(
+      collections.file,
+      {
+        public: true,
+        userId: { $in: botIds },
+        created: { $gte: twoWeeksAgo },
+        embedded: true,
+      },
+      { sort: { created: -1 }, limit: CANDIDATE_POOL_SIZE * 2 },
     ),
   ]);
-  const recentPool: CandidateFile[] = candidateRows.map((r) => ({
-    _id: r._id,
-    embedding: JSON.parse(r.embedding) as number[],
-    created: Number(r.created),
-  }));
+  const vecs = await db.getVecs(
+    collections.file,
+    candidateFiles.map((f) => f._id),
+  );
+  const recentPool: CandidateFile[] = [];
+  for (const f of candidateFiles) {
+    const embedding = vecs[f._id];
+    if (!embedding) continue;
+    recentPool.push({
+      _id: f._id,
+      embedding,
+      // `created` is a Date statically but epoch-ms at the D1 runtime; Number()
+      // coerces both (Date → getTime()).
+      created: Number(f.created),
+    });
+  }
 
   // Shuffle and take CANDIDATE_POOL_SIZE for random diversity
   for (let i = recentPool.length - 1; i > 0; i--) {
@@ -294,18 +304,18 @@ export async function newsSearch(
   input: NewsSearchInput,
 ): Promise<NewsSearchOutput> {
   const botIds = [uglyBotId];
-  const match: Record<string, unknown> = { public: true, userId: { $in: botIds } };
+  // The SQLite backend has no `$regex` operator, so title/text matching runs
+  // through the collection's FTS5 index (meta.search over ['title','text']),
+  // ranked by relevance (bm25). The equality/array filters ride alongside as the
+  // structured WHERE; the category filter matches any tag via json_each.
+  const filter: Record<string, unknown> = { public: true, userId: { $in: botIds } };
   if (isDefined(input.categories) && input.categories.length > 0) {
-    match.tags = { $in: input.categories };
+    filter.tags = { $in: input.categories };
   }
-  const searchRegex = { $regex: input.query, $options: 'i' };
-  match.$or = [{ title: searchRegex }, { text: searchRegex }];
-
-  const files = await db.getQuery<{ _id: string }>(
-    'file',
-    [{ $match: match }, { $sort: { created: -1 } }],
-    { limit: input.limit },
-  );
+  const files = await db.getDocs(collections.file, filter, {
+    search: input.query,
+    limit: input.limit,
+  });
   return { items: files.map((f) => f._id) };
 }
 
