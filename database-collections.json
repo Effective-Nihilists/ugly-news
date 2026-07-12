@@ -1,44 +1,7 @@
 {
-  "generatedAt": "2026-07-11T22:54:13.072Z",
+  "generatedAt": "2026-07-12T05:50:25.850Z",
   "source": "shared/collections.ts",
   "collections": {
-    "perfLog": {
-      "name": "perfLog",
-      "schema": {
-        "fields": {
-          "durationMs": {
-            "type": "number",
-            "required": true
-          },
-          "operation": {
-            "type": "string",
-            "required": true
-          },
-          "userId": {
-            "type": "string",
-            "required": true
-          }
-        },
-        "indexes": [
-          {
-            "fields": {
-              "operation": 1
-            }
-          },
-          {
-            "fields": {
-              "userId": 1
-            }
-          }
-        ]
-      },
-      "meta": {
-        "cache": false,
-        "trackable": false,
-        "public": false,
-        "cascadeFrom": null
-      }
-    },
     "authMagicLink": {
       "name": "authMagicLink",
       "schema": {
@@ -88,7 +51,10 @@
         "cache": false,
         "trackable": false,
         "public": false,
-        "cascadeFrom": null
+        "cascadeFrom": null,
+        "db": {
+          "kind": "d1"
+        }
       }
     },
     "authIdentity": {
@@ -148,7 +114,10 @@
         "cache": false,
         "trackable": false,
         "public": false,
-        "cascadeFrom": null
+        "cascadeFrom": null,
+        "db": {
+          "kind": "d1"
+        }
       }
     },
     "debugLogSession": {
@@ -240,7 +209,10 @@
         "cascadeFrom": null,
         "trackKeys": [
           "userId"
-        ]
+        ],
+        "db": {
+          "kind": "d1"
+        }
       }
     },
     "debugLogStream": {
@@ -267,7 +239,10 @@
         "cascadeFrom": null,
         "trackKeys": [
           "userId"
-        ]
+        ],
+        "db": {
+          "kind": "d1"
+        }
       }
     },
     "todo": {
@@ -286,9 +261,19 @@
             "type": "string",
             "required": true
           }
-        }
+        },
+        "indexes": [
+          {
+            "fields": {
+              "userId": 1
+            }
+          }
+        ]
       },
       "meta": {
+        "db": {
+          "kind": "d1"
+        },
         "cache": false,
         "trackable": true,
         "public": false,
@@ -315,6 +300,9 @@
         }
       },
       "meta": {
+        "db": {
+          "kind": "d1"
+        },
         "cache": false,
         "trackable": false,
         "public": false,
@@ -337,9 +325,19 @@
             "type": "string",
             "required": true
           }
-        }
+        },
+        "indexes": [
+          {
+            "fields": {
+              "conversationId": 1
+            }
+          }
+        ]
       },
       "meta": {
+        "db": {
+          "kind": "d1"
+        },
         "cache": false,
         "trackable": false,
         "public": false,
@@ -369,6 +367,9 @@
         }
       },
       "meta": {
+        "db": {
+          "kind": "d1"
+        },
         "cache": false,
         "trackable": false,
         "public": false,
@@ -432,6 +433,9 @@
         }
       },
       "meta": {
+        "db": {
+          "kind": "d1"
+        },
         "cache": true,
         "trackable": false,
         "public": true,
@@ -533,6 +537,9 @@
         ]
       },
       "meta": {
+        "db": {
+          "kind": "d1"
+        },
         "cache": false,
         "trackable": false,
         "public": false,
@@ -614,6 +621,9 @@
         }
       },
       "meta": {
+        "db": {
+          "kind": "d1"
+        },
         "cache": true,
         "trackable": false,
         "public": true,
@@ -819,6 +829,9 @@
         ]
       },
       "meta": {
+        "db": {
+          "kind": "d1"
+        },
         "cache": false,
         "trackable": true,
         "public": true,
@@ -849,14 +862,9 @@
             "required": true,
             "default": 0
           },
-          "embedding": {
-            "type": "array",
-            "items": {
-              "type": "number",
-              "required": true
-            },
-            "required": false,
-            "nullable": true
+          "embedded": {
+            "type": "boolean",
+            "required": false
           },
           "feedId": {
             "type": "string",
@@ -1001,10 +1009,20 @@
             "fields": {
               "created": -1
             }
+          },
+          {
+            "fields": {
+              "public": 1,
+              "userId": 1,
+              "embedded": 1
+            }
           }
         ]
       },
       "meta": {
+        "db": {
+          "kind": "d1"
+        },
         "cache": false,
         "trackable": true,
         "public": true,
@@ -1018,7 +1036,13 @@
         },
         "vector": {
           "dimensions": 512,
-          "from": "embedding"
+          "filterable": [
+            "public",
+            "userId",
+            "type",
+            "category",
+            "created"
+          ]
         }
       }
     },
@@ -1083,9 +1107,19 @@
             "type": "string",
             "required": true
           }
-        }
+        },
+        "indexes": [
+          {
+            "fields": {
+              "userId": 1
+            }
+          }
+        ]
       },
       "meta": {
+        "db": {
+          "kind": "d1"
+        },
         "cache": false,
         "trackable": false,
         "public": false,
@@ -1516,6 +1550,9 @@
         ]
       },
       "meta": {
+        "db": {
+          "kind": "d1"
+        },
         "cache": false,
         "trackable": true,
         "public": true,
@@ -1548,6 +1585,9 @@
         ]
       },
       "meta": {
+        "db": {
+          "kind": "d1"
+        },
         "cache": false,
         "trackable": false,
         "public": false,
@@ -1584,6 +1624,9 @@
         ]
       },
       "meta": {
+        "db": {
+          "kind": "d1"
+        },
         "cache": false,
         "trackable": true,
         "public": false,
@@ -1627,6 +1670,9 @@
         ]
       },
       "meta": {
+        "db": {
+          "kind": "d1"
+        },
         "cache": false,
         "trackable": false,
         "public": false,
@@ -1662,6 +1708,9 @@
         ]
       },
       "meta": {
+        "db": {
+          "kind": "d1"
+        },
         "cache": false,
         "trackable": false,
         "public": false,
@@ -1696,9 +1745,19 @@
             "type": "string",
             "required": true
           }
-        }
+        },
+        "indexes": [
+          {
+            "fields": {
+              "userId": 1
+            }
+          }
+        ]
       },
       "meta": {
+        "db": {
+          "kind": "d1"
+        },
         "cache": false,
         "trackable": false,
         "public": false,
@@ -1733,12 +1792,21 @@
         "indexes": [
           {
             "fields": {
-              "timezone": 1
+              "timezone": 1,
+              "emailAllowed": 1
+            }
+          },
+          {
+            "fields": {
+              "userId": 1
             }
           }
         ]
       },
       "meta": {
+        "db": {
+          "kind": "d1"
+        },
         "cache": false,
         "trackable": false,
         "public": false,
