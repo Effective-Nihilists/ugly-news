@@ -11,11 +11,8 @@ coverage/
 
 
 # ── Added by ugly-app upgrade ──
-.ugly-studio/codebase-index.db*
-.ugly-studio/session-index.db*
-.ugly-studio/layout.json
-.ugly-studio/sandbox-state.json
-.ugly-studio/tmp/
-.ugly-studio/users/
-.ugly-studio/home/
 .env.publish
+
+# ugly-studio state — throwaway local dev/IDE state (dev-server log, session &
+# codebase index, sandbox, bundled minio/postgres). None of it is committed.
+.ugly-studio/
