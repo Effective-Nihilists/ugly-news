@@ -254,8 +254,8 @@ const app = createApp(
             yield typeof content === 'string' ? content : '';
           },
         },
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       },
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       convDeps,
     );
 

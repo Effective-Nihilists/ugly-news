@@ -29,7 +29,7 @@ const CLUSTER_WINDOW_MS = 72 * 60 * 60 * 1000;
 // 0.74; raise if unrelated stories merge, lower if sides stay split.
 // eslint-disable-next-line @typescript-eslint/dot-notation
 const SIMILARITY_THRESHOLD = Number(
-  process.env['CLUSTER_SIM_THRESHOLD'] ?? '0.74',
+  process.env.CLUSTER_SIM_THRESHOLD ?? '0.74',
 );
 const CANDIDATE_LIMIT = 400;
 const SATIRE_MIN_ARTICLES = 3;
