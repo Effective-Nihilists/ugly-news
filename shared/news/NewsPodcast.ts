@@ -42,12 +42,7 @@ export type PodcastCameraShot = 'normal' | 'closeup';
 export type PodcastCameraEnergy = 'fast' | 'normal' | 'slow';
 
 export type PodcastListenerReaction =
-  | 'nod'
-  | 'laugh'
-  | 'shocked'
-  | 'agree'
-  | 'empathize'
-  | 'bored';
+  'nod' | 'laugh' | 'shocked' | 'agree' | 'empathize' | 'bored';
 
 /** Speaker emotion for TTS expressiveness (maps to InWorld emotion markups) */
 export type PodcastSpeakerEmotion =
@@ -95,10 +90,7 @@ export interface PodcastViseme extends TTSViseme {
 }
 
 export type PodcastGenerationStatus =
-  | 'pending'
-  | 'generating'
-  | 'complete'
-  | 'failed';
+  'pending' | 'generating' | 'complete' | 'failed';
 
 /** Main podcast entity stored in database */
 export type NewsPodcast = InferDocType<typeof NewsPodcastSchema>;

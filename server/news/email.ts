@@ -15,7 +15,10 @@ function envVar(name: string): string {
   return process.env[name] ?? '';
 }
 
-const PUBLIC_URL = (envVar('PUBLIC_URL') || 'https://ugly.press').replace(/\/$/, '');
+const PUBLIC_URL = (envVar('PUBLIC_URL') || 'https://ugly.press').replace(
+  /\/$/,
+  '',
+);
 
 /**
  * Resolve a ugly.bot userId → email via ugly.bot's `/v1/users/email` proxy.
@@ -25,12 +28,20 @@ const PUBLIC_URL = (envVar('PUBLIC_URL') || 'https://ugly.press').replace(/\/$/,
  * AI_PROXY_TOKEN may be empty — prefer the email/search token).
  */
 export async function resolveUserEmail(userId: string): Promise<string | null> {
-  const base = (envVar('AI_PROXY_URL') || 'https://ugly.bot/v1/ai').replace(/\/ai\/?$/, '');
+  const base = (envVar('AI_PROXY_URL') || 'https://ugly.bot/v1/ai').replace(
+    /\/ai\/?$/,
+    '',
+  );
   const token =
-    envVar('EMAIL_PROXY_TOKEN') || envVar('SEARCH_PROXY_TOKEN') || envVar('AI_PROXY_TOKEN');
+    envVar('EMAIL_PROXY_TOKEN') ||
+    envVar('SEARCH_PROXY_TOKEN') ||
+    envVar('AI_PROXY_TOKEN');
   const res = await fetch(`${base}/users/email`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
     body: JSON.stringify({ userId }),
   });
   if (!res.ok) {
@@ -98,7 +109,10 @@ export async function selectDailyEmailArticles(
   now: number,
 ): Promise<SelectedArticles> {
   const twoDays = 2 * ONE_DAY;
-  const userPreference = await db.getDoc(collections.userFilePreference, userId);
+  const userPreference = await db.getDoc(
+    collections.userFilePreference,
+    userId,
+  );
   const clusters: InterestCluster[] = userPreference?.clusters ?? [];
 
   // `created` is a top-level column surfaced as epoch-ms (bind a number, not a
@@ -110,14 +124,26 @@ export async function selectDailyEmailArticles(
     created: { $gt: now - twoDays },
     embedded: true,
   });
-  const files = [...allRecent].sort(() => Math.random() - 0.5).slice(0, 200) as (FileMarkdown & {
+  const files = [...allRecent]
+    .sort(() => Math.random() - 0.5)
+    .slice(0, 200) as (FileMarkdown & {
     _id: string;
   })[];
   if (files.length === 0) {
-    return { hero: null, trending: [], pickedForYou: [], categorySpotlight: [], totalUnread: 0, topCategory: 'News' };
+    return {
+      hero: null,
+      trending: [],
+      pickedForYou: [],
+      categorySpotlight: [],
+      totalUnread: 0,
+      topCategory: 'News',
+    };
   }
 
-  const vecs = await db.getVecs(collections.file, files.map((f) => f._id));
+  const vecs = await db.getVecs(
+    collections.file,
+    files.map((f) => f._id),
+  );
   const candidates = files.map((f) => ({
     id: f._id,
     embedding: vecs[f._id] ?? [],
@@ -125,15 +151,23 @@ export async function selectDailyEmailArticles(
   }));
   const ranked = rankAndDiversifyArticles(candidates, clusters, 10, now);
   const fileMap = new Map(files.map((f) => [f._id, f]));
-  const rankedFiles = ranked.map((r) => fileMap.get(r.id)).filter((f): f is (FileMarkdown & { _id: string }) => !!f);
+  const rankedFiles = ranked
+    .map((r) => fileMap.get(r.id))
+    .filter((f): f is FileMarkdown & { _id: string } => !!f);
 
   const byEngagement = [...files].sort(
-    (a, b) => (b.likeCount ?? 0) + (b.dislikeCount ?? 0) - ((a.likeCount ?? 0) + (a.dislikeCount ?? 0)),
+    (a, b) =>
+      (b.likeCount ?? 0) +
+      (b.dislikeCount ?? 0) -
+      ((a.likeCount ?? 0) + (a.dislikeCount ?? 0)),
   );
   const trendingIds = new Set(byEngagement.slice(0, 3).map((f) => f._id));
-  const topCategory = files.find((f) => f.tags && f.tags.length > 0)?.tags?.[0] ?? 'News';
+  const topCategory =
+    files.find((f) => f.tags && f.tags.length > 0)?.tags?.[0] ?? 'News';
   const [hero, trending, pickedForYou, categorySpotlight] = await Promise.all([
-    rankedFiles.length > 0 ? fileToEmailArticle(rankedFiles[0]!) : Promise.resolve(null),
+    rankedFiles.length > 0
+      ? fileToEmailArticle(rankedFiles[0]!)
+      : Promise.resolve(null),
     Promise.all(byEngagement.slice(0, 3).map(fileToEmailArticle)),
     Promise.all(
       rankedFiles
@@ -142,7 +176,10 @@ export async function selectDailyEmailArticles(
         .map(fileToEmailArticle),
     ),
     Promise.all(
-      files.filter((f) => f.tags?.includes(topCategory)).slice(0, 1).map(fileToEmailArticle),
+      files
+        .filter((f) => f.tags?.includes(topCategory))
+        .slice(0, 1)
+        .map(fileToEmailArticle),
     ),
   ]);
 
@@ -178,7 +215,9 @@ function factLabel(avg: number | null): string {
   return 'Very Low';
 }
 
-async function clusterToEmail(c: NewsCluster & { _id: string }): Promise<EmailCluster> {
+async function clusterToEmail(
+  c: NewsCluster & { _id: string },
+): Promise<EmailCluster> {
   const b = c.biasBreakdown;
   return {
     title: c.title,
@@ -191,7 +230,10 @@ async function clusterToEmail(c: NewsCluster & { _id: string }): Promise<EmailCl
     factuality: factLabel(c.factualityAvg),
     uri: await shareLink({
       target: `${PUBLIC_URL}/story/${encodeURIComponent(c._id)}`,
-      og: { title: c.title, ...(c.topImageUri ? { image: c.topImageUri } : {}) },
+      og: {
+        title: c.title,
+        ...(c.topImageUri ? { image: c.topImageUri } : {}),
+      },
     }),
   };
 }
@@ -204,13 +246,23 @@ export async function selectEmailClusters(
   const recent = await db.getQuery<NewsCluster & { _id: string }>(
     'newsCluster',
     [
-      { $match: { lastUpdatedAt: { $gte: now - 2 * ONE_DAY }, articleCount: { $gte: 2 } } },
+      {
+        $match: {
+          lastUpdatedAt: { $gte: now - 2 * ONE_DAY },
+          articleCount: { $gte: 2 },
+        },
+      },
       { $sort: { score: -1 } },
     ],
     { limit: 30 },
   );
   const topStories = await Promise.all(recent.slice(0, 4).map(clusterToEmail));
-  const blindspot = await Promise.all(recent.filter((c) => c.blindspotSide).slice(0, 2).map(clusterToEmail));
+  const blindspot = await Promise.all(
+    recent
+      .filter((c) => c.blindspotSide)
+      .slice(0, 2)
+      .map(clusterToEmail),
+  );
   return { topStories, blindspot };
 }
 
@@ -224,11 +276,19 @@ export interface EmailUglyTake {
 }
 
 /** Newest Ugly Take (labeled satire) for the daily email, or null if none recent. */
-export async function selectEmailUglyTake(db: NewsDb, now: number): Promise<EmailUglyTake | null> {
+export async function selectEmailUglyTake(
+  db: NewsDb,
+  now: number,
+): Promise<EmailUglyTake | null> {
   const rows = await db.getQuery<NewsCluster & { _id: string }>(
     'newsCluster',
     [
-      { $match: { uglyTakeFileId: { $ne: null }, satirizedAt: { $gte: now - 2 * ONE_DAY } } },
+      {
+        $match: {
+          uglyTakeFileId: { $ne: null },
+          satirizedAt: { $gte: now - 2 * ONE_DAY },
+        },
+      },
       { $sort: { satirizedAt: -1 } },
     ],
     { limit: 1 },
@@ -239,7 +299,11 @@ export async function selectEmailUglyTake(db: NewsDb, now: number): Promise<Emai
   if (!sf) return null;
   const f = sf as FileMarkdown;
   const body = (f.markdown ?? '').replace(/^\s*#[^\n]*\n/, '');
-  const snippet = body.replace(/[#>*_`[\]]/g, '').replace(/\s+/g, ' ').trim().slice(0, 160);
+  const snippet = body
+    .replace(/[#>*_`[\]]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 160);
   const title = f.title ?? 'The Ugly Take';
   const imageUri = emailImage(f.thumbnail?.uri);
   return {
@@ -249,7 +313,11 @@ export async function selectEmailUglyTake(db: NewsDb, now: number): Promise<Emai
     imageUri,
     uri: await shareLink({
       target: `${PUBLIC_URL}/ugly-take/${encodeURIComponent(c._id)}`,
-      og: { title, description: snippet, ...(imageUri ? { image: imageUri } : {}) },
+      og: {
+        title,
+        description: snippet,
+        ...(imageUri ? { image: imageUri } : {}),
+      },
     }),
   };
 }
@@ -278,9 +346,12 @@ function biasBar(c: EmailCluster): string {
   const rated = c.leftPct + c.centerPct + c.rightPct;
   const cell = (w: number, bg: string) =>
     `<td width="${w}%" style="background:${bg};height:14px;font-size:0;line-height:0">&nbsp;</td>`;
-  const cells = rated === 0
-    ? `<td width="100%" style="background:${CENTER_C};height:14px;font-size:0;line-height:0">&nbsp;</td>`
-    : cell(c.leftPct, LEFT_C) + cell(c.centerPct, CENTER_C) + cell(c.rightPct, ACCENT);
+  const cells =
+    rated === 0
+      ? `<td width="100%" style="background:${CENTER_C};height:14px;font-size:0;line-height:0">&nbsp;</td>`
+      : cell(c.leftPct, LEFT_C) +
+        cell(c.centerPct, CENTER_C) +
+        cell(c.rightPct, ACCENT);
   return `<table cellpadding="0" cellspacing="0" width="100%" style="border:1px solid ${INK};border-collapse:collapse;table-layout:fixed"><tr>${cells}</tr></table>`;
 }
 
@@ -338,7 +409,12 @@ export function renderDailyNewsEmail(
   date: string,
   clusters: { topStories: EmailCluster[]; blindspot: EmailCluster[] },
   articles: SelectedArticles,
-  podcast: { title: string; duration: string; uri: string; imageUri?: string | undefined } | null,
+  podcast: {
+    title: string;
+    duration: string;
+    uri: string;
+    imageUri?: string | undefined;
+  } | null,
   homeUrl: string,
   uglyTake: EmailUglyTake | null = null,
 ): string {
@@ -398,13 +474,20 @@ export async function dispatchUserPrivateNewsEmail(
     selectEmailUglyTake(db, input.now),
   ]);
   // Send if we have anything to show — clustered top stories OR personalized picks.
-  if (clusters.topStories.length === 0 && articles.pickedForYou.length === 0) return;
+  if (clusters.topStories.length === 0 && articles.pickedForYou.length === 0)
+    return;
 
   const today = new Date(input.now);
-  const dateStr = today.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const dateStr = today.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
 
   // Attach today's default podcast if complete.
-  const { podcast } = await newsPodcastGet(db, { date: todayDateString(input.now) });
+  const { podcast } = await newsPodcastGet(db, {
+    date: todayDateString(input.now),
+  });
   const podcastData =
     podcast?.generationStatus === 'complete'
       ? {
@@ -424,9 +507,23 @@ export async function dispatchUserPrivateNewsEmail(
     return;
   }
 
-  const homeUrl = await shareLink({ target: `${PUBLIC_URL}/`, og: { title: DEFAULT_STRINGS.greeting } });
-  const html = renderDailyNewsEmail(DEFAULT_STRINGS, dateStr, clusters, articles, podcastData, homeUrl, uglyTake);
-  const leadTitle = clusters.topStories[0]?.title ?? articles.hero?.title ?? 'Your daily edition';
+  const homeUrl = await shareLink({
+    target: `${PUBLIC_URL}/`,
+    og: { title: DEFAULT_STRINGS.greeting },
+  });
+  const html = renderDailyNewsEmail(
+    DEFAULT_STRINGS,
+    dateStr,
+    clusters,
+    articles,
+    podcastData,
+    homeUrl,
+    uglyTake,
+  );
+  const leadTitle =
+    clusters.topStories[0]?.title ??
+    articles.hero?.title ??
+    'Your daily edition';
   const subject = `The Ugly Press: ${leadTitle.slice(0, 55)}${leadTitle.length > 55 ? '…' : ''}`;
   await emailSend({ to, subject, html, id: 'dailyNews' });
 }
@@ -440,6 +537,8 @@ export async function userEmailHourly(db: NewsDb, now: number): Promise<void> {
     emailAllowed: true,
   });
   await Promise.all(
-    prefs.map((p) => enqueueTask('userPrivateNewsEmail', { userId: p.userId, now })),
+    prefs.map((p) =>
+      enqueueTask('userPrivateNewsEmail', { userId: p.userId, now }),
+    ),
   );
 }

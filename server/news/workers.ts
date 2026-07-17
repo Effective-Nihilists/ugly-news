@@ -2,7 +2,11 @@ import type { WorkerHandlers } from 'ugly-app/shared';
 import { collections } from '../../shared/collections';
 import type { cronTasks } from '../../shared/cron';
 import type { NewsDb } from './db';
-import { dispatchNewsFeedDownload, findFeed, newsRefreshAllFeeds } from './download';
+import {
+  dispatchNewsFeedDownload,
+  findFeed,
+  newsRefreshAllFeeds,
+} from './download';
 import { enqueueTask } from './queue';
 import { todayDateString } from './podcast';
 import { dispatchArticleScrape } from './scraper';
@@ -19,7 +23,9 @@ import {
 // Build the worker handler map. Shared by the Node entry (server/index.ts) and
 // the Cloudflare Workers entry (server/workers.ts) so cron + queue behavior is
 // identical across runtimes.
-export function createCronHandlers(getDb: () => NewsDb): WorkerHandlers<typeof cronTasks> {
+export function createCronHandlers(
+  getDb: () => NewsDb,
+): WorkerHandlers<typeof cronTasks> {
   return {
     // ── Scheduled ──────────────────────────────────────────────────────────
     newsHourly: async () => {
@@ -27,13 +33,22 @@ export function createCronHandlers(getDb: () => NewsDb): WorkerHandlers<typeof c
       // Backstop: the standalone clusterSweep cron TRIGGER doesn't fire in prod
       // (only the pre-existing hourly schedule does), so drive it from here too.
       // Best-effort — a failure must not abort the feed refresh.
-      await dispatchClusterSweep(getDb()).catch((e: unknown) => { console.error('[news] clusterSweep (hourly) failed', e); });
+      await dispatchClusterSweep(getDb()).catch((e: unknown) => {
+        console.error('[news] clusterSweep (hourly) failed', e);
+      });
     },
     podcastDaily: async () => {
       const date = todayDateString(Date.now());
-      const existing = await getDb().getDoc(collections.newsPodcast, `${date}_default`);
+      const existing = await getDb().getDoc(
+        collections.newsPodcast,
+        `${date}_default`,
+      );
       if (existing) return;
-      await enqueueTask('podcastGenerate', { date, userId: null, replaceDefault: true });
+      await enqueueTask('podcastGenerate', {
+        date,
+        userId: null,
+        replaceDefault: true,
+      });
     },
     userEmailHourly: async () => {
       await userEmailHourly(getDb(), Date.now());

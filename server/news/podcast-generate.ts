@@ -1,7 +1,11 @@
 import { getAdapter } from 'ugly-app/server/adapter/workers';
 import { dbDefaults, visemeNameSet } from 'ugly-app/shared';
 import { collections } from '../../shared/collections';
-import type { FileMarkdown, NewsCluster, NewsPodcast } from '../../shared/collections';
+import type {
+  FileMarkdown,
+  NewsCluster,
+  NewsPodcast,
+} from '../../shared/collections';
 import type { BiasBreakdown } from '../../shared/news/schemas';
 import { newsPush, type NewsDb } from './db';
 import { uglyBotId } from '../../shared/news/Bot';
@@ -34,7 +38,10 @@ const HOST2: HostConfig = { name: 'Ugly Bot', voiceId: 'inworld-Theodore' };
 
 // ── Article selection ────────────────────────────────────────────────────
 
-function selectWeightedRandom(articles: FileMarkdown[], count: number): FileMarkdown[] {
+function selectWeightedRandom(
+  articles: FileMarkdown[],
+  count: number,
+): FileMarkdown[] {
   const remaining = [...articles];
   const selected: FileMarkdown[] = [];
   for (let i = 0; i < Math.min(count, remaining.length); i++) {
@@ -77,7 +84,11 @@ async function getClustersForPodcast(db: NewsDb): Promise<PodcastClusterCtx[]> {
   const recent = await db.getQuery<NewsCluster & { _id: string }>(
     'newsCluster',
     [
-      { $match: { lastUpdatedAt: { $gte: Date.now() - 2 * 24 * 60 * 60 * 1000 } } },
+      {
+        $match: {
+          lastUpdatedAt: { $gte: Date.now() - 2 * 24 * 60 * 60 * 1000 },
+        },
+      },
       { $sort: { score: -1 } },
     ],
     { limit: 30 },
@@ -109,9 +120,12 @@ function buildClusterPromptBlock(ctx: PodcastClusterCtx[]): string {
       fileId: c.file._id,
       story: c.title,
       whatHappened: (c.neutralSummary ?? c.file.markdown ?? '').slice(0, 400),
-      howEachSideFramesIt: c.framingSummary ?? 'Coverage not yet split by side.',
+      howEachSideFramesIt:
+        c.framingSummary ?? 'Coverage not yet split by side.',
       coverage: `Left ${c.breakdown.leftPct}% · Center ${c.breakdown.centerPct}% · Right ${c.breakdown.rightPct}%`,
-      blindspot: c.blindspotSide ? `${c.blindspotSide} is barely covering this` : 'none',
+      blindspot: c.blindspotSide
+        ? `${c.blindspotSide} is barely covering this`
+        : 'none',
     })),
     null,
     2,
@@ -133,8 +147,9 @@ async function generatePodcastScript(
 
   // "The Daily Ugly" three-act script when we have clustered, multi-side
   // stories; otherwise fall back to the classic roast format.
-  const prompt = clusterCtx && clusterCtx.length >= 3
-    ? `You are writing "The Daily Ugly" — a COMEDY news podcast structured in THREE ACTS, with CAMERA and EMOTION directions per segment.
+  const prompt =
+    clusterCtx && clusterCtx.length >= 3
+      ? `You are writing "The Daily Ugly" — a COMEDY news podcast structured in THREE ACTS, with CAMERA and EMOTION directions per segment.
 
 HOSTS:
 - ${host1.name} (HOST1): serious professional news anchor; gravitas, factual, the straight man.
@@ -151,7 +166,7 @@ STRUCTURE — write all three acts in order, as one continuous segment list:
 Set "articleRef" to the story's fileId on segments about that story (null otherwise). ~900-1100 words.
 
 For EVERY segment include:`
-    : `You are writing a script for "Ugly News Daily" - a COMEDY podcast that roasts the news, with CAMERA and EMOTION directions per segment.
+      : `You are writing a script for "Ugly News Daily" - a COMEDY podcast that roasts the news, with CAMERA and EMOTION directions per segment.
 
 HOSTS:
 - ${host1.name} (HOST1): serious professional news anchor; gravitas, factual, the straight man.
@@ -203,14 +218,18 @@ OUTPUT JSON ONLY (no markdown fences):
       return script;
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error);
-      console.warn(`[PODCAST] script attempt ${attempt}/${MAX_ATTEMPTS} failed: ${lastError}`);
+      console.warn(
+        `[PODCAST] script attempt ${attempt}/${MAX_ATTEMPTS} failed: ${lastError}`,
+      );
       if (attempt < MAX_ATTEMPTS) {
         const backoffMs = Math.min(1000 * 2 ** (attempt - 1), 8000);
         await new Promise((resolve) => setTimeout(resolve, backoffMs));
       }
     }
   }
-  throw new Error(`Script generation failed after ${MAX_ATTEMPTS} attempts: ${lastError}`);
+  throw new Error(
+    `Script generation failed after ${MAX_ATTEMPTS} attempts: ${lastError}`,
+  );
 }
 
 // ── Audio assembly (InWorld TTS → WAV) ─────────────────────────────────────
@@ -246,14 +265,23 @@ async function generatePodcastAudio(
     let mapping: WordMapping[];
     let pcm: Uint8Array;
     try {
-      const r = await generateSegmentTTS(seg.text, voiceId, seg.speakerEmotion, seg.nonVerbalCue ?? undefined);
+      const r = await generateSegmentTTS(
+        seg.text,
+        voiceId,
+        seg.speakerEmotion,
+        seg.nonVerbalCue ?? undefined,
+      );
       result = r.result;
       mapping = r.mapping;
       pcm = result.pcm;
       if (pcm.length === 0) throw new Error('Empty audio data');
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      if (msg.includes('Empty audio data') || msg.includes('no audio content') || msg.includes('missing data chunk')) {
+      if (
+        msg.includes('Empty audio data') ||
+        msg.includes('no audio content') ||
+        msg.includes('missing data chunk')
+      ) {
         // Retry once with the plain (un-marked-up) text — emotion/cue markup
         // occasionally yields an empty render.
         const r = await generateSegmentTTS(seg.text, voiceId);
@@ -326,7 +354,11 @@ async function generatePodcastAudio(
 
     // 200ms silence between segments.
     const pauseMs = 200;
-    audioChunks.push(new Uint8Array(Math.floor((sampleRate * pauseMs) / 1000) * bytesPerSample));
+    audioChunks.push(
+      new Uint8Array(
+        Math.floor((sampleRate * pauseMs) / 1000) * bytesPerSample,
+      ),
+    );
     currentTimeMs += pauseMs;
   }
 
@@ -340,7 +372,10 @@ async function generatePodcastAudio(
   };
 }
 
-function buildArticleReferences(articles: FileMarkdown[], segments: PodcastSegment[]): PodcastArticleReference[] {
+function buildArticleReferences(
+  articles: FileMarkdown[],
+  segments: PodcastSegment[],
+): PodcastArticleReference[] {
   const map = new Map(articles.map((a) => [a._id, a]));
   const refs: PodcastArticleReference[] = [];
   for (const seg of segments) {
@@ -365,7 +400,10 @@ function buildArticleReferences(articles: FileMarkdown[], segments: PodcastSegme
   return refs;
 }
 
-async function uploadPodcastAudio(podcastId: string, audio: Uint8Array): Promise<string> {
+async function uploadPodcastAudio(
+  podcastId: string,
+  audio: Uint8Array,
+): Promise<string> {
   const key = `podcasts/${podcastId}/${Date.now()}.wav`;
   const storage = getAdapter().storage;
   await storage.put('public', key, audio, 'audio/wav');
@@ -382,8 +420,13 @@ async function uploadPodcastAudio(podcastId: string, audio: Uint8Array): Promise
  * yields { sent:false } and never aborts the batch. Routes through pushSend →
  * ugly.bot with the owner UGLY_BOT_TOKEN (no PUSH_PROXY_TOKEN needed).
  */
-export async function notifyPodcastReady(db: NewsDb, podcast: NewsPodcast): Promise<void> {
-  const subs = await db.getDocs(collections.userNewsEmailPref, { emailAllowed: true });
+export async function notifyPodcastReady(
+  db: NewsDb,
+  podcast: NewsPodcast,
+): Promise<void> {
+  const subs = await db.getDocs(collections.userNewsEmailPref, {
+    emailAllowed: true,
+  });
   if (subs.length === 0) return;
   const title = "Today's episode is live";
   const body = podcast.title || 'Your daily Ugly Press news podcast is ready.';
@@ -412,12 +455,18 @@ export async function notifyPodcastReady(db: NewsDb, podcast: NewsPodcast): Prom
     );
     sent += results.reduce((a: number, b: number) => a + b, 0);
   }
-  console.log(`[news] podcast push: ${sent}/${subs.length} delivered for ${podcast.date}`);
+  console.log(
+    `[news] podcast push: ${sent}/${subs.length} delivered for ${podcast.date}`,
+  );
 }
 
 export async function dispatchPodcastGenerate(
   db: NewsDb,
-  input: { date: string; userId: string | null; replaceDefault?: boolean | undefined },
+  input: {
+    date: string;
+    userId: string | null;
+    replaceDefault?: boolean | undefined;
+  },
 ): Promise<void> {
   const { date, userId } = input;
   const podcastId = userId ? `${date}_${userId}` : `${date}_default`;
@@ -458,10 +507,12 @@ export async function dispatchPodcastGenerate(
       script = await generatePodcastScript(articles, HOST1, HOST2, clusterCtx);
     } else {
       articles = await getArticlesForPodcast(db);
-      if (articles.length < 3) throw new Error(`Not enough articles: ${articles.length}`);
+      if (articles.length < 3)
+        throw new Error(`Not enough articles: ${articles.length}`);
       script = await generatePodcastScript(articles, HOST1, HOST2);
     }
-    const { audio, visemes, subtitles, segments, durationMs } = await generatePodcastAudio(script, HOST1, HOST2);
+    const { audio, visemes, subtitles, segments, durationMs } =
+      await generatePodcastAudio(script, HOST1, HOST2);
     const audioUri = await uploadPodcastAudio(podcastId, audio);
     const articleRefs = buildArticleReferences(articles, segments);
 
@@ -485,7 +536,9 @@ export async function dispatchPodcastGenerate(
     // Notify subscribers about the new DEFAULT daily episode (once per episode).
     if (userId === null && !alreadyPushed) {
       await notifyPodcastReady(db, completed);
-      await db.setDocFields(collections.newsPodcast, podcastId, { pushedAt: Date.now() });
+      await db.setDocFields(collections.newsPodcast, podcastId, {
+        pushedAt: Date.now(),
+      });
     }
   } catch (error) {
     console.error('[PODCAST] generation failed', error);

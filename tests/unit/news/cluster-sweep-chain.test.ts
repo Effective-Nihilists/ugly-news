@@ -36,10 +36,12 @@ describe('dispatchClusterSweepStep', () => {
     expect(enqueued).toEqual([
       {
         name: 'clusterSweepStep',
-        input: { queue: [
-          { type: 'satire', clusterId: 'b' },
-          { type: 'synth', clusterId: 'c' },
-        ] },
+        input: {
+          queue: [
+            { type: 'satire', clusterId: 'b' },
+            { type: 'synth', clusterId: 'c' },
+          ],
+        },
       },
     ]);
   });
@@ -69,7 +71,10 @@ describe('dispatchClusterSweepStep', () => {
       ]),
     ).resolves.toBeUndefined();
     expect(enqueued).toEqual([
-      { name: 'clusterSweepStep', input: { queue: [{ type: 'satire', clusterId: 'next' }] } },
+      {
+        name: 'clusterSweepStep',
+        input: { queue: [{ type: 'satire', clusterId: 'next' }] },
+      },
     ]);
   });
 });

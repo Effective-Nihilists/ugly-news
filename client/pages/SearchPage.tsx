@@ -16,7 +16,9 @@ export default function SearchPage(): React.ReactElement {
     <PageLayout
       header={
         <div>
-          <a href="/" data-id="home">← Home</a>
+          <a href="/" data-id="home">
+            ← Home
+          </a>
         </div>
       }
     >
@@ -29,7 +31,8 @@ export default function SearchPage(): React.ReactElement {
             label="Search query"
             value={query}
             onChange={handleQueryChange}
-            placeholder="Search..." data-id="search-query"
+            placeholder="Search..."
+            data-id="search-query"
           />
         </div>
         <Card>

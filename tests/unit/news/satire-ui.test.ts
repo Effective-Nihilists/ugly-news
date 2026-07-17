@@ -25,7 +25,10 @@ describe('composeTicker', () => {
   });
 
   it('dedupes repeated headlines case-insensitively', () => {
-    const out = composeTicker(['Nation Shrugs'], ['Nation shrugs', 'Nation Shrugs']);
+    const out = composeTicker(
+      ['Nation Shrugs'],
+      ['Nation shrugs', 'Nation Shrugs'],
+    );
     // the two identical takes collapse to one satire-marked line; the static
     // line stays (different string once marked)
     expect(out.filter((l) => /shrugs/i.test(l))).toEqual([

@@ -54,10 +54,7 @@ const DEFAULT_LIGHTING: Required<LightingOptions> = {
 };
 
 // Re-export types for backwards compatibility
-export type {
-  AvatarPosition,
-  LightingOptions,
-} from 'ugly-app/three/client';
+export type { AvatarPosition, LightingOptions } from 'ugly-app/three/client';
 
 export class PodcastSceneManager {
   private canvas: HTMLCanvasElement;
@@ -768,7 +765,9 @@ export class PodcastSceneManager {
         if ((object as THREE.Mesh).material) {
           const material = (object as THREE.Mesh).material;
           if (Array.isArray(material)) {
-            material.forEach((m) => { m.dispose(); });
+            material.forEach((m) => {
+              m.dispose();
+            });
           } else {
             material.dispose();
           }

@@ -263,10 +263,10 @@ export function usePodcastPlayer(
         listenerReaction === 'empathize'
           ? 'sad'
           : listenerReaction === 'shocked'
-          ? 'fear'
-          : listenerReaction === 'laugh'
-          ? 'happy'
-          : 'neutral';
+            ? 'fear'
+            : listenerReaction === 'laugh'
+              ? 'happy'
+              : 'neutral';
       listenerAvatar.setMood(listenerMood);
 
       // Trigger listener reaction gesture from script direction

@@ -16,9 +16,9 @@ export function toBiasBucket(biasScore: number): BiasBucket {
 
 const FACTUALITY_SCORE: Record<Factuality, number> = {
   'very-low': 1,
-  low: 2,
-  mixed: 3,
-  high: 4,
+  'low': 2,
+  'mixed': 3,
+  'high': 4,
   'very-high': 5,
 };
 
@@ -39,7 +39,9 @@ export interface MemberSourceRating {
 
 /** Coverage distribution across L/C/R buckets. Percentages are over RATED
  *  sources only (unrated aggregators like Google News don't skew the bar). */
-export function computeBiasBreakdown(members: MemberSourceRating[]): BiasBreakdown {
+export function computeBiasBreakdown(
+  members: MemberSourceRating[],
+): BiasBreakdown {
   let left = 0;
   let center = 0;
   let right = 0;
@@ -55,7 +57,8 @@ export function computeBiasBreakdown(members: MemberSourceRating[]): BiasBreakdo
     else center++;
   }
   const total = left + center + right;
-  const pct = (n: number): number => (total > 0 ? Math.round((n / total) * 100) : 0);
+  const pct = (n: number): number =>
+    total > 0 ? Math.round((n / total) * 100) : 0;
   return {
     left,
     center,
@@ -114,7 +117,10 @@ export function assignToCluster(
   for (const c of candidates) {
     if (c.centroid?.length !== embedding.length) continue;
     const similarity = cosineSimilarity(embedding, c.centroid);
-    if (similarity >= threshold && (best === null || similarity > best.similarity)) {
+    if (
+      similarity >= threshold &&
+      (best === null || similarity > best.similarity)
+    ) {
       best = { clusterId: c.id, similarity };
     }
   }

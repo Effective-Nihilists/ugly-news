@@ -6,14 +6,22 @@ import { newsPodcastGetDefault } from '../../../server/news/podcast';
 function fakeDb(docs: Record<string, unknown>, queryRows: unknown[] = []) {
   const calls = {
     getDoc: [] as string[],
-    getQuery: [] as { coll: string; pipeline: Record<string, unknown>[]; opts: { limit?: number } }[],
+    getQuery: [] as {
+      coll: string;
+      pipeline: Record<string, unknown>[];
+      opts: { limit?: number };
+    }[],
   };
   const db = {
     getDoc: async (_coll: unknown, id: string) => {
       calls.getDoc.push(id);
       return docs[id] ?? null;
     },
-    getQuery: async (coll: string, pipeline: Record<string, unknown>[], opts: { limit?: number }) => {
+    getQuery: async (
+      coll: string,
+      pipeline: Record<string, unknown>[],
+      opts: { limit?: number },
+    ) => {
       calls.getQuery.push({ coll, pipeline, opts });
       return queryRows.slice(0, opts.limit ?? queryRows.length);
     },
@@ -22,7 +30,10 @@ function fakeDb(docs: Record<string, unknown>, queryRows: unknown[] = []) {
   return { db, calls };
 }
 
-function pod(date: string, status: 'complete' | 'generating' | 'failed' = 'complete') {
+function pod(
+  date: string,
+  status: 'complete' | 'generating' | 'failed' = 'complete',
+) {
   return {
     _id: `${date}_default`,
     date,
@@ -58,11 +69,14 @@ describe('newsPodcastGetDefault', () => {
     expect(q.pipeline[1]).toEqual({ $sort: { date: -1 } });
   });
 
-  it('skips today\'s still-generating doc and picks the latest *complete* one in code', async () => {
+  it("skips today's still-generating doc and picks the latest *complete* one in code", async () => {
     const todayGenerating = pod('2026-06-17', 'generating');
     const yesterday = pod('2026-06-16', 'complete');
     // newest-first query returns today's generating doc ahead of yesterday's.
-    const { db } = fakeDb({ '2026-06-17_default': todayGenerating }, [todayGenerating, yesterday]);
+    const { db } = fakeDb({ '2026-06-17_default': todayGenerating }, [
+      todayGenerating,
+      yesterday,
+    ]);
 
     const out = await newsPodcastGetDefault(db, { date: '2026-06-17' });
 
@@ -72,7 +86,9 @@ describe('newsPodcastGetDefault', () => {
   it("falls back when today's episode exists but is still generating", async () => {
     const todayGenerating = pod('2026-06-17', 'generating');
     const yesterday = pod('2026-06-16', 'complete');
-    const { db } = fakeDb({ '2026-06-17_default': todayGenerating }, [yesterday]);
+    const { db } = fakeDb({ '2026-06-17_default': todayGenerating }, [
+      yesterday,
+    ]);
 
     const out = await newsPodcastGetDefault(db, { date: '2026-06-17' });
 

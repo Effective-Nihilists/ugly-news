@@ -42,7 +42,10 @@ export default function VideoRoomTestPage(): React.ReactElement {
       } else if (type === 'vr:peer-left') {
         addLog(`Peer left: ${data.peerId as string}`);
       } else if (type === 'vr:new-producer') {
-        addLog(`New producer: ${data.kind as string} from ${data.peerId as string}`, 'ok');
+        addLog(
+          `New producer: ${data.kind as string} from ${data.peerId as string}`,
+          'ok',
+        );
       } else if (type === 'vr:room-closed') {
         addLog('Room closed');
         setJoined(false);
@@ -50,7 +53,9 @@ export default function VideoRoomTestPage(): React.ReactElement {
     };
 
     const unsub = socket.on('message', handler);
-    return () => { unsub(); };
+    return () => {
+      unsub();
+    };
   }, [socket]);
 
   async function handleGetMedia(): Promise<MediaStream> {
@@ -63,7 +68,10 @@ export default function VideoRoomTestPage(): React.ReactElement {
     if (localVideoRef.current) {
       localVideoRef.current.srcObject = stream;
     }
-    addLog(`Got media: ${stream.getVideoTracks().length} video, ${stream.getAudioTracks().length} audio`, 'ok');
+    addLog(
+      `Got media: ${stream.getVideoTracks().length} video, ${stream.getAudioTracks().length} audio`,
+      'ok',
+    );
     return stream;
   }
 
@@ -78,7 +86,9 @@ export default function VideoRoomTestPage(): React.ReactElement {
       const stream = await handleGetMedia();
 
       // Request to join the video room via WebSocket
-      const _result = await socket.send('vr:join', { roomId }) as { routerRtpCapabilities: unknown };
+      const _result = (await socket.send('vr:join', { roomId })) as {
+        routerRtpCapabilities: unknown;
+      };
       addLog(`Joined room in ${fmt(Date.now() - started)}`, 'ok');
       addLog(`Router RTP capabilities received`);
 
@@ -87,12 +97,17 @@ export default function VideoRoomTestPage(): React.ReactElement {
       // 2. Create send/recv transports via vr:create-transport
       // 3. Produce local tracks via vr:produce
       // 4. Consume remote tracks via vr:consume
-      addLog('Note: Full WebRTC negotiation requires mediasoup-client (see docs)');
+      addLog(
+        'Note: Full WebRTC negotiation requires mediasoup-client (see docs)',
+      );
 
       setJoined(true);
       void stream; // used above
     } catch (err) {
-      addLog(`Join failed: ${err instanceof Error ? err.message : String(err)}`, 'err');
+      addLog(
+        `Join failed: ${err instanceof Error ? err.message : String(err)}`,
+        'err',
+      );
     } finally {
       setLoading(false);
     }
@@ -104,7 +119,10 @@ export default function VideoRoomTestPage(): React.ReactElement {
       await socket.send('vr:leave', { roomId });
       addLog('Left room', 'ok');
     } catch (err) {
-      addLog(`Leave failed: ${err instanceof Error ? err.message : String(err)}`, 'err');
+      addLog(
+        `Leave failed: ${err instanceof Error ? err.message : String(err)}`,
+        'err',
+      );
     }
 
     // Stop local media
@@ -138,7 +156,9 @@ export default function VideoRoomTestPage(): React.ReactElement {
     <PageLayout
       header={
         <div>
-          <a href="/test" data-id="tests">← Tests</a>
+          <a href="/test" data-id="tests">
+            ← Tests
+          </a>
         </div>
       }
     >
@@ -153,15 +173,27 @@ export default function VideoRoomTestPage(): React.ReactElement {
                 label="Room ID"
                 value={roomId}
                 onChange={setRoomId}
-                placeholder="test-room-1" data-id="room-id"
+                placeholder="test-room-1"
+                data-id="room-id"
               />
             </div>
             {!joined ? (
-              <Button data-id="vr-join" onClick={() => { void handleJoin(); }} disabled={loading || !roomId.trim()}>
+              <Button
+                data-id="vr-join"
+                onClick={() => {
+                  void handleJoin();
+                }}
+                disabled={loading || !roomId.trim()}
+              >
                 {loading ? 'Joining…' : 'Join Room'}
               </Button>
             ) : (
-              <Button data-id="vr-leave" onClick={() => { void handleLeave(); }}>
+              <Button
+                data-id="vr-leave"
+                onClick={() => {
+                  void handleLeave();
+                }}
+              >
                 Leave Room
               </Button>
             )}
@@ -171,7 +203,9 @@ export default function VideoRoomTestPage(): React.ReactElement {
         {/* Video feeds */}
         <div style={{ display: 'flex', gap: 8 }}>
           <Card>
-            <Text size="sm" weight="bold">Local</Text>
+            <Text size="sm" weight="bold">
+              Local
+            </Text>
             <video
               ref={localVideoRef}
               autoPlay
@@ -199,7 +233,9 @@ export default function VideoRoomTestPage(): React.ReactElement {
           </Card>
 
           <Card>
-            <Text size="sm" weight="bold">Remote</Text>
+            <Text size="sm" weight="bold">
+              Remote
+            </Text>
             <video
               ref={remoteVideoRef}
               autoPlay
@@ -225,13 +261,30 @@ export default function VideoRoomTestPage(): React.ReactElement {
         <Card>
           <h2>How it works</h2>
           <ol>
-            <li>Server uses <code>VideoRoomServer</code> with mediasoup SFU for WebRTC</li>
-            <li><code>vr:join</code> creates/joins a room and returns router RTP capabilities</li>
-            <li><code>vr:create-transport</code> sets up send/receive WebRTC transports</li>
-            <li><code>vr:produce</code> publishes local audio/video tracks</li>
-            <li><code>vr:consume</code> subscribes to remote peers&apos; tracks</li>
+            <li>
+              Server uses <code>VideoRoomServer</code> with mediasoup SFU for
+              WebRTC
+            </li>
+            <li>
+              <code>vr:join</code> creates/joins a room and returns router RTP
+              capabilities
+            </li>
+            <li>
+              <code>vr:create-transport</code> sets up send/receive WebRTC
+              transports
+            </li>
+            <li>
+              <code>vr:produce</code> publishes local audio/video tracks
+            </li>
+            <li>
+              <code>vr:consume</code> subscribes to remote peers&apos; tracks
+            </li>
             <li>Supports VP8, VP9, H264 video and Opus audio codecs</li>
-            <li>Server-side: use <code>enableVideoRooms(configurator, config)</code> in your server setup</li>
+            <li>
+              Server-side: use{' '}
+              <code>enableVideoRooms(configurator, config)</code> in your server
+              setup
+            </li>
           </ol>
         </Card>
 

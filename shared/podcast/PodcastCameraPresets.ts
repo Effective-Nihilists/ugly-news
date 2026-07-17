@@ -13,11 +13,7 @@
  * Camera focus targets for podcast scenes
  */
 export type CameraFocus =
-  | 'host1'
-  | 'host2'
-  | 'host1-closeup'
-  | 'host2-closeup'
-  | 'wide';
+  'host1' | 'host2' | 'host1-closeup' | 'host2-closeup' | 'wide';
 
 /**
  * Camera preset configuration

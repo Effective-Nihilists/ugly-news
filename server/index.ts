@@ -50,7 +50,8 @@ const app = createApp(
 
     toggleTodo: async (userId, { todoId }) => {
       const todo = await app.db.getDoc(collections.todo, todoId);
-      if (!todo?.userId || todo.userId !== userId) throw new Error('Todo not found');
+      if (!todo?.userId || todo.userId !== userId)
+        throw new Error('Todo not found');
       const updated: Todo = { ...todo, done: !todo.done, ...dbDefaults() };
       await app.db.setDoc(collections.todo, updated);
       return { done: updated.done };
@@ -58,12 +59,16 @@ const app = createApp(
 
     deleteTodo: async (userId, { todoId }) => {
       const todo = await app.db.getDoc(collections.todo, todoId);
-      if (!todo?.userId || todo.userId !== userId) throw new Error('Todo not found');
+      if (!todo?.userId || todo.userId !== userId)
+        throw new Error('Todo not found');
       await app.db.deleteDoc(collections.todo, todoId);
       return { ok: true };
     },
 
-    sendPush: async (_userId, { targetUserId, title, body, page, query, imageUrl }): Promise<{ sent: boolean }> => {
+    sendPush: async (
+      _userId,
+      { targetUserId, title, body, page, query, imageUrl },
+    ): Promise<{ sent: boolean }> => {
       try {
         // Route-checked send via the injected push (see setNewsPush below); the
         // framework resolves `page` against the route table and builds the
@@ -93,7 +98,10 @@ const app = createApp(
       throw new Error(msg);
     },
 
-    testWorkerDbMutation: async (userId, { text }): Promise<{ id: string; verified: boolean }> => {
+    testWorkerDbMutation: async (
+      userId,
+      { text },
+    ): Promise<{ id: string; verified: boolean }> => {
       const _id = `worker-test-${crypto.randomUUID()}`;
       const todo: Todo = { _id, userId, text, done: false, ...dbDefaults() };
       await app.db.setDoc(collections.todo, todo);
@@ -134,19 +142,25 @@ const app = createApp(
     newsLatest: (_userId, input) => pub.newsLatest(newsDb(), input),
     newsArticleGet: (_userId, input) => pub.newsArticleGet(newsDb(), input),
     newsArchive: (_userId, input) => pub.newsArchive(newsDb(), input),
-    newsPodcastArchive: (_userId, input) => pub.newsPodcastArchive(newsDb(), input),
+    newsPodcastArchive: (_userId, input) =>
+      pub.newsPodcastArchive(newsDb(), input),
 
     // ─── News: "Three Ways" clusters (public) ────────────────────────────
-    newsTopStories: (_userId, input) => clusters.newsTopStories(newsDb(), input),
-    newsClusterGet: (_userId, input) => clusters.newsClusterGet(newsDb(), input),
+    newsTopStories: (_userId, input) =>
+      clusters.newsTopStories(newsDb(), input),
+    newsClusterGet: (_userId, input) =>
+      clusters.newsClusterGet(newsDb(), input),
     newsBlindspot: (_userId, input) => clusters.newsBlindspot(newsDb(), input),
     newsUglyTakes: (_userId, input) => clusters.newsUglyTakes(newsDb(), input),
-    newsClusterArchive: (_userId, input) => clusters.newsClusterArchive(newsDb(), input),
+    newsClusterArchive: (_userId, input) =>
+      clusters.newsClusterArchive(newsDb(), input),
 
     // ─── News: read tracking ─────────────────────────────────────────────
     newsMarkRead: (userId, input) => feed.newsMarkRead(newsDb(), userId, input),
-    newsMarkReadBulk: (userId, input) => feed.newsMarkReadBulk(newsDb(), userId, input),
-    newsMarkUnread: (userId, input) => feed.newsMarkUnread(newsDb(), userId, input),
+    newsMarkReadBulk: (userId, input) =>
+      feed.newsMarkReadBulk(newsDb(), userId, input),
+    newsMarkUnread: (userId, input) =>
+      feed.newsMarkUnread(newsDb(), userId, input),
     newsReadGetAll: (userId) => feed.newsReadGetAll(newsDb(), userId),
     newsReadResetAll: (userId) => feed.newsReadResetAll(newsDb(), userId),
 
@@ -154,7 +168,8 @@ const app = createApp(
     newsSave: (userId, input) => feed.newsSave(newsDb(), userId, input),
     newsSavedGet: (userId, input) => feed.newsSavedGet(newsDb(), userId, input),
     newsIsSaved: (userId, input) => feed.newsIsSaved(newsDb(), userId, input),
-    newsIsSavedBatch: (userId, input) => feed.newsIsSavedBatch(newsDb(), userId, input),
+    newsIsSavedBatch: (userId, input) =>
+      feed.newsIsSavedBatch(newsDb(), userId, input),
 
     // ─── News: feed / search ─────────────────────────────────────────────
     newsFeedGet: (userId, input) => feed.newsFeedGet(newsDb(), userId, input),
@@ -162,20 +177,26 @@ const app = createApp(
 
     // ─── News: reactions / following ─────────────────────────────────────
     newsReact: (userId, input) => feed.newsReact(newsDb(), userId, input),
-    newsSourceFollow: (userId, input) => feed.newsSourceFollow(newsDb(), userId, input),
-    newsSourceGetFollowed: (userId, input) => feed.newsSourceGetFollowed(newsDb(), userId, input),
+    newsSourceFollow: (userId, input) =>
+      feed.newsSourceFollow(newsDb(), userId, input),
+    newsSourceGetFollowed: (userId, input) =>
+      feed.newsSourceGetFollowed(newsDb(), userId, input),
     newsReset: (userId) => feed.newsReset(newsDb(), userId),
 
     // ─── News: podcast ───────────────────────────────────────────────────
     newsPodcastGet: (_userId, input) => podcast.newsPodcastGet(newsDb(), input),
-    newsPodcastGetDefault: (_userId, input) => podcast.newsPodcastGetDefault(newsDb(), input),
-    newsPodcastList: (_userId, input) => podcast.newsPodcastList(newsDb(), input),
+    newsPodcastGetDefault: (_userId, input) =>
+      podcast.newsPodcastGetDefault(newsDb(), input),
+    newsPodcastList: (_userId, input) =>
+      podcast.newsPodcastList(newsDb(), input),
     newsPodcastInit: () => Promise.resolve(podcast.newsPodcastInit()),
-    newsPodcastRegenerate: (userId, input) => podcast.newsPodcastRegenerate(userId, input),
+    newsPodcastRegenerate: (userId, input) =>
+      podcast.newsPodcastRegenerate(userId, input),
 
     // ─── News: daily-email subscription ──────────────────────────────────
     newsEmailPrefGet: (userId) => emailPref.newsEmailPrefGet(newsDb(), userId),
-    newsEmailPrefSet: (userId, input) => emailPref.newsEmailPrefSet(newsDb(), userId, input),
+    newsEmailPrefSet: (userId, input) =>
+      emailPref.newsEmailPrefSet(newsDb(), userId, input),
   } satisfies RequestHandlers<typeof requests>,
   collections,
   (configurator: AppConfigurator) => {
@@ -194,36 +215,49 @@ const app = createApp(
     configurator.setWorkers(cronTasks, cronHandlers);
     configurator.setOnEmail(async (inbound: InboundEmail) => {
       await Promise.resolve();
-      console.log('[Email] Received:', { from: inbound.from, id: inbound.id, subject: inbound.subject });
+      console.log('[Email] Received:', {
+        from: inbound.from,
+        id: inbound.id,
+        subject: inbound.subject,
+      });
     });
 
     // ── Conversations (AI chat) ────────────────────────────────────────────
     // Note: ConversationDeps.db is set lazily since `app` isn't assigned yet during createApp.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const convDeps: any = { db: null, collections: {}, userGet: () => null, userPrivateGet: () => null };
-     
-    const convServer = enableConversations(configurator, {
-      conversationCollection: 'conversation',
-      messageCollection: 'message',
-      aiChat: {
-        async *onMessage(session, userMessage) {
-          const data = await uglyBotRequest('textGen', {
-            model: 'gemini_2_5_flash',
-            messages: [
-              ...session.messages.map((m) => ({
-                role: m.role,
-                content: m.text,
-              })),
-              { role: 'user' as const, content: userMessage },
-            ],
-            options: { maxTokens: 512 },
-          });
-          const content = data?.message.content;
-          yield typeof content === 'string' ? content : '';
+    const convDeps: any = {
+      db: null,
+      collections: {},
+      userGet: () => null,
+      userPrivateGet: () => null,
+    };
+
+    const convServer = enableConversations(
+      configurator,
+      {
+        conversationCollection: 'conversation',
+        messageCollection: 'message',
+        aiChat: {
+          async *onMessage(session, userMessage) {
+            const data = await uglyBotRequest('textGen', {
+              model: 'gemini_2_5_flash',
+              messages: [
+                ...session.messages.map((m) => ({
+                  role: m.role,
+                  content: m.text,
+                })),
+                { role: 'user' as const, content: userMessage },
+              ],
+              options: { maxTokens: 512 },
+            });
+            const content = data?.message.content;
+            yield typeof content === 'string' ? content : '';
+          },
         },
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       },
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-    }, convDeps);
+      convDeps,
+    );
 
     // ── Collaborative editing ──────────────────────────────────────────────
     enableCollab(configurator, {
@@ -231,7 +265,9 @@ const app = createApp(
         try {
           const doc = await app.db.getDoc(collections.collabDoc, docId);
           return doc?.yjsState ?? null;
-        } catch { return null; }
+        } catch {
+          return null;
+        }
       },
       async saveState(docId, state, serialized) {
         await app.db.setDoc(collections.collabDoc, {
@@ -261,7 +297,9 @@ const app = createApp(
 // Route-checked push binding — placed after `app` is fully defined so its type
 // is resolved (referencing `app.pushSend` inside createApp would be circular).
 // The sendPush handler + notifyPodcastReady send through newsPush().
-setNewsPush((input) => app.pushSend(input as Parameters<typeof app.pushSend>[0]));
+setNewsPush((input) =>
+  app.pushSend(input as Parameters<typeof app.pushSend>[0]),
+);
 
 // eslint-disable-next-line @typescript-eslint/dot-notation
 const port = parseInt(process.env['PORT'] ?? '4321');

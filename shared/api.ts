@@ -1,4 +1,11 @@
-import { authReq, defineMessages, defineRequests, frameworkMessages, frameworkRequests, z } from 'ugly-app/shared';
+import {
+  authReq,
+  defineMessages,
+  defineRequests,
+  frameworkMessages,
+  frameworkRequests,
+  z,
+} from 'ugly-app/shared';
 import { newsRequestDefs } from './news/requests';
 
 export const requests = defineRequests({

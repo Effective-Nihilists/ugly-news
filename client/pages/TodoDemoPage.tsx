@@ -28,11 +28,23 @@ function TodoDetail({ todoId }: { todoId: string }): React.ReactElement {
   return (
     <Card>
       <Text weight="bold">Selected todo — loaded via getDoc</Text>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 4,
+          marginTop: 8,
+        }}
+      >
         <Text size="sm">id: {todo._id}</Text>
         <Text size="sm">text: {todo.text}</Text>
         <Text size="sm">done: {todo.done ? 'true' : 'false'}</Text>
-        <Text size="sm">created: {todo.created instanceof Date ? todo.created.toLocaleString() : new Date(todo.created).toLocaleString()}</Text>
+        <Text size="sm">
+          created:{' '}
+          {todo.created instanceof Date
+            ? todo.created.toLocaleString()
+            : new Date(todo.created).toLocaleString()}
+        </Text>
       </div>
     </Card>
   );
@@ -63,7 +75,9 @@ export default function TodoDemoPage(): React.ReactElement {
     const unsub = socket.trackDocs<Todo>(
       'todo',
       { keys: { userId } },
-      (updated) => { setTodos(updated); },
+      (updated) => {
+        setTodos(updated);
+      },
     );
     // Return the unsubscribe function so React cleans up on unmount.
     return unsub;
@@ -95,21 +109,31 @@ export default function TodoDemoPage(): React.ReactElement {
   return (
     <PageLayout
       header={
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
           <Text weight="bold">Todo Demo</Text>
           <a href="/test" style={{ textDecoration: 'none' }} data-id="a">
-            <Button variant="secondary" data-id="tests">← Tests</Button>
+            <Button variant="secondary" data-id="tests">
+              ← Tests
+            </Button>
           </a>
         </div>
       }
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-
         {/* Description */}
         <Card>
-          <Text size="xl" weight="bold">Dynamic Todo List</Text>
+          <Text size="xl" weight="bold">
+            Dynamic Todo List
+          </Text>
           <Text size="sm" style={{ marginTop: 4 }}>
-            Demonstrates: custom collection · trackDocs · trackKeys · getDoc · custom server requests
+            Demonstrates: custom collection · trackDocs · trackKeys · getDoc ·
+            custom server requests
           </Text>
         </Card>
 
@@ -117,12 +141,15 @@ export default function TodoDemoPage(): React.ReactElement {
         <Card>
           <Text weight="medium">Add a todo</Text>
           <Text size="sm" style={{ marginBottom: 8 }}>
-            Calls <strong>socket.request('createTodo', {'{ text }'})</strong> — a custom authReq
+            Calls <strong>socket.request('createTodo', {'{ text }'})</strong> —
+            a custom authReq
           </Text>
           <div style={{ display: 'flex', gap: 8 }}>
             <input
               value={inputText}
-              onChange={(e) => { setInputText(e.target.value); }}
+              onChange={(e) => {
+                setInputText(e.target.value);
+              }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') void handleCreate();
               }}
@@ -133,11 +160,13 @@ export default function TodoDemoPage(): React.ReactElement {
                 borderRadius: 6,
                 border: '1px solid #ccc',
                 fontSize: 14,
-              }} data-id="what-needs-to-be"
+              }}
+              data-id="what-needs-to-be"
             />
             <Button
               onClick={() => void handleCreate()}
-              disabled={!inputText.trim()} data-id="add"
+              disabled={!inputText.trim()}
+              data-id="add"
             >
               Add
             </Button>
@@ -151,8 +180,8 @@ export default function TodoDemoPage(): React.ReactElement {
           </Text>
           <Text size="sm" style={{ marginBottom: 12 }}>
             <strong>trackDocs</strong> subscribes to real-time changes.{' '}
-            <strong>trackKeys {'{ userId }'}</strong> scopes the NATS channel per user.
-            Open a second tab — changes appear in both instantly.
+            <strong>trackKeys {'{ userId }'}</strong> scopes the NATS channel
+            per user. Open a second tab — changes appear in both instantly.
           </Text>
 
           {todos.length === 0 && (
@@ -163,7 +192,9 @@ export default function TodoDemoPage(): React.ReactElement {
             {todos.map((todo) => (
               <div
                 key={todo._id}
-                onClick={() => { setSelectedId(selectedId === todo._id ? null : todo._id); }}
+                onClick={() => {
+                  setSelectedId(selectedId === todo._id ? null : todo._id);
+                }}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -171,16 +202,25 @@ export default function TodoDemoPage(): React.ReactElement {
                   padding: '8px 10px',
                   borderRadius: 6,
                   cursor: 'pointer',
-                  background: selectedId === todo._id ? 'rgba(0,0,0,0.05)' : 'transparent',
+                  background:
+                    selectedId === todo._id
+                      ? 'rgba(0,0,0,0.05)'
+                      : 'transparent',
                   opacity: todo.done ? 0.55 : 1,
-                }} data-id="div"
+                }}
+                data-id="div"
               >
                 <input
                   type="checkbox"
                   checked={todo.done}
-                  onChange={() => { void handleToggle(todo._id); }}
-                  onClick={(e) => { e.stopPropagation(); }}
-                  style={{ cursor: 'pointer', flexShrink: 0 }} data-id="input"
+                  onChange={() => {
+                    void handleToggle(todo._id);
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
+                  style={{ cursor: 'pointer', flexShrink: 0 }}
+                  data-id="input"
                 />
                 <span
                   style={{
@@ -197,7 +237,8 @@ export default function TodoDemoPage(): React.ReactElement {
                   onClick={(e?: React.MouseEvent) => {
                     e?.stopPropagation();
                     void handleDelete(todo._id);
-                  }} data-id="delete"
+                  }}
+                  data-id="delete"
                 >
                   Delete
                 </Button>
@@ -210,12 +251,12 @@ export default function TodoDemoPage(): React.ReactElement {
         {selectedId && (
           <div>
             <Text size="sm" style={{ marginBottom: 8 }}>
-              <strong>getDoc</strong> — click a todo row to fetch its full document by ID:
+              <strong>getDoc</strong> — click a todo row to fetch its full
+              document by ID:
             </Text>
             <TodoDetail todoId={selectedId} />
           </div>
         )}
-
       </div>
     </PageLayout>
   );

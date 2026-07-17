@@ -22,7 +22,9 @@ export default function EmailTestPage(): React.ReactElement {
   const { socket, userId: currentUserId } = useApp();
   const [userId, setUserId] = useState(currentUserId);
   const [subject, setSubject] = useState('Test email from ugly-app');
-  const [html, setHtml] = useState('<h1>Hello!</h1>\n<p>This is a test email sent from ugly-app.</p>');
+  const [html, setHtml] = useState(
+    '<h1>Hello!</h1>\n<p>This is a test email sent from ugly-app.</p>',
+  );
   const [replyId, setReplyId] = useState('');
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState<SentEntry[]>([]);
@@ -41,7 +43,9 @@ export default function EmailTestPage(): React.ReactElement {
 
     setSending(true);
     const started = Date.now();
-    addLog(`Sending to user ${trimmedUserId} — subject: "${subject.trim() || 'Test email'}"${replyId.trim() ? ` — replyId: ${replyId.trim()}` : ''}`);
+    addLog(
+      `Sending to user ${trimmedUserId} — subject: "${subject.trim() || 'Test email'}"${replyId.trim() ? ` — replyId: ${replyId.trim()}` : ''}`,
+    );
     try {
       await socket.request('sendTestEmail', {
         userId: trimmedUserId,
@@ -51,11 +55,19 @@ export default function EmailTestPage(): React.ReactElement {
       });
       addLog(`Sent in ${fmt(Date.now() - started)}`, 'ok');
       setSent((prev) => [
-        { userId: trimmedUserId, subject, id: replyId.trim() || null, sentAt: new Date().toISOString() },
+        {
+          userId: trimmedUserId,
+          subject,
+          id: replyId.trim() || null,
+          sentAt: new Date().toISOString(),
+        },
         ...prev,
       ]);
     } catch (err) {
-      addLog(`Failed: ${err instanceof Error ? err.message : String(err)}`, 'err');
+      addLog(
+        `Failed: ${err instanceof Error ? err.message : String(err)}`,
+        'err',
+      );
     } finally {
       setSending(false);
     }
@@ -65,7 +77,9 @@ export default function EmailTestPage(): React.ReactElement {
     <PageLayout
       header={
         <div>
-          <a href="/test" data-id="tests">← Tests</a>
+          <a href="/test" data-id="tests">
+            ← Tests
+          </a>
         </div>
       }
     >
@@ -80,9 +94,17 @@ export default function EmailTestPage(): React.ReactElement {
               <input
                 type="text"
                 value={userId}
-                onChange={(e) => { setUserId(e.target.value); }}
+                onChange={(e) => {
+                  setUserId(e.target.value);
+                }}
                 placeholder="User ID to send email to"
-                style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #444' }} data-id="user-id-to-send"
+                style={{
+                  width: '100%',
+                  padding: 8,
+                  borderRadius: 4,
+                  border: '1px solid #444',
+                }}
+                data-id="user-id-to-send"
               />
             </label>
             <label>
@@ -90,19 +112,37 @@ export default function EmailTestPage(): React.ReactElement {
               <input
                 type="text"
                 value={subject}
-                onChange={(e) => { setSubject(e.target.value); }}
+                onChange={(e) => {
+                  setSubject(e.target.value);
+                }}
                 placeholder="Email subject"
-                style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #444' }} data-id="email-subject"
+                style={{
+                  width: '100%',
+                  padding: 8,
+                  borderRadius: 4,
+                  border: '1px solid #444',
+                }}
+                data-id="email-subject"
               />
             </label>
             <label>
-              <div style={{ marginBottom: 4, fontWeight: 500 }}>Reply ID (optional)</div>
+              <div style={{ marginBottom: 4, fontWeight: 500 }}>
+                Reply ID (optional)
+              </div>
               <input
                 type="text"
                 value={replyId}
-                onChange={(e) => { setReplyId(e.target.value); }}
+                onChange={(e) => {
+                  setReplyId(e.target.value);
+                }}
                 placeholder="e.g. order-123"
-                style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #444' }} data-id="e-g-order-123"
+                style={{
+                  width: '100%',
+                  padding: 8,
+                  borderRadius: 4,
+                  border: '1px solid #444',
+                }}
+                data-id="e-g-order-123"
               />
               <div style={{ fontSize: '0.8em', color: '#888', marginTop: 2 }}>
                 Sets the +tag in the from address for reply correlation
@@ -112,12 +152,28 @@ export default function EmailTestPage(): React.ReactElement {
               <div style={{ marginBottom: 4, fontWeight: 500 }}>HTML Body</div>
               <textarea
                 value={html}
-                onChange={(e) => { setHtml(e.target.value); }}
+                onChange={(e) => {
+                  setHtml(e.target.value);
+                }}
                 rows={6}
-                style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #444', fontFamily: 'monospace', fontSize: '0.9em' }} data-id="textarea"
+                style={{
+                  width: '100%',
+                  padding: 8,
+                  borderRadius: 4,
+                  border: '1px solid #444',
+                  fontFamily: 'monospace',
+                  fontSize: '0.9em',
+                }}
+                data-id="textarea"
               />
             </label>
-            <Button onClick={() => { void handleSend(); }} disabled={sending || !userId.trim()} data-id="button">
+            <Button
+              onClick={() => {
+                void handleSend();
+              }}
+              disabled={sending || !userId.trim()}
+              data-id="button"
+            >
               {sending ? 'Sending…' : 'Send Email'}
             </Button>
           </div>
@@ -140,11 +196,28 @@ export default function EmailTestPage(): React.ReactElement {
           <Card>
             <h2>Sent Emails</h2>
             {sent.map((entry, i) => (
-              <div key={i} style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid #333' }}>
-                <div><strong>User:</strong> {entry.userId}</div>
-                <div><strong>Subject:</strong> {entry.subject}</div>
-                {entry.id && <div><strong>Reply ID:</strong> {entry.id}</div>}
-                <div style={{ fontSize: '0.8em', color: '#888' }}>{entry.sentAt}</div>
+              <div
+                key={i}
+                style={{
+                  marginBottom: 12,
+                  paddingBottom: 12,
+                  borderBottom: '1px solid #333',
+                }}
+              >
+                <div>
+                  <strong>User:</strong> {entry.userId}
+                </div>
+                <div>
+                  <strong>Subject:</strong> {entry.subject}
+                </div>
+                {entry.id && (
+                  <div>
+                    <strong>Reply ID:</strong> {entry.id}
+                  </div>
+                )}
+                <div style={{ fontSize: '0.8em', color: '#888' }}>
+                  {entry.sentAt}
+                </div>
               </div>
             ))}
           </Card>
@@ -153,11 +226,26 @@ export default function EmailTestPage(): React.ReactElement {
         <Card>
           <h2>How it works</h2>
           <ol>
-            <li><code>sendEmail()</code> sends email via ugly.bot</li>
-            <li>Emails are sent from <code>{'<projectId>'}@ugly.bot</code></li>
-            <li>Replies are routed back to your app via <code>setOnEmail()</code> handler</li>
+            <li>
+              <code>sendEmail()</code> sends email via ugly.bot
+            </li>
+            <li>
+              Emails are sent from <code>{'<projectId>'}@ugly.bot</code>
+            </li>
+            <li>
+              Replies are routed back to your app via <code>setOnEmail()</code>{' '}
+              handler
+            </li>
           </ol>
-          <pre style={{ background: '#1a1a1a', padding: 12, borderRadius: 4, fontSize: '0.85em', overflow: 'auto' }}>{`// server/index.ts
+          <pre
+            style={{
+              background: '#1a1a1a',
+              padding: 12,
+              borderRadius: 4,
+              fontSize: '0.85em',
+              overflow: 'auto',
+            }}
+          >{`// server/index.ts
 import { sendEmail } from 'ugly-app';
 
 await sendEmail({

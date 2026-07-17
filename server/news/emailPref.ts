@@ -17,7 +17,10 @@ const DEFAULT_PREF: EmailPrefView = {
 };
 
 /** Current daily-email preference for the signed-in user (defaults if unset). */
-export async function newsEmailPrefGet(db: Db, userId: string): Promise<EmailPrefView> {
+export async function newsEmailPrefGet(
+  db: Db,
+  userId: string,
+): Promise<EmailPrefView> {
   const pref = await db.getDoc(collections.userNewsEmailPref, userId);
   if (!pref) return { ...DEFAULT_PREF };
   return {

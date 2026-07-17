@@ -44,40 +44,71 @@ export default function CollabTestPage(): React.ReactElement {
   useEffect(() => {
     const unsubs: (() => void)[] = [];
 
-    unsubs.push(socket.on('collab:sync' as never, ((data: Record<string, unknown>) => {
-      const d = data as { content: string };
-      suppressUpdateRef.current = true;
-      setContent(d.content);
-      addLog(`Synced document (${d.content.length} chars)`, 'ok');
-      setTimeout(() => { suppressUpdateRef.current = false; }, 0);
-    }) as never));
+    unsubs.push(
+      socket.on(
+        'collab:sync' as never,
+        ((data: Record<string, unknown>) => {
+          const d = data as { content: string };
+          suppressUpdateRef.current = true;
+          setContent(d.content);
+          addLog(`Synced document (${d.content.length} chars)`, 'ok');
+          setTimeout(() => {
+            suppressUpdateRef.current = false;
+          }, 0);
+        }) as never,
+      ),
+    );
 
-    unsubs.push(socket.on('collab:update' as never, ((data: Record<string, unknown>) => {
-      const d = data as { content: string };
-      if (d.content != null) {
-        suppressUpdateRef.current = true;
-        setContent(d.content);
-        setTimeout(() => { suppressUpdateRef.current = false; }, 0);
-      }
-    }) as never));
+    unsubs.push(
+      socket.on(
+        'collab:update' as never,
+        ((data: Record<string, unknown>) => {
+          const d = data as { content: string };
+          if (d.content != null) {
+            suppressUpdateRef.current = true;
+            setContent(d.content);
+            setTimeout(() => {
+              suppressUpdateRef.current = false;
+            }, 0);
+          }
+        }) as never,
+      ),
+    );
 
-    unsubs.push(socket.on('collab:peers' as never, ((data: Record<string, unknown>) => {
-      const d = data as { peerIds: string[] };
-      setPeers(d.peerIds.map((userId) => ({ userId })));
-      addLog(`Peers updated: ${d.peerIds.join(', ')}`, 'ok');
-    }) as never));
+    unsubs.push(
+      socket.on(
+        'collab:peers' as never,
+        ((data: Record<string, unknown>) => {
+          const d = data as { peerIds: string[] };
+          setPeers(d.peerIds.map((userId) => ({ userId })));
+          addLog(`Peers updated: ${d.peerIds.join(', ')}`, 'ok');
+        }) as never,
+      ),
+    );
 
-    unsubs.push(socket.on('collab:awareness' as never, ((data: Record<string, unknown>) => {
-      const d = data as { userId: string; cursor: { line: number; ch: number } };
-      if (d.userId && d.cursor) {
-        setPeers((prev) =>
-          prev.map((p) => p.userId === d.userId ? { ...p, cursor: d.cursor } : p),
-        );
-      }
-    }) as never));
+    unsubs.push(
+      socket.on(
+        'collab:awareness' as never,
+        ((data: Record<string, unknown>) => {
+          const d = data as {
+            userId: string;
+            cursor: { line: number; ch: number };
+          };
+          if (d.userId && d.cursor) {
+            setPeers((prev) =>
+              prev.map((p) =>
+                p.userId === d.userId ? { ...p, cursor: d.cursor } : p,
+              ),
+            );
+          }
+        }) as never,
+      ),
+    );
 
     unsubsRef.current = unsubs;
-    return () => { unsubAll(); };
+    return () => {
+      unsubAll();
+    };
   }, [socket]);
 
   // Auto-connect on mount
@@ -89,13 +120,20 @@ export default function CollabTestPage(): React.ReactElement {
       const started = Date.now();
       addLog(`Connecting to document: ${docId}`);
       try {
-        await (socket.send as (type: string, data: object) => Promise<unknown>)('collab:join', { docId });
+        await (socket.send as (type: string, data: object) => Promise<unknown>)(
+          'collab:join',
+          { docId },
+        );
         if (!cancelled) {
           setConnected(true);
           addLog(`Connected in ${fmt(Date.now() - started)}`, 'ok');
         }
       } catch (err) {
-        if (!cancelled) addLog(`Connect failed: ${err instanceof Error ? err.message : String(err)}`, 'err');
+        if (!cancelled)
+          addLog(
+            `Connect failed: ${err instanceof Error ? err.message : String(err)}`,
+            'err',
+          );
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -103,12 +141,16 @@ export default function CollabTestPage(): React.ReactElement {
     void doConnect();
     return () => {
       cancelled = true;
-      (socket.emit as (type: string, data: object) => void)('collab:leave', { docId });
+      (socket.emit as (type: string, data: object) => void)('collab:leave', {
+        docId,
+      });
     };
-  }, [socket, docId]);  
+  }, [socket, docId]);
 
   function handleDisconnect(): void {
-    (socket.emit as (type: string, data: object) => void)('collab:leave', { docId });
+    (socket.emit as (type: string, data: object) => void)('collab:leave', {
+      docId,
+    });
     setConnected(false);
     setContent('');
     setPeers([]);
@@ -124,7 +166,10 @@ export default function CollabTestPage(): React.ReactElement {
       if (suppressUpdateRef.current) return;
 
       // Send update to server
-      (socket.emit as (type: string, data: object) => void)('collab:update', { docId, content: newContent });
+      (socket.emit as (type: string, data: object) => void)('collab:update', {
+        docId,
+        content: newContent,
+      });
     },
     [socket, docId],
   );
@@ -138,14 +183,19 @@ export default function CollabTestPage(): React.ReactElement {
     const line = lines.length - 1;
     const ch = lines[lines.length - 1]!.length;
 
-    (socket.emit as (type: string, data: object) => void)('collab:awareness', { docId, cursor: { line, ch } });
+    (socket.emit as (type: string, data: object) => void)('collab:awareness', {
+      docId,
+      cursor: { line, ch },
+    });
   }, [socket, docId, connected]);
 
   return (
     <PageLayout
       header={
         <div>
-          <a href="/test" data-id="tests">← Tests</a>
+          <a href="/test" data-id="tests">
+            ← Tests
+          </a>
         </div>
       }
     >
@@ -156,10 +206,19 @@ export default function CollabTestPage(): React.ReactElement {
         <Card>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <Text size="sm" style={{ flex: 1, opacity: 0.6 }}>
-              {connected ? `Connected to: ${docId}` : loading ? 'Connecting…' : 'Waiting for connection…'}
+              {connected
+                ? `Connected to: ${docId}`
+                : loading
+                  ? 'Connecting…'
+                  : 'Waiting for connection…'}
             </Text>
             {connected && (
-              <Button data-id="collab-disconnect" onClick={() => { handleDisconnect(); }}>
+              <Button
+                data-id="collab-disconnect"
+                onClick={() => {
+                  handleDisconnect();
+                }}
+              >
                 Disconnect
               </Button>
             )}
@@ -169,8 +228,18 @@ export default function CollabTestPage(): React.ReactElement {
         {/* Peers */}
         {peers.length > 0 && (
           <Card>
-            <Text size="sm" weight="bold">Connected Peers ({peers.length})</Text>
-            <div data-id="collab-peers" style={{ display: 'flex', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+            <Text size="sm" weight="bold">
+              Connected Peers ({peers.length})
+            </Text>
+            <div
+              data-id="collab-peers"
+              style={{
+                display: 'flex',
+                gap: 8,
+                marginTop: 4,
+                flexWrap: 'wrap',
+              }}
+            >
               {peers.map((peer) => (
                 <div
                   key={peer.userId}
@@ -196,7 +265,9 @@ export default function CollabTestPage(): React.ReactElement {
         {/* Editor */}
         <Card>
           <Text size="sm" weight="bold" style={{ marginBottom: 4 }}>
-            {connected ? `Editing: ${docId}` : 'Connect to a document to start editing'}
+            {connected
+              ? `Editing: ${docId}`
+              : 'Connect to a document to start editing'}
           </Text>
           <textarea
             data-id="collab-editor"
@@ -207,7 +278,11 @@ export default function CollabTestPage(): React.ReactElement {
             onKeyUp={handleCursorMove}
             onClick={handleCursorMove}
             disabled={!connected}
-            placeholder={connected ? 'Start typing… changes sync in real-time' : 'Connect to a document first'}
+            placeholder={
+              connected
+                ? 'Start typing… changes sync in real-time'
+                : 'Connect to a document first'
+            }
             style={{
               width: '100%',
               minHeight: 250,
@@ -231,19 +306,43 @@ export default function CollabTestPage(): React.ReactElement {
         <Card>
           <h2>How it works</h2>
           <ol>
-            <li>Server uses <code>CollabServer</code> with Yjs CRDTs for conflict-free real-time editing</li>
-            <li><code>collab:join</code> connects to a document and syncs the current state</li>
-            <li><code>collab:update</code> sends local changes (Yjs handles merge/conflict resolution)</li>
-            <li><code>collab:awareness</code> broadcasts cursor position and presence</li>
-            <li>Changes are persisted via the <code>saveState</code> callback with configurable debouncing</li>
-            <li>Cross-server sync via NATS ensures consistency across multiple app instances</li>
-            <li>Server-side: use <code>enableCollab(configurator, config)</code> in your server setup</li>
+            <li>
+              Server uses <code>CollabServer</code> with Yjs CRDTs for
+              conflict-free real-time editing
+            </li>
+            <li>
+              <code>collab:join</code> connects to a document and syncs the
+              current state
+            </li>
+            <li>
+              <code>collab:update</code> sends local changes (Yjs handles
+              merge/conflict resolution)
+            </li>
+            <li>
+              <code>collab:awareness</code> broadcasts cursor position and
+              presence
+            </li>
+            <li>
+              Changes are persisted via the <code>saveState</code> callback with
+              configurable debouncing
+            </li>
+            <li>
+              Cross-server sync via NATS ensures consistency across multiple app
+              instances
+            </li>
+            <li>
+              Server-side: use <code>enableCollab(configurator, config)</code>{' '}
+              in your server setup
+            </li>
           </ol>
         </Card>
 
         {/* Log panel */}
         {logs.length > 0 && (
-          <div data-id="collab-logs" style={{ marginTop: 8, fontSize: '0.85em', opacity: 0.7 }}>
+          <div
+            data-id="collab-logs"
+            style={{ marginTop: 8, fontSize: '0.85em', opacity: 0.7 }}
+          >
             {logs.map((entry, i) => (
               <div key={i} data-log-kind={entry.kind}>
                 {entry.kind === 'err' ? '✗' : entry.kind === 'ok' ? '✓' : '·'}{' '}

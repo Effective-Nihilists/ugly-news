@@ -27,5 +27,7 @@ export async function seedNewsSources(db: NewsDb): Promise<void> {
       return db.setDoc(collections.newsSource, doc);
     }),
   );
-  console.log(`[news] seeded ${newsSourceSeeds.length} news sources (bias/factuality registry)`);
+  console.log(
+    `[news] seeded ${newsSourceSeeds.length} news sources (bias/factuality registry)`,
+  );
 }

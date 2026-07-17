@@ -39,29 +39,37 @@ const requestHandlers: Partial<RequestHandlers<typeof requests>> = {
   newsClusterGet: (_userId, input) => clusters.newsClusterGet(wdb(), input),
   newsBlindspot: (_userId, input) => clusters.newsBlindspot(wdb(), input),
   newsUglyTakes: (_userId, input) => clusters.newsUglyTakes(wdb(), input),
-  newsClusterArchive: (_userId, input) => clusters.newsClusterArchive(wdb(), input),
+  newsClusterArchive: (_userId, input) =>
+    clusters.newsClusterArchive(wdb(), input),
   newsMarkRead: (userId, input) => feed.newsMarkRead(wdb(), userId, input),
-  newsMarkReadBulk: (userId, input) => feed.newsMarkReadBulk(wdb(), userId, input),
+  newsMarkReadBulk: (userId, input) =>
+    feed.newsMarkReadBulk(wdb(), userId, input),
   newsMarkUnread: (userId, input) => feed.newsMarkUnread(wdb(), userId, input),
   newsReadGetAll: (userId) => feed.newsReadGetAll(wdb(), userId),
   newsReadResetAll: (userId) => feed.newsReadResetAll(wdb(), userId),
   newsSave: (userId, input) => feed.newsSave(wdb(), userId, input),
   newsSavedGet: (userId, input) => feed.newsSavedGet(wdb(), userId, input),
   newsIsSaved: (userId, input) => feed.newsIsSaved(wdb(), userId, input),
-  newsIsSavedBatch: (userId, input) => feed.newsIsSavedBatch(wdb(), userId, input),
+  newsIsSavedBatch: (userId, input) =>
+    feed.newsIsSavedBatch(wdb(), userId, input),
   newsFeedGet: (userId, input) => feed.newsFeedGet(wdb(), userId, input),
   newsSearch: (_userId, input) => feed.newsSearch(wdb(), input),
   newsReact: (userId, input) => feed.newsReact(wdb(), userId, input),
-  newsSourceFollow: (userId, input) => feed.newsSourceFollow(wdb(), userId, input),
-  newsSourceGetFollowed: (userId, input) => feed.newsSourceGetFollowed(wdb(), userId, input),
+  newsSourceFollow: (userId, input) =>
+    feed.newsSourceFollow(wdb(), userId, input),
+  newsSourceGetFollowed: (userId, input) =>
+    feed.newsSourceGetFollowed(wdb(), userId, input),
   newsReset: (userId) => feed.newsReset(wdb(), userId),
   newsPodcastGet: (_userId, input) => podcast.newsPodcastGet(wdb(), input),
-  newsPodcastGetDefault: (_userId, input) => podcast.newsPodcastGetDefault(wdb(), input),
+  newsPodcastGetDefault: (_userId, input) =>
+    podcast.newsPodcastGetDefault(wdb(), input),
   newsPodcastList: (_userId, input) => podcast.newsPodcastList(wdb(), input),
   newsPodcastInit: () => Promise.resolve(podcast.newsPodcastInit()),
-  newsPodcastRegenerate: (userId, input) => podcast.newsPodcastRegenerate(userId, input),
+  newsPodcastRegenerate: (userId, input) =>
+    podcast.newsPodcastRegenerate(userId, input),
   newsEmailPrefGet: (userId) => emailPref.newsEmailPrefGet(wdb(), userId),
-  newsEmailPrefSet: (userId, input) => emailPref.newsEmailPrefSet(wdb(), userId, input),
+  newsEmailPrefSet: (userId, input) =>
+    emailPref.newsEmailPrefSet(wdb(), userId, input),
 };
 
 const app = createWorkersApp(
@@ -75,7 +83,9 @@ const app = createWorkersApp(
 
 // Route-checked push binding — the podcast-ready cron (createCronHandlers) sends
 // via newsPush() on Workers too, where there's no setOnAfterStart.
-setNewsPush((input) => app.pushSend(input as Parameters<typeof app.pushSend>[0]));
+setNewsPush((input) =>
+  app.pushSend(input as Parameters<typeof app.pushSend>[0]),
+);
 
 export default app;
 export { CollectionDO, SessionDO };

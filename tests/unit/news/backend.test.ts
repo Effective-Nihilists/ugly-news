@@ -7,8 +7,15 @@ import {
   parseWAVHeader,
 } from '../../../shared/news/WAV';
 import { getTimezonesAtLocalHour } from '../../../shared/news/Timezone';
-import { decodeHtmlEntities, extractImageFromRSSItem, htmlToMarkdown } from '../../../server/news/download';
-import { createWordIndexMapping, preprocessTextForTTS } from '../../../server/news/tts';
+import {
+  decodeHtmlEntities,
+  extractImageFromRSSItem,
+  htmlToMarkdown,
+} from '../../../server/news/download';
+import {
+  createWordIndexMapping,
+  preprocessTextForTTS,
+} from '../../../server/news/tts';
 
 // ── WAV (replaces ffmpeg; must round-trip for podcast audio) ────────────────
 describe('WAV', () => {
@@ -20,7 +27,9 @@ describe('WAV', () => {
     expect(info.numChannels).toBe(1);
     expect(info.bitsPerSample).toBe(16);
     expect(info.dataSize).toBe(pcm.length);
-    expect(wav.subarray(info.dataOffset, info.dataOffset + info.dataSize)).toEqual(pcm);
+    expect(
+      wav.subarray(info.dataOffset, info.dataOffset + info.dataSize),
+    ).toEqual(pcm);
   });
 
   it('base64 round-trips bytes', () => {
@@ -29,15 +38,22 @@ describe('WAV', () => {
   });
 
   it('concatBytes concatenates in order', () => {
-    expect(concatBytes([new Uint8Array([1, 2]), new Uint8Array([3]), new Uint8Array([4, 5])]))
-      .toEqual(new Uint8Array([1, 2, 3, 4, 5]));
+    expect(
+      concatBytes([
+        new Uint8Array([1, 2]),
+        new Uint8Array([3]),
+        new Uint8Array([4, 5]),
+      ]),
+    ).toEqual(new Uint8Array([1, 2, 3, 4, 5]));
   });
 });
 
 // ── HTML entity decoding (RSS titles arrive encoded) ────────────────────────
 describe('decodeHtmlEntities', () => {
   it('decodes the real-world title regression (&#8217; → ’)', () => {
-    expect(decodeHtmlEntities('Anthropic&#8217;s safety warnings')).toBe('Anthropic’s safety warnings');
+    expect(decodeHtmlEntities('Anthropic&#8217;s safety warnings')).toBe(
+      'Anthropic’s safety warnings',
+    );
   });
   it('decodes decimal, hex, and named entities', () => {
     expect(decodeHtmlEntities('A &amp; B')).toBe('A & B');
@@ -76,7 +92,9 @@ describe('getTimezonesAtLocalHour', () => {
 // ── RSS helpers (Workers-safe parsing) ──────────────────────────────────────
 describe('RSS extraction', () => {
   it('htmlToMarkdown strips tags + decodes entities', () => {
-    const md = htmlToMarkdown('<p>Hello &amp; <b>world</b></p><script>x()</script>');
+    const md = htmlToMarkdown(
+      '<p>Hello &amp; <b>world</b></p><script>x()</script>',
+    );
     expect(md).toContain('Hello & world');
     expect(md).not.toContain('<');
     expect(md).not.toContain('x()');
@@ -97,7 +115,9 @@ describe('RSS extraction', () => {
   });
 
   it('extractImageFromRSSItem returns null when no image', () => {
-    expect(extractImageFromRSSItem({ description: 'no images here' })).toBeNull();
+    expect(
+      extractImageFromRSSItem({ description: 'no images here' }),
+    ).toBeNull();
   });
 });
 
@@ -105,7 +125,9 @@ describe('RSS extraction', () => {
 describe('TTS preprocessing', () => {
   it('prepends the emotion markup matching the hint', () => {
     expect(preprocessTextForTTS('Hello there', 'angry')).toMatch(/^\[angry\] /);
-    expect(preprocessTextForTTS('Hello there', 'laughing')).toMatch(/^\[laughing\] /);
+    expect(preprocessTextForTTS('Hello there', 'laughing')).toMatch(
+      /^\[laughing\] /,
+    );
   });
 
   it('neutral hint adds no leading emotion markup', () => {
@@ -114,7 +136,9 @@ describe('TTS preprocessing', () => {
   });
 
   it('emphasizes keywords with asterisks', () => {
-    expect(preprocessTextForTTS('This is breaking news', 'neutral')).toContain('*breaking*');
+    expect(preprocessTextForTTS('This is breaking news', 'neutral')).toContain(
+      '*breaking*',
+    );
   });
 
   it('createWordIndexMapping skips markup, maps real words to originals', () => {
@@ -124,7 +148,11 @@ describe('TTS preprocessing', () => {
     const mapped = mapping.filter((m) => m.originalIdx !== null);
     // Every original word is represented exactly once.
     expect(mapped.length).toBe(original.split(/\s+/).length);
-    expect(mapped.map((m) => m.originalWord)).toEqual(['breaking', 'news', 'today']);
+    expect(mapped.map((m) => m.originalWord)).toEqual([
+      'breaking',
+      'news',
+      'today',
+    ]);
     // The leading [angry] tag maps to null (skipped).
     expect(mapping[0]!.originalIdx).toBeNull();
   });

@@ -31,27 +31,42 @@ describe('AI proxy retry with backoff + jitter', () => {
     const fetchMock = vi.fn(async () => {
       calls += 1;
       return calls === 1
-        ? new Response(JSON.stringify({ error: 'Rate limit exceeded' }), { status: 429 })
-        : textResponse('A genuine neutral wire-service account of what happened.');
+        ? new Response(JSON.stringify({ error: 'Rate limit exceeded' }), {
+            status: 429,
+          })
+        : textResponse(
+            'A genuine neutral wire-service account of what happened.',
+          );
     });
     vi.stubGlobal('fetch', fetchMock);
     const { genText } = await import('../../../server/news/ai');
 
-    const promise = genText([{ role: 'user', content: 'story' }], { model: 'deepseek_v4_flash' });
+    const promise = genText([{ role: 'user', content: 'story' }], {
+      model: 'deepseek_v4_flash',
+    });
     await vi.runAllTimersAsync();
     const out = await promise;
 
-    expect(out).toBe('A genuine neutral wire-service account of what happened.');
+    expect(out).toBe(
+      'A genuine neutral wire-service account of what happened.',
+    );
     expect(calls).toBe(2);
   });
 
   it('gives up and returns null after exhausting retries on persistent 429', async () => {
     vi.useFakeTimers();
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ error: 'Rate limit exceeded' }), { status: 429 }));
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ error: 'Rate limit exceeded' }), {
+          status: 429,
+        }),
+    );
     vi.stubGlobal('fetch', fetchMock);
     const { genText } = await import('../../../server/news/ai');
 
-    const promise = genText([{ role: 'user', content: 'story' }], { model: 'gpt_4o' });
+    const promise = genText([{ role: 'user', content: 'story' }], {
+      model: 'gpt_4o',
+    });
     await vi.runAllTimersAsync();
     const out = await promise;
 
@@ -60,17 +75,23 @@ describe('AI proxy retry with backoff + jitter', () => {
   });
 
   it('does NOT retry a permanent 4xx (fails fast on 400)', async () => {
-    const fetchMock = vi.fn(async () => new Response('bad request', { status: 400 }));
+    const fetchMock = vi.fn(
+      async () => new Response('bad request', { status: 400 }),
+    );
     vi.stubGlobal('fetch', fetchMock);
     const { genText } = await import('../../../server/news/ai');
 
-    expect(await genText([{ role: 'user', content: 'x' }], { model: 'm' })).toBeNull();
+    expect(
+      await genText([{ role: 'user', content: 'x' }], { model: 'm' }),
+    ).toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('retries network errors and returns null when every attempt throws', async () => {
     vi.useFakeTimers();
-    const fetchMock = vi.fn(async () => { throw new Error('ECONNRESET'); });
+    const fetchMock = vi.fn(async () => {
+      throw new Error('ECONNRESET');
+    });
     vi.stubGlobal('fetch', fetchMock);
     const { genText } = await import('../../../server/news/ai');
 
@@ -86,14 +107,21 @@ describe('AI proxy retry with backoff + jitter', () => {
     vi.stubGlobal('fetch', fetchMock);
     const { genText } = await import('../../../server/news/ai');
 
-    expect(await genText([{ role: 'user', content: 'x' }], { model: 'm' })).toBeNull();
+    expect(
+      await genText([{ role: 'user', content: 'x' }], { model: 'm' }),
+    ).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('returns null when a 200 response body cannot be parsed', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response('not json', { status: 200 })));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('not json', { status: 200 })),
+    );
     const { genText } = await import('../../../server/news/ai');
-    expect(await genText([{ role: 'user', content: 'x' }], { model: 'm' })).toBeNull();
+    expect(
+      await genText([{ role: 'user', content: 'x' }], { model: 'm' }),
+    ).toBeNull();
   });
 
   it('genImage also retries a 429 then succeeds', async () => {
@@ -102,8 +130,12 @@ describe('AI proxy retry with backoff + jitter', () => {
     const fetchMock = vi.fn(async () => {
       calls += 1;
       return calls === 1
-        ? new Response(JSON.stringify({ error: 'Rate limit exceeded' }), { status: 429 })
-        : new Response(JSON.stringify({ url: 'https://cdn.example/img.png' }), { status: 200 });
+        ? new Response(JSON.stringify({ error: 'Rate limit exceeded' }), {
+            status: 429,
+          })
+        : new Response(JSON.stringify({ url: 'https://cdn.example/img.png' }), {
+            status: 200,
+          });
     });
     vi.stubGlobal('fetch', fetchMock);
     const { genImage } = await import('../../../server/news/ai');

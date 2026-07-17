@@ -68,8 +68,8 @@ export class PodcastCameraController {
       const xOffset = key.startsWith('host1')
         ? host1X - HOST1_POSITION.x
         : key.startsWith('host2')
-        ? host2X - HOST2_POSITION.x
-        : 0;
+          ? host2X - HOST2_POSITION.x
+          : 0;
       const heightScale = avatarHeight / AVATAR_HEIGHT;
 
       this.presets[key as CameraFocus] = {
@@ -272,8 +272,8 @@ export class PodcastCameraController {
       const xOffset = key.startsWith('host1')
         ? host1X - HOST1_POSITION.x
         : key.startsWith('host2')
-        ? host2X - HOST2_POSITION.x
-        : 0;
+          ? host2X - HOST2_POSITION.x
+          : 0;
       const heightScale = avatarHeight / AVATAR_HEIGHT;
 
       this.presets[key as CameraFocus] = {

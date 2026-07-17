@@ -38,8 +38,13 @@ export interface TtsRenderResult {
 export const PODCAST_TTS_MODEL = 'inworld-tts-1.5-max';
 
 async function sha256Hex(s: string): Promise<string> {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
-  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  const buf = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(s),
+  );
+  return [...new Uint8Array(buf)]
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
 }
 
 /**
@@ -54,7 +59,9 @@ export async function renderSegmentCached(params: {
 }): Promise<TtsRenderResult> {
   const { text, voiceId, temperature } = params;
   const storage = getAdapter().storage;
-  const hash = await sha256Hex(`${PODCAST_TTS_MODEL}|${voiceId}|${temperature}|${text}`);
+  const hash = await sha256Hex(
+    `${PODCAST_TTS_MODEL}|${voiceId}|${temperature}|${text}`,
+  );
   const key = `tts-cache/${hash}.json`;
 
   // Cache check: the public bucket is web-readable (same bucket podcasts serve
@@ -63,7 +70,8 @@ export async function renderSegmentCached(params: {
     const res = await fetch(storage.url('public', key));
     if (res.ok) {
       const cached = (await res.json()) as TtsRenderResult;
-      if (cached && typeof cached.audio === 'string' && cached.audio) return cached;
+      if (cached && typeof cached.audio === 'string' && cached.audio)
+        return cached;
     }
   } catch {
     /* treat as a miss */

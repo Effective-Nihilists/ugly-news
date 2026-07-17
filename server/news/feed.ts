@@ -276,7 +276,9 @@ export async function newsFeedGet(
   ]);
 
   const savedSet = new Set(savedDocs.map((s) => s.fileId));
-  const reactionMap = new Map(reactionDocs.map((r) => [r.articleId, r.reaction]));
+  const reactionMap = new Map(
+    reactionDocs.map((r) => [r.articleId, r.reaction]),
+  );
   const fileMap = new Map<string, FileMarkdown & { _id: string }>();
   for (const file of files) fileMap.set(file._id, file);
 
@@ -308,7 +310,10 @@ export async function newsSearch(
   // through the collection's FTS5 index (meta.search over ['title','text']),
   // ranked by relevance (bm25). The equality/array filters ride alongside as the
   // structured WHERE; the category filter matches any tag via json_each.
-  const filter: Record<string, unknown> = { public: true, userId: { $in: botIds } };
+  const filter: Record<string, unknown> = {
+    public: true,
+    userId: { $in: botIds },
+  };
   if (isDefined(input.categories) && input.categories.length > 0) {
     filter.tags = { $in: input.categories };
   }

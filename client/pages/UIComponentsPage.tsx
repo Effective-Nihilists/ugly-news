@@ -89,9 +89,13 @@ function Section({
   return (
     <div style={{ marginBottom: 24 }}>
       <div style={{ marginBottom: 6 }}>
-        <Text size="sm" weight="semibold">{title}</Text>
+        <Text size="sm" weight="semibold">
+          {title}
+        </Text>
         {description && (
-          <p style={{ margin: '2px 0 0', fontSize: 12, opacity: 0.55 }}>{description}</p>
+          <p style={{ margin: '2px 0 0', fontSize: 12, opacity: 0.55 }}>
+            {description}
+          </p>
         )}
       </div>
       <Card>{children}</Card>
@@ -104,28 +108,76 @@ function Section({
 function LayoutTab(): React.ReactElement {
   return (
     <ScrollView>
-      <div style={{ maxWidth: 640, margin: '0 auto', padding: '16px 16px 48px' }}>
-
-        <Section title="Text" description="Typography scale and weight variants">
+      <div
+        style={{ maxWidth: 640, margin: '0 auto', padding: '16px 16px 48px' }}
+      >
+        <Section
+          title="Text"
+          description="Typography scale and weight variants"
+        >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {(['xs', 'sm', 'md', 'lg', 'xl', '2xl'] as const).map((size) => (
-              <div key={size} style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-                <span style={{ opacity: 0.4, width: 32, flexShrink: 0, fontSize: 11 }}>{size}</span>
+              <div
+                key={size}
+                style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}
+              >
+                <span
+                  style={{
+                    opacity: 0.4,
+                    width: 32,
+                    flexShrink: 0,
+                    fontSize: 11,
+                  }}
+                >
+                  {size}
+                </span>
                 <Text size={size}>The quick brown fox</Text>
-                <span style={{ opacity: 0.6 }}><Text size={size} weight="bold">bold</Text></span>
+                <span style={{ opacity: 0.6 }}>
+                  <Text size={size} weight="bold">
+                    bold
+                  </Text>
+                </span>
               </div>
             ))}
           </div>
         </Section>
 
-        <Section title="View" description="Flex container with optional border/background">
-          <View style={{ border: '1px solid rgba(0,0,0,0.15)', borderRadius: 8, padding: 12 }}>
+        <Section
+          title="View"
+          description="Flex container with optional border/background"
+        >
+          <View
+            style={{
+              border: '1px solid rgba(0,0,0,0.15)',
+              borderRadius: 8,
+              padding: 12,
+            }}
+          >
             <View style={{ flexDirection: 'row', gap: 8 }}>
-              <View style={{ flex: 1, background: 'var(--app-primary, #2563eb)', borderRadius: 6, padding: 8 }}>
-                <Text size="xs" color="white">flex: 1</Text>
+              <View
+                style={{
+                  flex: 1,
+                  background: 'var(--app-primary, #2563eb)',
+                  borderRadius: 6,
+                  padding: 8,
+                }}
+              >
+                <Text size="xs" color="white">
+                  flex: 1
+                </Text>
               </View>
-              <View style={{ flex: 2, background: 'var(--app-primary, #2563eb)', borderRadius: 6, padding: 8, opacity: 0.7 }}>
-                <Text size="xs" color="white">flex: 2</Text>
+              <View
+                style={{
+                  flex: 2,
+                  background: 'var(--app-primary, #2563eb)',
+                  borderRadius: 6,
+                  padding: 8,
+                  opacity: 0.7,
+                }}
+              >
+                <Text size="xs" color="white">
+                  flex: 2
+                </Text>
               </View>
             </View>
           </View>
@@ -133,7 +185,10 @@ function LayoutTab(): React.ReactElement {
 
         <Section title="Panel" description="Elevated surface container">
           <Panel>
-            <Text size="sm">Panel content goes here. Use Panel for cards with a subtle background and border.</Text>
+            <Text size="sm">
+              Panel content goes here. Use Panel for cards with a subtle
+              background and border.
+            </Text>
           </Panel>
         </Section>
 
@@ -142,8 +197,12 @@ function LayoutTab(): React.ReactElement {
             {(['sm', 'md', 'lg'] as const).map((pad) => (
               <div key={pad} style={{ flex: 1 }}>
                 <Card padding={pad}>
-                  <Text size="xs" weight="medium">{pad}</Text>
-                  <span style={{ opacity: 0.5 }}><Text size="xs">padding</Text></span>
+                  <Text size="xs" weight="medium">
+                    {pad}
+                  </Text>
+                  <span style={{ opacity: 0.5 }}>
+                    <Text size="xs">padding</Text>
+                  </span>
                 </Card>
               </div>
             ))}
@@ -153,23 +212,49 @@ function LayoutTab(): React.ReactElement {
         <Section title="Image" description="Image with resize modes">
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             {(['cover', 'contain', 'center'] as const).map((mode) => (
-              <div key={mode} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+              <div
+                key={mode}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
                 <Image
                   src={{ url: 'https://placehold.co/120x80' }}
                   resizeMode={mode}
                   style={{ width: 120, height: 80, borderRadius: 6 }}
                 />
-                <span style={{ opacity: 0.5 }}><Text size="xs">{mode}</Text></span>
+                <span style={{ opacity: 0.5 }}>
+                  <Text size="xs">{mode}</Text>
+                </span>
               </div>
             ))}
           </div>
         </Section>
 
-        <Section title="ScrollView" description="Scrollable container that integrates with scroll indicators">
-          <div style={{ height: 80, border: '1px dashed rgba(0,0,0,0.2)', borderRadius: 8, overflow: 'hidden' }}>
+        <Section
+          title="ScrollView"
+          description="Scrollable container that integrates with scroll indicators"
+        >
+          <div
+            style={{
+              height: 80,
+              border: '1px dashed rgba(0,0,0,0.2)',
+              borderRadius: 8,
+              overflow: 'hidden',
+            }}
+          >
             <ScrollView>
               {Array.from({ length: 6 }, (_, i) => (
-                <div key={i} style={{ padding: '6px 12px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+                <div
+                  key={i}
+                  style={{
+                    padding: '6px 12px',
+                    borderBottom: '1px solid rgba(0,0,0,0.06)',
+                  }}
+                >
                   <Text size="sm">Scroll item {i + 1}</Text>
                 </div>
               ))}
@@ -177,11 +262,27 @@ function LayoutTab(): React.ReactElement {
           </div>
         </Section>
 
-        <Section title="SimpleScrollView" description="Lightweight scroll wrapper without scroll context — use for nested scrollable areas">
-          <div style={{ height: 80, border: '1px dashed rgba(0,0,0,0.2)', borderRadius: 8, overflow: 'hidden' }}>
+        <Section
+          title="SimpleScrollView"
+          description="Lightweight scroll wrapper without scroll context — use for nested scrollable areas"
+        >
+          <div
+            style={{
+              height: 80,
+              border: '1px dashed rgba(0,0,0,0.2)',
+              borderRadius: 8,
+              overflow: 'hidden',
+            }}
+          >
             <SimpleScrollView style={{ height: '100%', overflowY: 'auto' }}>
               {Array.from({ length: 6 }, (_, i) => (
-                <div key={i} style={{ padding: '6px 12px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+                <div
+                  key={i}
+                  style={{
+                    padding: '6px 12px',
+                    borderBottom: '1px solid rgba(0,0,0,0.06)',
+                  }}
+                >
                   <Text size="sm">Item {i + 1}</Text>
                 </div>
               ))}
@@ -189,21 +290,30 @@ function LayoutTab(): React.ReactElement {
           </div>
         </Section>
 
-        <Section title="PopupPanel" description="Slide-up panel for popups (opened via useRouter().openPopup())">
+        <Section
+          title="PopupPanel"
+          description="Slide-up panel for popups (opened via useRouter().openPopup())"
+        >
           <span style={{ opacity: 0.6 }}>
             <Text size="sm">
               PopupPanel is a container used inside popups opened with{' '}
-              <code style={{ fontSize: 12 }}>useRouter().openPopup()</code>.
-              It provides consistent padding and a drag handle.
+              <code style={{ fontSize: 12 }}>useRouter().openPopup()</code>. It
+              provides consistent padding and a drag handle.
             </Text>
           </span>
-          <div style={{ marginTop: 8, border: '1px dashed rgba(0,0,0,0.2)', borderRadius: 12, overflow: 'hidden' }}>
+          <div
+            style={{
+              marginTop: 8,
+              border: '1px dashed rgba(0,0,0,0.2)',
+              borderRadius: 12,
+              overflow: 'hidden',
+            }}
+          >
             <PopupPanel>
               <Text size="sm">Popup content renders inside PopupPanel</Text>
             </PopupPanel>
           </div>
         </Section>
-
       </div>
     </ScrollView>
   );
@@ -224,7 +334,9 @@ function InputsTab(): React.ReactElement {
   });
   const [wheelHour, setWheelHour] = useState(0);
   const [wheelMin, setWheelMin] = useState(0);
-  const [selectVal, setSelectVal] = useState<'alpha' | 'beta' | 'gamma' | 'delta' | undefined>(undefined);
+  const [selectVal, setSelectVal] = useState<
+    'alpha' | 'beta' | 'gamma' | 'delta' | undefined
+  >(undefined);
   const [animInputVal, setAnimInputVal] = useState('');
   const [animFocused, setAnimFocused] = useState(false);
   const [pressed, setPressed] = useState(false);
@@ -244,23 +356,40 @@ function InputsTab(): React.ReactElement {
 
   return (
     <ScrollView>
-      <div style={{ maxWidth: 640, margin: '0 auto', padding: '16px 16px 48px' }}>
-
-        <Section title="Button" description="Primary, secondary, and error variants">
+      <div
+        style={{ maxWidth: 640, margin: '0 auto', padding: '16px 16px 48px' }}
+      >
+        <Section
+          title="Button"
+          description="Primary, secondary, and error variants"
+        >
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <Button variant="primary" data-id="primary">Primary</Button>
-            <Button variant="secondary" data-id="secondary">Secondary</Button>
-            <Button variant="error" data-id="error">Error</Button>
-            <Button variant="ghost" data-id="ghost">Ghost</Button>
-            <Button variant="primary" disabled data-id="disabled">Disabled</Button>
+            <Button variant="primary" data-id="primary">
+              Primary
+            </Button>
+            <Button variant="secondary" data-id="secondary">
+              Secondary
+            </Button>
+            <Button variant="error" data-id="error">
+              Error
+            </Button>
+            <Button variant="ghost" data-id="ghost">
+              Ghost
+            </Button>
+            <Button variant="primary" disabled data-id="disabled">
+              Disabled
+            </Button>
           </div>
         </Section>
 
         <Section title="Input" description="Controlled text input">
           <Input
             value={inputVal}
-            onChange={(value) => { setInputVal(value); }}
-            placeholder="Type something..." data-id="type-something"
+            onChange={(value) => {
+              setInputVal(value);
+            }}
+            placeholder="Type something..."
+            data-id="type-something"
           />
           {inputVal && (
             <span style={{ marginTop: 6, display: 'block' }}>
@@ -269,28 +398,44 @@ function InputsTab(): React.ReactElement {
           )}
         </Section>
 
-        <Section title="ValidatedTextInput" description="Input with inline validation via onValueChanged">
+        <Section
+          title="ValidatedTextInput"
+          description="Input with inline validation via onValueChanged"
+        >
           <ValidatedTextInput
             value={validatedVal}
             valueToText={(v: string) => v}
             textToValue={(t: string) => t}
-            onValueChanged={(value: string, showError: (x: unknown) => void) => {
+            onValueChanged={(
+              value: string,
+              showError: (x: unknown) => void,
+            ) => {
               if (value.length > 0 && value.length < 3) {
                 showError('Minimum 3 characters required');
               }
               setValidatedVal(value);
             }}
-            placeholder="Min 3 characters" data-id="min-3-characters"
+            placeholder="Min 3 characters"
+            data-id="min-3-characters"
           />
         </Section>
 
-        <Section title="AnimatedInputWrapper" description="Focus ring animation wrapper for any input element">
+        <Section
+          title="AnimatedInputWrapper"
+          description="Focus ring animation wrapper for any input element"
+        >
           <AnimatedInputWrapper isFocused={animFocused}>
             <input
               value={animInputVal}
-              onChange={(e) => { setAnimInputVal(e.target.value); }}
-              onFocus={() => { setAnimFocused(true); }}
-              onBlur={() => { setAnimFocused(false); }}
+              onChange={(e) => {
+                setAnimInputVal(e.target.value);
+              }}
+              onFocus={() => {
+                setAnimFocused(true);
+              }}
+              onBlur={() => {
+                setAnimFocused(false);
+              }}
               placeholder="Click to see focus animation"
               style={{
                 width: '100%',
@@ -302,12 +447,16 @@ function InputsTab(): React.ReactElement {
                 background: 'transparent',
                 color: 'inherit',
                 boxSizing: 'border-box',
-              }} data-id="click-to-see-focus"
+              }}
+              data-id="click-to-see-focus"
             />
           </AnimatedInputWrapper>
         </Section>
 
-        <Section title="EnumInput" description="Dropdown selector for enum values">
+        <Section
+          title="EnumInput"
+          description="Dropdown selector for enum values"
+        >
           <EnumInput
             value={enumVal}
             onChange={setEnumVal}
@@ -315,14 +464,18 @@ function InputsTab(): React.ReactElement {
               { value: 'a', label: 'Option A' },
               { value: 'b', label: 'Option B' },
               { value: 'c', label: 'Option C' },
-            ]} data-id="enum-input"
+            ]}
+            data-id="enum-input"
           />
           <span style={{ marginTop: 6, opacity: 0.5, display: 'block' }}>
             <Text size="xs">Selected: {enumVal}</Text>
           </span>
         </Section>
 
-        <Section title="DatePicker" description="Calendar date selector (returns YYYY-MM-DD string)">
+        <Section
+          title="DatePicker"
+          description="Calendar date selector (returns YYYY-MM-DD string)"
+        >
           <DatePicker value={dateVal} onValueChanged={setDateVal} />
           {dateVal && (
             <span style={{ marginTop: 6, opacity: 0.5, display: 'block' }}>
@@ -331,29 +484,51 @@ function InputsTab(): React.ReactElement {
           )}
         </Section>
 
-        <Section title="DateTimePicker" description="Date and time selector (returns Unix timestamp ms)">
+        <Section
+          title="DateTimePicker"
+          description="Date and time selector (returns Unix timestamp ms)"
+        >
           <DateTimePicker value={dateTimeVal} onValueChanged={setDateTimeVal} />
           {dateTimeVal !== null && (
             <span style={{ marginTop: 6, opacity: 0.5, display: 'block' }}>
-              <Text size="xs">Selected: {new Date(dateTimeVal).toLocaleString()}</Text>
+              <Text size="xs">
+                Selected: {new Date(dateTimeVal).toLocaleString()}
+              </Text>
             </span>
           )}
         </Section>
 
-        <Section title="DateRangePicker" description="Preset or custom date range selector">
+        <Section
+          title="DateRangePicker"
+          description="Preset or custom date range selector"
+        >
           <DateRangePicker value={dateRangeVal} onChange={setDateRangeVal} />
         </Section>
 
-        <Section title="WheelPicker" description="iOS-style scroll wheel selector">
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+        <Section
+          title="WheelPicker"
+          description="iOS-style scroll wheel selector"
+        >
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 12,
+            }}
+          >
             <Text size="lg" weight="bold">
-              {String(wheelHour).padStart(2, '0')}:{String(wheelMin).padStart(2, '0')}
+              {String(wheelHour).padStart(2, '0')}:
+              {String(wheelMin).padStart(2, '0')}
             </Text>
             <WheelPicker columns={[hourCol, minCol]} />
           </div>
         </Section>
 
-        <Section title="SelectView" description="List-based single or multi-select">
+        <Section
+          title="SelectView"
+          description="List-based single or multi-select"
+        >
           <SelectView
             items={[
               { value: 'alpha', text: 'Alpha', description: 'First option' },
@@ -362,7 +537,8 @@ function InputsTab(): React.ReactElement {
               { value: 'delta', text: 'Delta', description: 'Fourth option' },
             ]}
             value={selectVal}
-            onChange={setSelectVal} data-id="select-view"
+            onChange={setSelectVal}
+            data-id="select-view"
           />
           {selectVal && (
             <span style={{ marginTop: 6, opacity: 0.5, display: 'block' }}>
@@ -371,21 +547,28 @@ function InputsTab(): React.ReactElement {
           )}
         </Section>
 
-        <Section title="Pressable" description="Pressable area with visual feedback">
+        <Section
+          title="Pressable"
+          description="Pressable area with visual feedback"
+        >
           <Pressable
-            onPress={() => { setPressed((p) => !p); }}
+            onPress={() => {
+              setPressed((p) => !p);
+            }}
             style={{
               padding: 16,
               borderRadius: 8,
               border: '1px solid rgba(0,0,0,0.1)',
               textAlign: 'center',
               cursor: 'pointer',
-            }} data-id="pressable"
+            }}
+            data-id="pressable"
           >
-            <Text weight="medium">{pressed ? 'Pressed! (tap again to reset)' : 'Tap me'}</Text>
+            <Text weight="medium">
+              {pressed ? 'Pressed! (tap again to reset)' : 'Tap me'}
+            </Text>
           </Pressable>
         </Section>
-
       </div>
     </ScrollView>
   );
@@ -414,35 +597,81 @@ function FeedbackTab(): React.ReactElement {
 
   return (
     <ScrollView>
-      <div style={{ maxWidth: 640, margin: '0 auto', padding: '16px 16px 48px' }}>
-
-        <Section title="Modal" description="Overlay dialog with backdrop dismiss">
-          <Button variant="primary" onClick={() => { setShowModal(true); }} data-id="open-modal">Open Modal</Button>
+      <div
+        style={{ maxWidth: 640, margin: '0 auto', padding: '16px 16px 48px' }}
+      >
+        <Section
+          title="Modal"
+          description="Overlay dialog with backdrop dismiss"
+        >
+          <Button
+            variant="primary"
+            onClick={() => {
+              setShowModal(true);
+            }}
+            data-id="open-modal"
+          >
+            Open Modal
+          </Button>
           {showModal && (
-            <Modal onClose={() => { setShowModal(false); }}>
+            <Modal
+              onClose={() => {
+                setShowModal(false);
+              }}
+            >
               <div style={{ padding: 24, maxWidth: 360 }}>
-                <Text size="lg" weight="bold">Modal Title</Text>
+                <Text size="lg" weight="bold">
+                  Modal Title
+                </Text>
                 <span style={{ marginTop: 8, opacity: 0.6, display: 'block' }}>
                   <Text size="sm">
-                    This is the modal body. Click outside or the button below to close.
+                    This is the modal body. Click outside or the button below to
+                    close.
                   </Text>
                 </span>
                 <div style={{ marginTop: 16 }}>
-                  <Button variant="secondary" onClick={() => { setShowModal(false); }} data-id="close">Close</Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setShowModal(false);
+                    }}
+                    data-id="close"
+                  >
+                    Close
+                  </Button>
                 </div>
               </div>
             </Modal>
           )}
         </Section>
 
-        <Section title="AlertPopup / alertShowMessage" description="Imperative top-banner alert (no JSX state required)">
-          <Button variant="secondary" onClick={() => { alertShowMessage('Hello from alertShowMessage!'); }} data-id="show-alert">
+        <Section
+          title="AlertPopup / alertShowMessage"
+          description="Imperative top-banner alert (no JSX state required)"
+        >
+          <Button
+            variant="secondary"
+            onClick={() => {
+              alertShowMessage('Hello from alertShowMessage!');
+            }}
+            data-id="show-alert"
+          >
             Show Alert
           </Button>
         </Section>
 
-        <Section title="Toast" description="Auto-dismissing notification banner">
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <Section
+          title="Toast"
+          description="Auto-dismissing notification banner"
+        >
+          <div
+            style={{
+              display: 'flex',
+              gap: 8,
+              flexWrap: 'wrap',
+              alignItems: 'center',
+            }}
+          >
             <EnumInput
               value={toastVariant}
               onChange={setToastVariant}
@@ -451,12 +680,16 @@ function FeedbackTab(): React.ReactElement {
                 { value: 'success', label: 'Success' },
                 { value: 'warning', label: 'Warning' },
                 { value: 'error', label: 'Error' },
-              ]} data-id="enum-input-2"
+              ]}
+              data-id="enum-input-2"
             />
             <Button
               variant="primary"
-              onClick={() => { setShowToast(true); }}
-              disabled={showToast} data-id="show-toast"
+              onClick={() => {
+                setShowToast(true);
+              }}
+              disabled={showToast}
+              data-id="show-toast"
             >
               Show Toast
             </Button>
@@ -465,15 +698,28 @@ function FeedbackTab(): React.ReactElement {
             <Toast
               message={`This is a ${toastVariant} toast message.`}
               variant={toastVariant}
-              onDismiss={() => { setShowToast(false); }}
+              onDismiss={() => {
+                setShowToast(false);
+              }}
             />
           )}
         </Section>
 
-        <Section title="Loading" description="Spinner at multiple sizes (size is in pixels)">
+        <Section
+          title="Loading"
+          description="Spinner at multiple sizes (size is in pixels)"
+        >
           <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
             {([16, 24, 40] as const).map((size) => (
-              <div key={size} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+              <div
+                key={size}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
                 <Loading size={size} />
                 <Text size="xs">{size}px</Text>
               </div>
@@ -481,34 +727,57 @@ function FeedbackTab(): React.ReactElement {
           </div>
         </Section>
 
-        <Section title="AnimatedLoading" description="Loading indicator with animated status messages">
+        <Section
+          title="AnimatedLoading"
+          description="Loading indicator with animated status messages"
+        >
           <AnimatedLoading />
         </Section>
 
-        <Section title="CelebrationOverlay" description="Fullscreen celebration animation">
+        <Section
+          title="CelebrationOverlay"
+          description="Fullscreen celebration animation"
+        >
           <div style={{ position: 'relative', minHeight: 80 }}>
-            <Button variant="primary" onClick={() => { setShowCelebration(true); }} data-id="celebrate">
+            <Button
+              variant="primary"
+              onClick={() => {
+                setShowCelebration(true);
+              }}
+              data-id="celebrate"
+            >
               Celebrate!
             </Button>
             <CelebrationOverlay
               show={showCelebration}
               title="You did it!"
               subtitle="Keep up the great work"
-              onDismiss={() => { setShowCelebration(false); }}
+              onDismiss={() => {
+                setShowCelebration(false);
+              }}
             />
           </div>
         </Section>
 
-        <Section title="Confetti" description="10 canvas-confetti presets — fire and forget">
+        <Section
+          title="Confetti"
+          description="10 canvas-confetti presets — fire and forget"
+        >
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {confettiFns.map(({ label, fn }) => (
-              <Button key={label} variant="secondary" onClick={() => { fn(); }} data-id="button">
+              <Button
+                key={label}
+                variant="secondary"
+                onClick={() => {
+                  fn();
+                }}
+                data-id="button"
+              >
                 {label}
               </Button>
             ))}
           </div>
         </Section>
-
       </div>
     </ScrollView>
   );
@@ -518,9 +787,18 @@ function FeedbackTab(): React.ReactElement {
 
 function ListsTab(): React.ReactElement {
   const flatListRef = useRef<FlatListHandle>(null);
-  const [animatedItems, setAnimatedItems] = useState(['Alpha', 'Beta', 'Gamma']);
-  const [presenceItems, setPresenceItems] = useState(['One', 'Two', 'Three', 'Four']);
-   
+  const [animatedItems, setAnimatedItems] = useState([
+    'Alpha',
+    'Beta',
+    'Gamma',
+  ]);
+  const [presenceItems, setPresenceItems] = useState([
+    'One',
+    'Two',
+    'Three',
+    'Four',
+  ]);
+
   const [cardItems] = useState<CardStackItem<{ label: string }>[]>([
     { id: '1', data: { label: 'Card One' } },
     { id: '2', data: { label: 'Card Two' } },
@@ -531,18 +809,46 @@ function ListsTab(): React.ReactElement {
 
   return (
     <ScrollView>
-      <div style={{ maxWidth: 640, margin: '0 auto', padding: '16px 16px 48px' }}>
-
-        <Section title="FlatList" description="Virtualized list with scroll management">
-          <div style={{ height: 160, overflow: 'hidden', borderRadius: 8, border: '1px solid rgba(0,0,0,0.08)' }}>
+      <div
+        style={{ maxWidth: 640, margin: '0 auto', padding: '16px 16px 48px' }}
+      >
+        <Section
+          title="FlatList"
+          description="Virtualized list with scroll management"
+        >
+          <div
+            style={{
+              height: 160,
+              overflow: 'hidden',
+              borderRadius: 8,
+              border: '1px solid rgba(0,0,0,0.08)',
+            }}
+          >
             <FlatList
               listRef={flatListRef}
-              data={['Item 1', 'Item 2', 'Item 3', 'Item 4', 'Item 5', 'Item 6', 'Item 7']}
+              data={[
+                'Item 1',
+                'Item 2',
+                'Item 3',
+                'Item 4',
+                'Item 5',
+                'Item 6',
+                'Item 7',
+              ]}
               keyExtractor={(item) => item}
-              renderItem={({ item, index }: { item: string; index: number }) => (
+              renderItem={({
+                item,
+                index,
+              }: {
+                item: string;
+                index: number;
+              }) => (
                 <div
                   key={index}
-                  style={{ padding: '10px 14px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}
+                  style={{
+                    padding: '10px 14px',
+                    borderBottom: '1px solid rgba(0,0,0,0.06)',
+                  }}
                 >
                   <Text size="sm">{item}</Text>
                 </div>
@@ -551,21 +857,28 @@ function ListsTab(): React.ReactElement {
           </div>
         </Section>
 
-        <Section title="AnimatedList / AnimatedListItem" description="List with slide-in animations for new items">
+        <Section
+          title="AnimatedList / AnimatedListItem"
+          description="List with slide-in animations for new items"
+        >
           <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
             <Button
               variant="primary"
               onClick={() => {
                 const next = `Item ${Date.now() % 10000}`;
                 setAnimatedItems((prev) => [next, ...prev]);
-              }} data-id="add-item"
+              }}
+              data-id="add-item"
             >
               Add Item
             </Button>
             <Button
               variant="secondary"
-              onClick={() => { setAnimatedItems((prev) => prev.slice(1)); }}
-              disabled={animatedItems.length === 0} data-id="remove-first"
+              onClick={() => {
+                setAnimatedItems((prev) => prev.slice(1));
+              }}
+              disabled={animatedItems.length === 0}
+              data-id="remove-first"
             >
               Remove First
             </Button>
@@ -573,7 +886,14 @@ function ListsTab(): React.ReactElement {
           <AnimatedList>
             {animatedItems.map((item) => (
               <AnimatedListItem key={item} itemKey={item} variant="slide">
-                <div style={{ padding: '8px 12px', marginBottom: 4, borderRadius: 6, background: 'rgba(0,0,0,0.04)' }}>
+                <div
+                  style={{
+                    padding: '8px 12px',
+                    marginBottom: 4,
+                    borderRadius: 6,
+                    background: 'rgba(0,0,0,0.04)',
+                  }}
+                >
                   <Text size="sm">{item}</Text>
                 </div>
               </AnimatedListItem>
@@ -581,12 +901,18 @@ function ListsTab(): React.ReactElement {
           </AnimatedList>
         </Section>
 
-        <Section title="AnimatedPresenceList" description="List with exit animations when items are removed">
+        <Section
+          title="AnimatedPresenceList"
+          description="List with exit animations when items are removed"
+        >
           <div style={{ marginBottom: 10 }}>
             <Button
               variant="secondary"
-              onClick={() => { setPresenceItems((prev) => prev.slice(1)); }}
-              disabled={presenceItems.length === 0} data-id="remove-first-2"
+              onClick={() => {
+                setPresenceItems((prev) => prev.slice(1));
+              }}
+              disabled={presenceItems.length === 0}
+              data-id="remove-first-2"
             >
               Remove First
             </Button>
@@ -611,24 +937,76 @@ function ListsTab(): React.ReactElement {
             )}
           />
           {presenceItems.length === 0 && (
-            <Button variant="secondary" onClick={() => { setPresenceItems(['One', 'Two', 'Three', 'Four']); }} data-id="reset">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setPresenceItems(['One', 'Two', 'Three', 'Four']);
+              }}
+              data-id="reset"
+            >
               Reset
             </Button>
           )}
         </Section>
 
-        <Section title="Pager" description="Horizontally paginated slides with dot indicators">
-          <div style={{ height: 120, overflow: 'hidden', borderRadius: 8, border: '1px solid rgba(0,0,0,0.08)' }}>
+        <Section
+          title="Pager"
+          description="Horizontally paginated slides with dot indicators"
+        >
+          <div
+            style={{
+              height: 120,
+              overflow: 'hidden',
+              borderRadius: 8,
+              border: '1px solid rgba(0,0,0,0.08)',
+            }}
+          >
             <Pager
               items={[
-                <div key="1" style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--app-primary, #2563eb)', borderRadius: 8 }}>
-                  <Text weight="bold" color="white">Slide 1</Text>
+                <div
+                  key="1"
+                  style={{
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'var(--app-primary, #2563eb)',
+                    borderRadius: 8,
+                  }}
+                >
+                  <Text weight="bold" color="white">
+                    Slide 1
+                  </Text>
                 </div>,
-                <div key="2" style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#7c3aed', borderRadius: 8 }}>
-                  <Text weight="bold" color="white">Slide 2</Text>
+                <div
+                  key="2"
+                  style={{
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: '#7c3aed',
+                    borderRadius: 8,
+                  }}
+                >
+                  <Text weight="bold" color="white">
+                    Slide 2
+                  </Text>
                 </div>,
-                <div key="3" style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#059669', borderRadius: 8 }}>
-                  <Text weight="bold" color="white">Slide 3</Text>
+                <div
+                  key="3"
+                  style={{
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: '#059669',
+                    borderRadius: 8,
+                  }}
+                >
+                  <Text weight="bold" color="white">
+                    Slide 3
+                  </Text>
                 </div>,
               ]}
               delay={0}
@@ -637,16 +1015,46 @@ function ListsTab(): React.ReactElement {
           </div>
         </Section>
 
-        <Section title="CardStack" description="Swipeable card stack — drag or use buttons">
-          <div style={{ height: 220, position: 'relative', overflow: 'hidden' }}>
+        <Section
+          title="CardStack"
+          description="Swipeable card stack — drag or use buttons"
+        >
+          <div
+            style={{ height: 220, position: 'relative', overflow: 'hidden' }}
+          >
             <CardStack
               items={cardItems}
-              renderCard={(item: { label: string }, actions: CardStackActions) => (
-                <div style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: 16 }}>
-                  <Text size="lg" weight="bold">{item.label}</Text>
+              renderCard={(
+                item: { label: string },
+                actions: CardStackActions,
+              ) => (
+                <div
+                  style={{
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    padding: 16,
+                  }}
+                >
+                  <Text size="lg" weight="bold">
+                    {item.label}
+                  </Text>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <Button variant="error" onClick={actions.dislike} data-id="pass">✕ Pass</Button>
-                    <Button variant="primary" onClick={actions.like} data-id="like">✓ Like</Button>
+                    <Button
+                      variant="error"
+                      onClick={actions.dislike}
+                      data-id="pass"
+                    >
+                      ✕ Pass
+                    </Button>
+                    <Button
+                      variant="primary"
+                      onClick={actions.like}
+                      data-id="like"
+                    >
+                      ✓ Like
+                    </Button>
                   </div>
                 </div>
               )}
@@ -654,7 +1062,10 @@ function ListsTab(): React.ReactElement {
           </div>
         </Section>
 
-        <Section title="ResponsiveGrid" description="Grid with automatic responsive column sizing">
+        <Section
+          title="ResponsiveGrid"
+          description="Grid with automatic responsive column sizing"
+        >
           <ResponsiveGrid
             data={['A', 'B', 'C', 'D', 'E', 'F']}
             columns={3}
@@ -672,12 +1083,13 @@ function ListsTab(): React.ReactElement {
                   justifyContent: 'center',
                 }}
               >
-                <Text weight="bold" color="white">{item}</Text>
+                <Text weight="bold" color="white">
+                  {item}
+                </Text>
               </div>
             )}
           />
         </Section>
-
       </div>
     </ScrollView>
   );
@@ -698,9 +1110,18 @@ function NavigationTab(): React.ReactElement {
   const [wizardDone, setWizardDone] = useState(false);
 
   const miniTabDictionary: TabPickerDictionary<MiniTab> = {
-    alpha: { text: 'Alpha', content: <Text size="sm">Content for the Alpha tab.</Text> },
-    beta: { text: 'Beta', content: <Text size="sm">Content for the Beta tab.</Text> },
-    gamma: { text: 'Gamma', content: <Text size="sm">Content for the Gamma tab.</Text> },
+    alpha: {
+      text: 'Alpha',
+      content: <Text size="sm">Content for the Alpha tab.</Text>,
+    },
+    beta: {
+      text: 'Beta',
+      content: <Text size="sm">Content for the Beta tab.</Text>,
+    },
+    gamma: {
+      text: 'Gamma',
+      content: <Text size="sm">Content for the Gamma tab.</Text>,
+    },
   };
 
   const headerMiniDictionary: TabPickerDictionary<HeaderMiniTab> = {
@@ -710,10 +1131,20 @@ function NavigationTab(): React.ReactElement {
 
   return (
     <ScrollView>
-      <div style={{ maxWidth: 640, margin: '0 auto', padding: '16px 16px 48px' }}>
-
-        <Section title="TabPicker" description="Underline-style tab bar (used for this page's own tabs)">
-          <div style={{ border: '1px solid rgba(0,0,0,0.08)', borderRadius: 8, overflow: 'hidden' }}>
+      <div
+        style={{ maxWidth: 640, margin: '0 auto', padding: '16px 16px 48px' }}
+      >
+        <Section
+          title="TabPicker"
+          description="Underline-style tab bar (used for this page's own tabs)"
+        >
+          <div
+            style={{
+              border: '1px solid rgba(0,0,0,0.08)',
+              borderRadius: 8,
+              overflow: 'hidden',
+            }}
+          >
             <TabPicker
               tabs={MINI_TABS}
               tabDictionary={miniTabDictionary}
@@ -730,7 +1161,10 @@ function NavigationTab(): React.ReactElement {
           </div>
         </Section>
 
-        <Section title="HeaderTabPicker" description="Pill/segment-style tab selector for headers">
+        <Section
+          title="HeaderTabPicker"
+          description="Pill/segment-style tab selector for headers"
+        >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <HeaderTabPicker
               tabs={HEADER_MINI_TABS}
@@ -738,31 +1172,57 @@ function NavigationTab(): React.ReactElement {
               selectedTab={headerMiniTab}
               setSelectedTab={setHeaderMiniTab}
             />
-            <span style={{ opacity: 0.6 }}><Text size="sm">Selected: {headerMiniTab}</Text></span>
+            <span style={{ opacity: 0.6 }}>
+              <Text size="sm">Selected: {headerMiniTab}</Text>
+            </span>
           </div>
         </Section>
 
-        <Section title="WizardView" description="Multi-step form with progress bar and navigation">
+        <Section
+          title="WizardView"
+          description="Multi-step form with progress bar and navigation"
+        >
           {wizardDone ? (
             <div style={{ padding: 16, textAlign: 'center' }}>
-              <Text size="lg" weight="bold">Wizard completed!</Text>
+              <Text size="lg" weight="bold">
+                Wizard completed!
+              </Text>
               <div style={{ marginTop: 12 }}>
-                <Button variant="secondary" onClick={() => { setWizardDone(false); setWizardStep(0); }} data-id="reset-2">
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setWizardDone(false);
+                    setWizardStep(0);
+                  }}
+                  data-id="reset-2"
+                >
                   Reset
                 </Button>
               </div>
             </div>
           ) : (
-            <div style={{ height: 320, position: 'relative', overflow: 'hidden' }}>
+            <div
+              style={{ height: 320, position: 'relative', overflow: 'hidden' }}
+            >
               <WizardView
                 steps={[
                   {
                     key: 's1',
                     content: (
                       <div style={{ padding: 16 }}>
-                        <Text size="lg" weight="bold">Step 1: Welcome</Text>
-                        <span style={{ marginTop: 8, opacity: 0.6, display: 'block' }}>
-                          <Text size="sm">First step of the wizard. Click Next to continue.</Text>
+                        <Text size="lg" weight="bold">
+                          Step 1: Welcome
+                        </Text>
+                        <span
+                          style={{
+                            marginTop: 8,
+                            opacity: 0.6,
+                            display: 'block',
+                          }}
+                        >
+                          <Text size="sm">
+                            First step of the wizard. Click Next to continue.
+                          </Text>
                         </span>
                       </div>
                     ),
@@ -772,9 +1232,20 @@ function NavigationTab(): React.ReactElement {
                     key: 's2',
                     content: (
                       <div style={{ padding: 16 }}>
-                        <Text size="lg" weight="bold">Step 2: Configure</Text>
-                        <span style={{ marginTop: 8, opacity: 0.6, display: 'block' }}>
-                          <Text size="sm">Second step. Back and Next buttons appear automatically.</Text>
+                        <Text size="lg" weight="bold">
+                          Step 2: Configure
+                        </Text>
+                        <span
+                          style={{
+                            marginTop: 8,
+                            opacity: 0.6,
+                            display: 'block',
+                          }}
+                        >
+                          <Text size="sm">
+                            Second step. Back and Next buttons appear
+                            automatically.
+                          </Text>
                         </span>
                       </div>
                     ),
@@ -784,9 +1255,19 @@ function NavigationTab(): React.ReactElement {
                     key: 's3',
                     content: (
                       <div style={{ padding: 16 }}>
-                        <Text size="lg" weight="bold">Step 3: Confirm</Text>
-                        <span style={{ marginTop: 8, opacity: 0.6, display: 'block' }}>
-                          <Text size="sm">Final step. Press Done to complete the wizard.</Text>
+                        <Text size="lg" weight="bold">
+                          Step 3: Confirm
+                        </Text>
+                        <span
+                          style={{
+                            marginTop: 8,
+                            opacity: 0.6,
+                            display: 'block',
+                          }}
+                        >
+                          <Text size="sm">
+                            Final step. Press Done to complete the wizard.
+                          </Text>
                         </span>
                       </div>
                     ),
@@ -795,42 +1276,85 @@ function NavigationTab(): React.ReactElement {
                 ]}
                 currentStep={wizardStep}
                 onStepChange={setWizardStep}
-                onComplete={() => { setWizardDone(true); }}
+                onComplete={() => {
+                  setWizardDone(true);
+                }}
                 progressStyle="bar"
               />
             </div>
           )}
         </Section>
 
-        <Section title="SettingGroup" description="Grouped settings rows with label and dividers">
+        <Section
+          title="SettingGroup"
+          description="Grouped settings rows with label and dividers"
+        >
           <SettingGroup
             label="Preferences"
             items={[
-              <div key="notif" style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+              <div
+                key="notif"
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  width: '100%',
+                }}
+              >
                 <div>
-                  <Text size="sm" weight="medium">Notifications</Text>
-                  <span style={{ opacity: 0.5 }}><Text size="xs">Receive push notifications</Text></span>
+                  <Text size="sm" weight="medium">
+                    Notifications
+                  </Text>
+                  <span style={{ opacity: 0.5 }}>
+                    <Text size="xs">Receive push notifications</Text>
+                  </span>
                 </div>
-                <span style={{ opacity: 0.4 }}><Text size="sm">On</Text></span>
+                <span style={{ opacity: 0.4 }}>
+                  <Text size="sm">On</Text>
+                </span>
               </div>,
-              <div key="dark" style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+              <div
+                key="dark"
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  width: '100%',
+                }}
+              >
                 <div>
-                  <Text size="sm" weight="medium">Dark mode</Text>
-                  <span style={{ opacity: 0.5 }}><Text size="xs">Use system default</Text></span>
+                  <Text size="sm" weight="medium">
+                    Dark mode
+                  </Text>
+                  <span style={{ opacity: 0.5 }}>
+                    <Text size="xs">Use system default</Text>
+                  </span>
                 </div>
-                <span style={{ opacity: 0.4 }}><Text size="sm">Auto</Text></span>
+                <span style={{ opacity: 0.4 }}>
+                  <Text size="sm">Auto</Text>
+                </span>
               </div>,
-              <div key="lang" style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+              <div
+                key="lang"
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  width: '100%',
+                }}
+              >
                 <div>
-                  <Text size="sm" weight="medium">Language</Text>
-                  <span style={{ opacity: 0.5 }}><Text size="xs">Display language</Text></span>
+                  <Text size="sm" weight="medium">
+                    Language
+                  </Text>
+                  <span style={{ opacity: 0.5 }}>
+                    <Text size="xs">Display language</Text>
+                  </span>
                 </div>
-                <span style={{ opacity: 0.4 }}><Text size="sm">English</Text></span>
+                <span style={{ opacity: 0.4 }}>
+                  <Text size="sm">English</Text>
+                </span>
               </div>,
             ]}
           />
         </Section>
-
       </div>
     </ScrollView>
   );
@@ -858,22 +1382,36 @@ function AdvancedTab(): React.ReactElement {
 
   return (
     <ScrollView>
-      <div style={{ maxWidth: 640, margin: '0 auto', padding: '16px 16px 48px' }}>
-
-        <Section title="DrawingCanvas" description="Freehand drawing canvas with color picker and eraser">
+      <div
+        style={{ maxWidth: 640, margin: '0 auto', padding: '16px 16px 48px' }}
+      >
+        <Section
+          title="DrawingCanvas"
+          description="Freehand drawing canvas with color picker and eraser"
+        >
           <div style={{ maxWidth: 400, margin: '0 auto' }}>
             {drawingDone ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div
+                style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
+              >
                 {drawnImage && (
                   <img
                     src={drawnImage}
                     alt="Your drawing"
-                    style={{ width: '100%', borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)' }}
+                    style={{
+                      width: '100%',
+                      borderRadius: 8,
+                      border: '1px solid rgba(0,0,0,0.1)',
+                    }}
                   />
                 )}
                 <Button
                   variant="secondary"
-                  onClick={() => { setDrawingDone(false); setDrawnImage(null); }} data-id="draw-again"
+                  onClick={() => {
+                    setDrawingDone(false);
+                    setDrawnImage(null);
+                  }}
+                  data-id="draw-again"
                 >
                   Draw Again
                 </Button>
@@ -881,18 +1419,30 @@ function AdvancedTab(): React.ReactElement {
             ) : (
               <DrawingCanvas
                 onComplete={handleDrawingComplete}
-                onCancel={() => { setDrawingDone(false); setDrawnImage(null); }}
+                onCancel={() => {
+                  setDrawingDone(false);
+                  setDrawnImage(null);
+                }}
                 size={512}
               />
             )}
           </div>
         </Section>
 
-        <Section title="TransformWrapper / TransformComponent" description="Pinch-to-zoom and pan for any content">
+        <Section
+          title="TransformWrapper / TransformComponent"
+          description="Pinch-to-zoom and pan for any content"
+        >
           <span style={{ opacity: 0.5, display: 'block', marginBottom: 8 }}>
             <Text size="xs">Scroll or pinch to zoom, drag to pan</Text>
           </span>
-          <div style={{ overflow: 'hidden', borderRadius: 8, border: '1px solid rgba(0,0,0,0.08)' }}>
+          <div
+            style={{
+              overflow: 'hidden',
+              borderRadius: 8,
+              border: '1px solid rgba(0,0,0,0.08)',
+            }}
+          >
             <TransformWrapper>
               <TransformComponent>
                 <img
@@ -905,30 +1455,67 @@ function AdvancedTab(): React.ReactElement {
           </div>
         </Section>
 
-        <Section title="ScrollAnimatedView" description="Animate children when they scroll into view">
+        <Section
+          title="ScrollAnimatedView"
+          description="Animate children when they scroll into view"
+        >
           <span style={{ opacity: 0.5, display: 'block', marginBottom: 8 }}>
-            <Text size="xs">Items animate in as they enter the viewport (scroll down if needed)</Text>
+            <Text size="xs">
+              Items animate in as they enter the viewport (scroll down if
+              needed)
+            </Text>
           </span>
           {['First item', 'Second item', 'Third item'].map((text, i) => (
-            <ScrollAnimatedView key={text} animation="slideUp" delay={i * 100} threshold={0.1}>
-              <div style={{ padding: '12px 16px', marginBottom: 8, borderRadius: 8, background: 'rgba(0,0,0,0.04)', width: '100%' }}>
+            <ScrollAnimatedView
+              key={text}
+              animation="slideUp"
+              delay={i * 100}
+              threshold={0.1}
+            >
+              <div
+                style={{
+                  padding: '12px 16px',
+                  marginBottom: 8,
+                  borderRadius: 8,
+                  background: 'rgba(0,0,0,0.04)',
+                  width: '100%',
+                }}
+              >
                 <Text size="sm">{text}</Text>
               </div>
             </ScrollAnimatedView>
           ))}
         </Section>
 
-        <Section title="StaggeredAnimationContainer" description="Staggered entry animation for a group of children">
+        <Section
+          title="StaggeredAnimationContainer"
+          description="Staggered entry animation for a group of children"
+        >
           <div style={{ marginBottom: 10 }}>
-            <Button variant="secondary" onClick={() => { setStaggerKey((k) => k + 1); }} data-id="replay">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setStaggerKey((k) => k + 1);
+              }}
+              data-id="replay"
+            >
               Replay
             </Button>
           </div>
-          <StaggeredAnimationContainer key={staggerKey} animation="fadeIn" baseDelay={100}>
+          <StaggeredAnimationContainer
+            key={staggerKey}
+            animation="fadeIn"
+            baseDelay={100}
+          >
             {['Item A', 'Item B', 'Item C', 'Item D'].map((label) => (
               <div
                 key={label}
-                style={{ padding: '8px 12px', marginBottom: 6, borderRadius: 6, background: 'rgba(0,0,0,0.04)' }}
+                style={{
+                  padding: '8px 12px',
+                  marginBottom: 6,
+                  borderRadius: 6,
+                  background: 'rgba(0,0,0,0.04)',
+                }}
               >
                 <Text size="sm">{label}</Text>
               </div>
@@ -936,9 +1523,16 @@ function AdvancedTab(): React.ReactElement {
           </StaggeredAnimationContainer>
         </Section>
 
-        <Section title="Animated + useAnimatedValue" description="Animate any CSS property with spring physics">
+        <Section
+          title="Animated + useAnimatedValue"
+          description="Animate any CSS property with spring physics"
+        >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <Button variant="secondary" onClick={toggleOpacity} data-id="toggle-opacity">
+            <Button
+              variant="secondary"
+              onClick={toggleOpacity}
+              data-id="toggle-opacity"
+            >
               {isHidden ? 'Fade in' : 'Fade out'}
             </Button>
             <Animated.div
@@ -949,11 +1543,12 @@ function AdvancedTab(): React.ReactElement {
                 background: 'var(--app-primary, #2563eb)',
               }}
             >
-              <Text weight="bold" color="white">Animated opacity via useAnimatedValue</Text>
+              <Text weight="bold" color="white">
+                Animated opacity via useAnimatedValue
+              </Text>
             </Animated.div>
           </div>
         </Section>
-
       </div>
     </ScrollView>
   );
@@ -961,19 +1556,31 @@ function AdvancedTab(): React.ReactElement {
 
 // ─── Page shell ────────────────────────────────────────────────────────────────
 
-type TabId = 'layout' | 'inputs' | 'feedback' | 'lists' | 'navigation' | 'advanced';
-const TABS: TabId[] = ['layout', 'inputs', 'feedback', 'lists', 'navigation', 'advanced'];
+type TabId =
+  'layout' | 'inputs' | 'feedback' | 'lists' | 'navigation' | 'advanced';
+const TABS: TabId[] = [
+  'layout',
+  'inputs',
+  'feedback',
+  'lists',
+  'navigation',
+  'advanced',
+];
 
 export default function UIComponentsPage(): React.ReactElement {
-  const [selectedTab, setSelectedTab] = useSelectedTab<TabId>('layout', TABS, 'ui-components-tab');
+  const [selectedTab, setSelectedTab] = useSelectedTab<TabId>(
+    'layout',
+    TABS,
+    'ui-components-tab',
+  );
 
   const tabDictionary: TabPickerDictionary<TabId> = {
-    layout:     { text: 'Layout',     content: <LayoutTab /> },
-    inputs:     { text: 'Inputs',     content: <InputsTab /> },
-    feedback:   { text: 'Feedback',   content: <FeedbackTab /> },
-    lists:      { text: 'Lists',      content: <ListsTab /> },
+    layout: { text: 'Layout', content: <LayoutTab /> },
+    inputs: { text: 'Inputs', content: <InputsTab /> },
+    feedback: { text: 'Feedback', content: <FeedbackTab /> },
+    lists: { text: 'Lists', content: <ListsTab /> },
     navigation: { text: 'Navigation', content: <NavigationTab /> },
-    advanced:   { text: 'Advanced',   content: <AdvancedTab /> },
+    advanced: { text: 'Advanced', content: <AdvancedTab /> },
   };
 
   return (
@@ -981,10 +1588,18 @@ export default function UIComponentsPage(): React.ReactElement {
       header={
         <div>
           <div style={{ padding: '12px 16px 4px' }}>
-            <a href="/test" style={{ fontSize: 13, opacity: 0.5, textDecoration: 'none' }} data-id="tests">← Tests</a>
+            <a
+              href="/test"
+              style={{ fontSize: 13, opacity: 0.5, textDecoration: 'none' }}
+              data-id="tests"
+            >
+              ← Tests
+            </a>
           </div>
           <div style={{ padding: '4px 16px 8px' }}>
-            <Text size="xl" weight="bold">UI Components</Text>
+            <Text size="xl" weight="bold">
+              UI Components
+            </Text>
             <span style={{ opacity: 0.5, display: 'block' }}>
               <Text size="sm">Live demos of all built-in components</Text>
             </span>
@@ -998,7 +1613,11 @@ export default function UIComponentsPage(): React.ReactElement {
         </div>
       }
     >
-      <TabContent tabs={TABS} tabDictionary={tabDictionary} selectedTab={selectedTab} />
+      <TabContent
+        tabs={TABS}
+        tabDictionary={tabDictionary}
+        selectedTab={selectedTab}
+      />
     </PageLayout>
   );
 }

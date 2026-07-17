@@ -41,15 +41,23 @@ export default function UploadTestPage(): React.ReactElement {
   async function uploadFile(file: File): Promise<void> {
     setUploading(true);
     const started = Date.now();
-    addLog(`Uploading "${file.name}" (${formatSize(file.size)}, ${file.type || 'unknown type'})`);
+    addLog(
+      `Uploading "${file.name}" (${formatSize(file.size)}, ${file.type || 'unknown type'})`,
+    );
     try {
       const key = `uploads/${Date.now()}-${file.name}`;
       addLog(`Key: ${key}`);
       const url = await socket.uploadFile(file, key);
       addLog(`Done in ${fmt(Date.now() - started)} — ${url}`, 'ok');
-      setUploads((prev) => [...prev, { name: file.name, size: file.size, type: file.type, url }]);
+      setUploads((prev) => [
+        ...prev,
+        { name: file.name, size: file.size, type: file.type, url },
+      ]);
     } catch (err) {
-      addLog(`Failed: ${err instanceof Error ? err.message : String(err)}`, 'err');
+      addLog(
+        `Failed: ${err instanceof Error ? err.message : String(err)}`,
+        'err',
+      );
     } finally {
       setUploading(false);
     }
@@ -71,7 +79,9 @@ export default function UploadTestPage(): React.ReactElement {
     <PageLayout
       header={
         <div>
-          <a href="/test" data-id="tests">← Tests</a>
+          <a href="/test" data-id="tests">
+            ← Tests
+          </a>
         </div>
       }
     >
@@ -80,8 +90,13 @@ export default function UploadTestPage(): React.ReactElement {
 
         <Card>
           <div
-            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-            onDragLeave={() => { setDragOver(false); }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => {
+              setDragOver(false);
+            }}
             onDrop={handleDrop}
             style={{
               border: `2px dashed ${dragOver ? '#4f8' : '#666'}`,
@@ -91,12 +106,17 @@ export default function UploadTestPage(): React.ReactElement {
               transition: 'border-color 0.2s',
             }}
           >
-            <p>{dragOver ? 'Drop file here' : 'Drag & drop a file here, or click below'}</p>
+            <p>
+              {dragOver
+                ? 'Drop file here'
+                : 'Drag & drop a file here, or click below'}
+            </p>
             <input
               type="file"
               onChange={handleFileChange}
               disabled={uploading}
-              style={{ marginTop: 8 }} data-id="input"
+              style={{ marginTop: 8 }}
+              data-id="input"
             />
           </div>
         </Card>
@@ -120,16 +140,29 @@ export default function UploadTestPage(): React.ReactElement {
             {uploads.map((entry, i) => (
               <div key={i} style={{ marginBottom: 16 }}>
                 <div>
-                  <strong>{entry.name}</strong> — {formatSize(entry.size)} — {entry.type || 'unknown type'}
+                  <strong>{entry.name}</strong> — {formatSize(entry.size)} —{' '}
+                  {entry.type || 'unknown type'}
                 </div>
                 <div style={{ fontSize: '0.85em', wordBreak: 'break-all' }}>
-                  <a href={entry.url} target="_blank" rel="noreferrer" data-id="url">{entry.url}</a>
+                  <a
+                    href={entry.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    data-id="url"
+                  >
+                    {entry.url}
+                  </a>
                 </div>
                 {entry.type.startsWith('image/') && (
                   <img
                     src={entry.url}
                     alt={entry.name}
-                    style={{ maxWidth: 320, maxHeight: 240, marginTop: 8, borderRadius: 4 }}
+                    style={{
+                      maxWidth: 320,
+                      maxHeight: 240,
+                      marginTop: 8,
+                      borderRadius: 4,
+                    }}
                   />
                 )}
               </div>
@@ -140,10 +173,21 @@ export default function UploadTestPage(): React.ReactElement {
         <Card>
           <h2>How it works</h2>
           <ol>
-            <li><code>socket.uploadFile(file, key)</code> requests a presigned URL from the server</li>
-            <li>The file is PUT directly to the storage backend (MinIO locally, R2 in prod)</li>
-            <li>The returned URL points to the uploaded file in the temp bucket</li>
-            <li>To keep files long-term, promote them to the public bucket via <code>ctx.storage.moveToPublic()</code></li>
+            <li>
+              <code>socket.uploadFile(file, key)</code> requests a presigned URL
+              from the server
+            </li>
+            <li>
+              The file is PUT directly to the storage backend (MinIO locally, R2
+              in prod)
+            </li>
+            <li>
+              The returned URL points to the uploaded file in the temp bucket
+            </li>
+            <li>
+              To keep files long-term, promote them to the public bucket via{' '}
+              <code>ctx.storage.moveToPublic()</code>
+            </li>
           </ol>
         </Card>
       </div>

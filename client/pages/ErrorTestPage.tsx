@@ -22,7 +22,9 @@ export default function ErrorTestPage(): React.ReactElement {
 
   function handleCaptureClientError(): void {
     const msg = `[ErrorTest] captureClientError test ${Date.now()}`;
-    captureClientError(msg, new Error('Test client error'), { source: 'ErrorTestPage' });
+    captureClientError(msg, new Error('Test client error'), {
+      source: 'ErrorTestPage',
+    });
     addLog(`Sent captureClientError: ${msg}`, 'ok');
   }
 
@@ -65,7 +67,9 @@ export default function ErrorTestPage(): React.ReactElement {
     <PageLayout
       header={
         <div>
-          <a href="/test" data-id="tests">← Tests</a>
+          <a href="/test" data-id="tests">
+            ← Tests
+          </a>
         </div>
       }
     >
@@ -75,16 +79,28 @@ export default function ErrorTestPage(): React.ReactElement {
         <Card>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <h3>Client Errors</h3>
-            <Button data-id="btn-console-error" onClick={handleClientConsoleError}>
+            <Button
+              data-id="btn-console-error"
+              onClick={handleClientConsoleError}
+            >
               Trigger console.error
             </Button>
-            <Button data-id="btn-capture-error" onClick={handleCaptureClientError}>
+            <Button
+              data-id="btn-capture-error"
+              onClick={handleCaptureClientError}
+            >
               Trigger captureClientError
             </Button>
-            <Button data-id="btn-unhandled-error" onClick={handleUnhandledError}>
+            <Button
+              data-id="btn-unhandled-error"
+              onClick={handleUnhandledError}
+            >
               Trigger Unhandled Error
             </Button>
-            <Button data-id="btn-unhandled-rejection" onClick={handleUnhandledRejection}>
+            <Button
+              data-id="btn-unhandled-rejection"
+              onClick={handleUnhandledRejection}
+            >
               Trigger Unhandled Rejection
             </Button>
           </div>
@@ -93,7 +109,12 @@ export default function ErrorTestPage(): React.ReactElement {
         <Card>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <h3>Server Errors</h3>
-            <Button data-id="btn-server-error" onClick={() => { void handleServerError(); }}>
+            <Button
+              data-id="btn-server-error"
+              onClick={() => {
+                void handleServerError();
+              }}
+            >
               Trigger Server Error
             </Button>
           </div>
@@ -103,7 +124,11 @@ export default function ErrorTestPage(): React.ReactElement {
           <div data-id="error-test-logs">
             {logs.map((entry, i) => (
               <div key={i}>
-                {entry.kind === 'err' ? '\u2717' : entry.kind === 'ok' ? '\u2713' : '\u00b7'}{' '}
+                {entry.kind === 'err'
+                  ? '\u2717'
+                  : entry.kind === 'ok'
+                    ? '\u2713'
+                    : '\u00b7'}{' '}
                 {entry.msg}
               </div>
             ))}

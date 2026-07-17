@@ -15,7 +15,11 @@ interface IconProps {
 }
 
 /** Solid play triangle (lucide "play", filled). */
-export function PlayIcon({ size = 24, style, className }: IconProps): React.ReactElement {
+export function PlayIcon({
+  size = 24,
+  style,
+  className,
+}: IconProps): React.ReactElement {
   return (
     <svg
       width={size}
@@ -34,7 +38,11 @@ export function PlayIcon({ size = 24, style, className }: IconProps): React.Reac
 }
 
 /** Two bars (lucide "pause", filled). */
-export function PauseIcon({ size = 24, style, className }: IconProps): React.ReactElement {
+export function PauseIcon({
+  size = 24,
+  style,
+  className,
+}: IconProps): React.ReactElement {
   return (
     <svg
       width={size}

@@ -6,7 +6,12 @@ const puts: Array<{ key: string; bytes: Uint8Array; mime: string }> = [];
 vi.mock('ugly-app/server/adapter/workers', () => ({
   getAdapter: () => ({
     storage: {
-      put: async (_bucket: string, key: string, bytes: Uint8Array, mime: string) => {
+      put: async (
+        _bucket: string,
+        key: string,
+        bytes: Uint8Array,
+        mime: string,
+      ) => {
         puts.push({ key, bytes, mime });
       },
       url: (_bucket: string, key: string) => `https://news.ugly.bot/r2/${key}`,
@@ -27,13 +32,22 @@ describe('genImage R2 hosting', () => {
     const b64 = Buffer.from(new Uint8Array([1, 2, 3, 4, 5])).toString('base64');
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => new Response(JSON.stringify({ base64: b64, mime: 'image/jpeg' }), { status: 200 })),
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ base64: b64, mime: 'image/jpeg' }), {
+            status: 200,
+          }),
+      ),
     );
     const { genImage } = await import('../../../server/news/ai');
 
     const url = await genImage('a satirical newspaper illustration');
 
-    expect(url).toBe('https://news.ugly.bot/r2/gen-images/' + hashHex([1, 2, 3, 4, 5]) + '.jpg');
+    expect(url).toBe(
+      'https://news.ugly.bot/r2/gen-images/' +
+        hashHex([1, 2, 3, 4, 5]) +
+        '.jpg',
+    );
     expect(url).not.toContain('data:');
     expect(puts).toHaveLength(1);
     expect(puts[0]!.mime).toBe('image/jpeg');
@@ -43,7 +57,12 @@ describe('genImage R2 hosting', () => {
   it('passes through a url the proxy already hosts', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => new Response(JSON.stringify({ url: 'https://cdn.example/img.png' }), { status: 200 })),
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ url: 'https://cdn.example/img.png' }), {
+            status: 200,
+          }),
+      ),
     );
     const { genImage } = await import('../../../server/news/ai');
     expect(await genImage('x')).toBe('https://cdn.example/img.png');
@@ -53,6 +72,9 @@ describe('genImage R2 hosting', () => {
 
 function hashHex(bytes: number[]): string {
   // recompute the sha256 the impl uses, so the test asserts the real key
-  const buf = require('node:crypto').createHash('sha256').update(Buffer.from(bytes)).digest('hex');
+  const buf = require('node:crypto')
+    .createHash('sha256')
+    .update(Buffer.from(bytes))
+    .digest('hex');
   return buf;
 }

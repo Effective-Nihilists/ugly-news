@@ -28,7 +28,9 @@ const CLUSTER_WINDOW_MS = 72 * 60 * 60 * 1000;
 // merges before the 0.68-0.72 "same topic, different event" muddy zone. Default
 // 0.74; raise if unrelated stories merge, lower if sides stay split.
 // eslint-disable-next-line @typescript-eslint/dot-notation
-const SIMILARITY_THRESHOLD = Number(process.env['CLUSTER_SIM_THRESHOLD'] ?? '0.74');
+const SIMILARITY_THRESHOLD = Number(
+  process.env['CLUSTER_SIM_THRESHOLD'] ?? '0.74',
+);
 const CANDIDATE_LIMIT = 400;
 const SATIRE_MIN_ARTICLES = 3;
 
@@ -58,7 +60,12 @@ function ratingsPerOutlet(feedIds: string[]): MemberSourceRating[] {
     const key = sid ?? `feed:${fid}`;
     if (byOutlet.has(key)) continue;
     const src = sid ? sourceById[sid] : undefined;
-    byOutlet.set(key, src ? { biasScore: src.biasScore, factuality: src.factuality } : { biasScore: null, factuality: null });
+    byOutlet.set(
+      key,
+      src
+        ? { biasScore: src.biasScore, factuality: src.factuality }
+        : { biasScore: null, factuality: null },
+    );
   }
   return [...byOutlet.values()];
 }
@@ -70,7 +77,10 @@ function recomputeAggregates(
   now: number,
   firstSeenAt: number,
   engagement: number,
-): Pick<NewsCluster, 'biasBreakdown' | 'blindspotSide' | 'factualityAvg' | 'score'> {
+): Pick<
+  NewsCluster,
+  'biasBreakdown' | 'blindspotSide' | 'factualityAvg' | 'score'
+> {
   const ratings = ratingsPerOutlet(feedIds); // distinct outlets, not per-article
   const biasBreakdown = computeBiasBreakdown(ratings);
   const blindspotSide = detectBlindspot(biasBreakdown);
@@ -127,10 +137,17 @@ export async function assignFileToCluster(
   // whose activity is too far from this article's own publish time, BEFORE the
   // cosine match — so "same topic, different day/event" starts a fresh cluster.
   const eligible = candidates.filter((c) =>
-    clusterAcceptsArticle({ firstSeenAt: c.firstSeenAt, lastUpdatedAt: c.lastUpdatedAt }, articleCreatedMs, now),
+    clusterAcceptsArticle(
+      { firstSeenAt: c.firstSeenAt, lastUpdatedAt: c.lastUpdatedAt },
+      articleCreatedMs,
+      now,
+    ),
   );
 
-  const eligibleMapped = eligible.map((c) => ({ id: c._id, centroid: c.centroid }));
+  const eligibleMapped = eligible.map((c) => ({
+    id: c._id,
+    centroid: c.centroid,
+  }));
   // Best candidate REGARDLESS of threshold (threshold -1 accepts any cosine), so
   // we can record near-misses for live threshold calibration.
   const best = assignToCluster(embedding, eligibleMapped, -1);
@@ -149,7 +166,10 @@ export async function assignFileToCluster(
   // (wrangler tail / Logpush). Aggregate sim1000 by matched → tune the threshold:
   // if the matched=false tail bunches just below `threshold`, lower it.
   if (best) {
-    recordPerfSample(match ? 'cluster.simMatched' : 'cluster.simNearMiss', Math.round(best.similarity * 1000));
+    recordPerfSample(
+      match ? 'cluster.simMatched' : 'cluster.simNearMiss',
+      Math.round(best.similarity * 1000),
+    );
     console.log(
       `[cluster-sim] sim1000=${Math.round(best.similarity * 1000)} matched=${match !== null} ` +
         `threshold=${SIMILARITY_THRESHOLD} cat=${category} feed=${feedId} nearest=${best.clusterId}`,
@@ -200,18 +220,26 @@ export async function assignFileToCluster(
       // Trigger synthesis / satire FROM THE ARTICLE FLOW (the queue processes
       // reliably) rather than the standalone clusterSweep cron, which wasn't
       // firing in prod. Gated to the crossing transition so each fires once.
-      const grewToMultiSide = distinctBuckets(agg.biasBreakdown) >= 2 && distinctBuckets(cluster.biasBreakdown) < 2;
+      const grewToMultiSide =
+        distinctBuckets(agg.biasBreakdown) >= 2 &&
+        distinctBuckets(cluster.biasBreakdown) < 2;
       if (grewToMultiSide && !cluster.neutralSummary) {
         await enqueueTask('clusterSynthesize', { clusterId: cluster._id });
-        console.log(`[cluster] → enqueued clusterSynthesize for ${cluster._id} (now spans ≥2 sides)`);
+        console.log(
+          `[cluster] → enqueued clusterSynthesize for ${cluster._id} (now spans ≥2 sides)`,
+        );
       }
       if (fileIds.length === SATIRE_MIN_ARTICLES && !cluster.uglyTakeFileId) {
         await enqueueTask('clusterSatirize', { clusterId: cluster._id });
-        console.log(`[cluster] → enqueued clusterSatirize for ${cluster._id} (reached ${SATIRE_MIN_ARTICLES} articles)`);
+        console.log(
+          `[cluster] → enqueued clusterSatirize for ${cluster._id} (reached ${SATIRE_MIN_ARTICLES} articles)`,
+        );
       }
       return cluster._id;
     }
-    console.warn(`[cluster] matched ${match.clusterId} but candidate not found — creating new cluster instead`);
+    console.warn(
+      `[cluster] matched ${match.clusterId} but candidate not found — creating new cluster instead`,
+    );
   }
 
   // No match → start a new single-member cluster.
@@ -241,7 +269,9 @@ export async function assignFileToCluster(
   };
   await db.setDoc(collections.newsCluster, cluster);
   await markFileCluster(db, file, _id);
-  console.log(`[cluster] created ${_id} from file=${file._id} feed=${feedId} cat=${category} source=${sourceId ?? 'unrated'}`);
+  console.log(
+    `[cluster] created ${_id} from file=${file._id} feed=${feedId} cat=${category} source=${sourceId ?? 'unrated'}`,
+  );
   return _id;
 }
 
@@ -253,7 +283,9 @@ async function markFileCluster(
 ): Promise<void> {
   const fresh = await db.getDoc(collections.file, file._id);
   if (!fresh) {
-    console.warn(`[cluster] markFileCluster: file ${file._id} vanished before clusterId stamp (cluster=${clusterId})`);
+    console.warn(
+      `[cluster] markFileCluster: file ${file._id} vanished before clusterId stamp (cluster=${clusterId})`,
+    );
     return;
   }
   await db.setDoc(collections.file, {

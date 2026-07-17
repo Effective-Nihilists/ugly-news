@@ -79,11 +79,19 @@ function dateLabel(ms: number): string {
   if (day(d) === day(now)) return 'Today';
   if (day(d) === day(y)) return 'Yesterday';
   return d
-    .toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+    .toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    })
     .toUpperCase();
 }
 
-function groupByDate<T>(items: T[], ms: (t: T) => number): { label: string; rows: T[] }[] {
+function groupByDate<T>(
+  items: T[],
+  ms: (t: T) => number,
+): { label: string; rows: T[] }[] {
   const groups: { label: string; rows: T[] }[] = [];
   for (const it of items) {
     const label = dateLabel(ms(it));
@@ -154,8 +162,12 @@ export default function ArchivePage(): React.ReactElement {
 
   // Debounce the search box.
   React.useEffect(() => {
-    const id = setTimeout(() => { setDebounced(query.trim()); }, 300);
-    return () => { clearTimeout(id); };
+    const id = setTimeout(() => {
+      setDebounced(query.trim());
+    }, 300);
+    return () => {
+      clearTimeout(id);
+    };
   }, [query]);
 
   // (Re)load page 0 whenever the tab or search term changes.
@@ -163,30 +175,72 @@ export default function ArchivePage(): React.ReactElement {
     let alive = true;
     setLoading(true);
     if (tab === 'stories') {
-      rpc<{ items: StoryCard[]; hasMore: boolean }>('newsArchive', { limit: PAGE, skip: 0, query: debounced || undefined })
-        .then((r) => { if (alive) { setStories(r.items); setStoryMore(r.hasMore); } })
-        .catch(() => { if (alive) { setStories([]); setStoryMore(false); } })
-        .finally(() => { if (alive) setLoading(false); });
+      rpc<{ items: StoryCard[]; hasMore: boolean }>('newsArchive', {
+        limit: PAGE,
+        skip: 0,
+        query: debounced || undefined,
+      })
+        .then((r) => {
+          if (alive) {
+            setStories(r.items);
+            setStoryMore(r.hasMore);
+          }
+        })
+        .catch(() => {
+          if (alive) {
+            setStories([]);
+            setStoryMore(false);
+          }
+        })
+        .finally(() => {
+          if (alive) setLoading(false);
+        });
     } else {
-      rpc<{ items: PodcastCard[]; hasMore: boolean }>('newsPodcastArchive', { limit: PAGE, skip: 0 })
-        .then((r) => { if (alive) { setPods(r.items); setPodMore(r.hasMore); } })
-        .catch(() => { if (alive) { setPods([]); setPodMore(false); } })
-        .finally(() => { if (alive) setLoading(false); });
+      rpc<{ items: PodcastCard[]; hasMore: boolean }>('newsPodcastArchive', {
+        limit: PAGE,
+        skip: 0,
+      })
+        .then((r) => {
+          if (alive) {
+            setPods(r.items);
+            setPodMore(r.hasMore);
+          }
+        })
+        .catch(() => {
+          if (alive) {
+            setPods([]);
+            setPodMore(false);
+          }
+        })
+        .finally(() => {
+          if (alive) setLoading(false);
+        });
     }
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [tab, debounced]);
 
   async function loadMore(): Promise<void> {
     if (tab === 'stories') {
-      const r = await rpc<{ items: StoryCard[]; hasMore: boolean }>('newsArchive', {
-        limit: PAGE, skip: stories.length, query: debounced || undefined,
-      });
+      const r = await rpc<{ items: StoryCard[]; hasMore: boolean }>(
+        'newsArchive',
+        {
+          limit: PAGE,
+          skip: stories.length,
+          query: debounced || undefined,
+        },
+      );
       setStories((s) => [...s, ...r.items]);
       setStoryMore(r.hasMore);
     } else {
-      const r = await rpc<{ items: PodcastCard[]; hasMore: boolean }>('newsPodcastArchive', {
-        limit: PAGE, skip: pods.length,
-      });
+      const r = await rpc<{ items: PodcastCard[]; hasMore: boolean }>(
+        'newsPodcastArchive',
+        {
+          limit: PAGE,
+          skip: pods.length,
+        },
+      );
       setPods((p) => [...p, ...r.items]);
       setPodMore(r.hasMore);
     }
@@ -206,14 +260,20 @@ export default function ArchivePage(): React.ReactElement {
   const empty = !loading && currentCount === 0;
 
   const mono = (size: number, color = C.muted): React.CSSProperties => ({
-    fontFamily: 'IBM Plex Mono, monospace', fontSize: size, letterSpacing: '0.08em', textTransform: 'uppercase', color,
+    fontFamily: 'IBM Plex Mono, monospace',
+    fontSize: size,
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+    color,
   });
 
   const renderStory = (a: StoryCard): React.ReactElement => (
     <a
       key={a.id}
       href={`/article/${a.id}`}
-      onClick={navClick(() => { router.push('article/:id', { id: a.id }); })}
+      onClick={navClick(() => {
+        router.push('article/:id', { id: a.id });
+      })}
       className="ar-card ar-link"
       style={{
         display: 'grid',
@@ -222,20 +282,72 @@ export default function ArchivePage(): React.ReactElement {
         padding: '16px 0',
         borderBottom: `1px solid rgba(26,23,20,0.16)`,
         alignItems: 'start',
-      }} data-id="a"
+      }}
+      data-id="a"
     >
       <div>
-        {a.category && <div style={{ ...mono(10.5, C.accent), letterSpacing: '0.16em', marginBottom: 5 }}>{a.category}</div>}
-        <h3 className="ar-title" style={{ fontFamily: 'Spectral, serif', fontWeight: 600, fontSize: 21, lineHeight: 1.18, margin: '0 0 6px' }}>{a.title}</h3>
-        <p style={{ fontFamily: 'Spectral, serif', fontSize: 15.5, lineHeight: 1.5, color: '#3a342c', margin: '0 0 6px' }}>{a.summary}</p>
+        {a.category && (
+          <div
+            style={{
+              ...mono(10.5, C.accent),
+              letterSpacing: '0.16em',
+              marginBottom: 5,
+            }}
+          >
+            {a.category}
+          </div>
+        )}
+        <h3
+          className="ar-title"
+          style={{
+            fontFamily: 'Spectral, serif',
+            fontWeight: 600,
+            fontSize: 21,
+            lineHeight: 1.18,
+            margin: '0 0 6px',
+          }}
+        >
+          {a.title}
+        </h3>
+        <p
+          style={{
+            fontFamily: 'Spectral, serif',
+            fontSize: 15.5,
+            lineHeight: 1.5,
+            color: '#3a342c',
+            margin: '0 0 6px',
+          }}
+        >
+          {a.summary}
+        </p>
         <div style={mono(10.5)}>
-          {new Date(a.createdMs).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase()}
+          {new Date(a.createdMs)
+            .toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            .toUpperCase()}
           {a.feedId ? ` · ${a.feedId}` : ''} · Read →
         </div>
       </div>
       {a.thumbnailUri && (
-        <div style={{ overflow: 'hidden', border: `1px solid rgba(26,23,20,0.18)`, alignSelf: 'stretch', minHeight: 84 }}>
-          <img src={a.thumbnailUri} alt="" className="ar-img" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', aspectRatio: '4/3' }} />
+        <div
+          style={{
+            overflow: 'hidden',
+            border: `1px solid rgba(26,23,20,0.18)`,
+            alignSelf: 'stretch',
+            minHeight: 84,
+          }}
+        >
+          <img
+            src={a.thumbnailUri}
+            alt=""
+            className="ar-img"
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              display: 'block',
+              aspectRatio: '4/3',
+            }}
+          />
         </div>
       )}
     </a>
@@ -260,23 +372,52 @@ export default function ArchivePage(): React.ReactElement {
         paddingBottom: 'env(safe-area-inset-bottom)',
         paddingLeft: 'env(safe-area-inset-left)',
         paddingRight: 'env(safe-area-inset-right)',
-        backgroundImage: 'radial-gradient(rgba(26,23,20,0.05) 1px, transparent 1px)',
+        backgroundImage:
+          'radial-gradient(rgba(26,23,20,0.05) 1px, transparent 1px)',
         backgroundSize: '3px 3px',
       }}
     >
       <style dangerouslySetInnerHTML={{ __html: STYLE }} />
 
-      <div style={{ maxWidth: 1040, margin: '0 auto', padding: 'clamp(18px,4vw,40px) clamp(18px,5vw,56px) 80px' }}>
+      <div
+        style={{
+          maxWidth: 1040,
+          margin: '0 auto',
+          padding: 'clamp(18px,4vw,40px) clamp(18px,5vw,56px) 80px',
+        }}
+      >
         {/* Masthead */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-          <a href="/" onClick={navClick(() => { router.push('', {}); })} className="ar-link" style={mono(12, C.ink)} data-id="the-ugly-press">← The Ugly Press</a>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 6,
+          }}
+        >
+          <a
+            href="/"
+            onClick={navClick(() => {
+              router.push('', {});
+            })}
+            className="ar-link"
+            style={mono(12, C.ink)}
+            data-id="the-ugly-press"
+          >
+            ← The Ugly Press
+          </a>
           <span style={mono(11)}>The Archive</span>
         </div>
         <div style={{ height: 6, background: C.ink, marginBottom: 6 }} />
         <h1
           style={{
-            fontFamily: 'Anton, sans-serif', fontWeight: 400, fontSize: 'clamp(40px,9vw,96px)',
-            lineHeight: 0.86, textTransform: 'uppercase', margin: '6px 0 4px', textAlign: 'center',
+            fontFamily: 'Anton, sans-serif',
+            fontWeight: 400,
+            fontSize: 'clamp(40px,9vw,96px)',
+            lineHeight: 0.86,
+            textTransform: 'uppercase',
+            margin: '6px 0 4px',
+            textAlign: 'center',
           }}
         >
           The Archive
@@ -287,25 +428,65 @@ export default function ArchivePage(): React.ReactElement {
         </p>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 18 }}>
-          <button className={`ar-tab ${tab === 'stories' ? 'active' : ''}`} onClick={() => { setTab('stories'); }} data-id="stories">Stories</button>
-          <button className={`ar-tab ${tab === 'podcasts' ? 'active' : ''}`} onClick={() => { setTab('podcasts'); }} data-id="podcasts">Podcasts</button>
+        <div
+          style={{
+            display: 'flex',
+            gap: 10,
+            justifyContent: 'center',
+            marginBottom: 18,
+          }}
+        >
+          <button
+            className={`ar-tab ${tab === 'stories' ? 'active' : ''}`}
+            onClick={() => {
+              setTab('stories');
+            }}
+            data-id="stories"
+          >
+            Stories
+          </button>
+          <button
+            className={`ar-tab ${tab === 'podcasts' ? 'active' : ''}`}
+            onClick={() => {
+              setTab('podcasts');
+            }}
+            data-id="podcasts"
+          >
+            Podcasts
+          </button>
         </div>
 
         {/* Search row — reserve the same height on both tabs so toggling
             doesn't shove the results up/down. Input on Stories; caption on
             Podcasts fills the reserved space. */}
-        <div style={{ marginBottom: 26, height: 60, display: 'flex', alignItems: 'center' }}>
+        <div
+          style={{
+            marginBottom: 26,
+            height: 60,
+            display: 'flex',
+            alignItems: 'center',
+          }}
+        >
           {tab === 'stories' ? (
             <input
               className="ar-search"
               value={query}
-              onChange={(e) => { setQuery(e.target.value); }}
+              onChange={(e) => {
+                setQuery(e.target.value);
+              }}
               placeholder="Search the stories…"
-              aria-label="Search stories" data-id="search-stories"
+              aria-label="Search stories"
+              data-id="search-stories"
             />
           ) : (
-            <p style={{ ...mono(11), width: '100%', textAlign: 'center', margin: 0 }}>
+            <p
+              style={{
+                ...mono(11),
+                width: '100%',
+                textAlign: 'center',
+                margin: 0,
+              }}
+            >
               Every daily episode, newest first
             </p>
           )}
@@ -315,70 +496,138 @@ export default function ArchivePage(): React.ReactElement {
             loading / empty / a short Podcasts list never collapse the page and
             tab switches don't produce a big vertical jump. */}
         <div style={{ minHeight: '65vh' }}>
-        {initialLoading && <p style={{ ...mono(13), textAlign: 'center', padding: 40 }}>Pulling the back issues…</p>}
+          {initialLoading && (
+            <p style={{ ...mono(13), textAlign: 'center', padding: 40 }}>
+              Pulling the back issues…
+            </p>
+          )}
 
-        {empty && (
-          <p style={{ fontFamily: 'Spectral, serif', fontStyle: 'italic', fontSize: 20, textAlign: 'center', padding: 50, color: C.muted }}>
-            {tab === 'stories' && debounced ? `No stories match “${debounced}”.` : 'Nothing in the archive yet.'}
-          </p>
-        )}
+          {empty && (
+            <p
+              style={{
+                fontFamily: 'Spectral, serif',
+                fontStyle: 'italic',
+                fontSize: 20,
+                textAlign: 'center',
+                padding: 50,
+                color: C.muted,
+              }}
+            >
+              {tab === 'stories' && debounced
+                ? `No stories match “${debounced}”.`
+                : 'Nothing in the archive yet.'}
+            </p>
+          )}
 
-        {/* Results stay mounted while a new query loads — dim, don't unmount. */}
-        {!initialLoading && !empty && (
-          <div style={{ opacity: loading ? 0.5 : 1, transition: 'opacity 0.18s ease' }}>
-            {/* Stories — flat relevance list when searching, else grouped by date */}
-            {tab === 'stories' && searchActive && stories.length > 0 && (
-              <section>
-                <DateHeader label={`Results for “${debounced}”`} />
-                {stories.map(renderStory)}
-              </section>
-            )}
-            {tab === 'stories' && !searchActive && storyGroups.map((g) => (
-              <section key={g.label}>
-                <DateHeader label={g.label} />
-                {g.rows.map(renderStory)}
-              </section>
-            ))}
-
-            {/* Podcasts */}
-            {tab === 'podcasts' && podGroups.map((g) => (
-              <section key={g.label}>
-                <DateHeader label={g.label} />
-                {g.rows.map((p) => (
-                  <a
-                    key={p.id}
-                    href="/podcast"
-                    onClick={navClick(() => { router.push('podcast', {}); })}
-                    className="ar-card ar-link"
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: '54px 1fr',
-                      gap: 18,
-                      padding: '18px 0',
-                      borderBottom: `1px solid rgba(26,23,20,0.16)`,
-                      alignItems: 'center',
-                    }} data-id="a-2"
-                  >
-                    <div style={{ width: 54, height: 54, borderRadius: '50%', background: C.accent, color: C.paper, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-                      <PlayIcon size={18} style={{ marginLeft: 2 }} />
-                    </div>
-                    <div>
-                      <div style={{ ...mono(10.5, C.accent), letterSpacing: '0.16em', marginBottom: 5 }}>The Daily Podcast</div>
-                      <h3 className="ar-title" style={{ fontFamily: 'Anton, sans-serif', fontWeight: 400, fontSize: 24, lineHeight: 0.98, textTransform: 'uppercase', margin: '0 0 6px' }}>{p.title}</h3>
-                      <div style={mono(10.5)}>{fmtMin(p.durationMs)} · {p.articleCount} stories</div>
-                    </div>
-                  </a>
+          {/* Results stay mounted while a new query loads — dim, don't unmount. */}
+          {!initialLoading && !empty && (
+            <div
+              style={{
+                opacity: loading ? 0.5 : 1,
+                transition: 'opacity 0.18s ease',
+              }}
+            >
+              {/* Stories — flat relevance list when searching, else grouped by date */}
+              {tab === 'stories' && searchActive && stories.length > 0 && (
+                <section>
+                  <DateHeader label={`Results for “${debounced}”`} />
+                  {stories.map(renderStory)}
+                </section>
+              )}
+              {tab === 'stories' &&
+                !searchActive &&
+                storyGroups.map((g) => (
+                  <section key={g.label}>
+                    <DateHeader label={g.label} />
+                    {g.rows.map(renderStory)}
+                  </section>
                 ))}
-              </section>
-            ))}
 
-            {hasMore && (
-              <div style={{ textAlign: 'center', marginTop: 34 }}>
-                <button className="ar-more" disabled={loading} onClick={() => { void loadMore(); }} data-id="load-more">Load more →</button>
-              </div>
-            )}
-          </div>
-        )}
+              {/* Podcasts */}
+              {tab === 'podcasts' &&
+                podGroups.map((g) => (
+                  <section key={g.label}>
+                    <DateHeader label={g.label} />
+                    {g.rows.map((p) => (
+                      <a
+                        key={p.id}
+                        href="/podcast"
+                        onClick={navClick(() => {
+                          router.push('podcast', {});
+                        })}
+                        className="ar-card ar-link"
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: '54px 1fr',
+                          gap: 18,
+                          padding: '18px 0',
+                          borderBottom: `1px solid rgba(26,23,20,0.16)`,
+                          alignItems: 'center',
+                        }}
+                        data-id="a-2"
+                      >
+                        <div
+                          style={{
+                            width: 54,
+                            height: 54,
+                            borderRadius: '50%',
+                            background: C.accent,
+                            color: C.paper,
+                            display: 'grid',
+                            placeItems: 'center',
+                            flexShrink: 0,
+                          }}
+                        >
+                          <PlayIcon size={18} style={{ marginLeft: 2 }} />
+                        </div>
+                        <div>
+                          <div
+                            style={{
+                              ...mono(10.5, C.accent),
+                              letterSpacing: '0.16em',
+                              marginBottom: 5,
+                            }}
+                          >
+                            The Daily Podcast
+                          </div>
+                          <h3
+                            className="ar-title"
+                            style={{
+                              fontFamily: 'Anton, sans-serif',
+                              fontWeight: 400,
+                              fontSize: 24,
+                              lineHeight: 0.98,
+                              textTransform: 'uppercase',
+                              margin: '0 0 6px',
+                            }}
+                          >
+                            {p.title}
+                          </h3>
+                          <div style={mono(10.5)}>
+                            {fmtMin(p.durationMs)} · {p.articleCount} stories
+                          </div>
+                        </div>
+                      </a>
+                    ))}
+                  </section>
+                ))}
+
+              {hasMore && (
+                <div style={{ textAlign: 'center', marginTop: 34 }}>
+                  <button
+                    className="ar-more"
+                    disabled={loading}
+                    onClick={() => {
+                      void loadMore();
+                    }}
+                    data-id="load-more"
+                  >
+                    Load more →
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

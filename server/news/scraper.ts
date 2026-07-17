@@ -22,12 +22,18 @@ const SUMMARY_PROMPT = `Rewrite this article as a complete news article in your 
 const BOT_COMMENT_PROMPT = `You are Ugly Bot, a brutally honest and sardonic AI commentator. Write a 1-2 sentence opening comment for a news article discussion thread that makes an insightful observation (not a summary), points out an angle or irony readers might miss, and invites discussion without being generic. Output only the comment text, no quotes.`;
 
 /** Generate the newsBot's opening comment for an article (or null). */
-export async function generateBotComment(title: string, content: string): Promise<string | null> {
+export async function generateBotComment(
+  title: string,
+  content: string,
+): Promise<string | null> {
   const truncated = truncateToApproximateTokens(content, 1500);
   const comment = await genText(
     [
       { role: 'system', content: BOT_COMMENT_PROMPT },
-      { role: 'user', content: `Title: ${title}\n\nArticle content:\n${truncated}` },
+      {
+        role: 'user',
+        content: `Title: ${title}\n\nArticle content:\n${truncated}`,
+      },
     ],
     { model: 'llama_4_scout', temperature: 0.7, maxTokens: 150 },
   );
@@ -44,11 +50,16 @@ const SCRAPE_TIMEOUT_MS = 10_000;
 
 async function crawlbaseFetch(url: string): Promise<string | null> {
   const controller = new AbortController();
-  const timer = setTimeout(() => { controller.abort(); }, SCRAPE_TIMEOUT_MS);
+  const timer = setTimeout(() => {
+    controller.abort();
+  }, SCRAPE_TIMEOUT_MS);
   try {
     const res = await fetch(url, {
       signal: controller.signal,
-      headers: { 'user-agent': 'Mozilla/5.0 (compatible; UglyNews/1.0; +https://ugly.press)' },
+      headers: {
+        'user-agent':
+          'Mozilla/5.0 (compatible; UglyNews/1.0; +https://ugly.press)',
+      },
     });
     if (!res.ok) return null;
     return await res.text();
@@ -64,11 +75,20 @@ async function crawlbaseFetch(url: string): Promise<string | null> {
 function extractWithArticleTag(html: string): string | null {
   try {
     const $ = cheerio.load(html);
-    const selectors = ['article', '[role="article"]', '.article-content', '.post-content', '.entry-content', 'main'];
+    const selectors = [
+      'article',
+      '[role="article"]',
+      '.article-content',
+      '.post-content',
+      '.entry-content',
+      'main',
+    ];
     for (const selector of selectors) {
       const el = $(selector);
       if (el.length > 0) {
-        el.find('script, style, nav, header, footer, aside, .ads, .comments, .social-share').remove();
+        el.find(
+          'script, style, nav, header, footer, aside, .ads, .comments, .social-share',
+        ).remove();
         const inner = el.html();
         if (inner) {
           const md = htmlToMarkdown(inner);
@@ -85,10 +105,15 @@ function extractWithArticleTag(html: string): string | null {
 function extractBodyText(html: string): string | null {
   try {
     const $ = cheerio.load(html);
-    $('script, style, nav, header, footer, aside, form, iframe, noscript, .ads, .comments, .social-share, .sidebar, .menu, .navigation').remove();
+    $(
+      'script, style, nav, header, footer, aside, form, iframe, noscript, .ads, .comments, .social-share, .sidebar, .menu, .navigation',
+    ).remove();
     const body = $('body').text();
     if (!body) return null;
-    const normalized = body.replace(/\s+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+    const normalized = body
+      .replace(/\s+/g, ' ')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
     return normalized.length > 200 ? normalized : null;
   } catch {
     return null;
@@ -103,7 +128,10 @@ export async function extractArticle(url: string): Promise<string | null> {
 
 // ── AI processing ────────────────────────────────────────────────────────
 
-export async function detectIfAdvertisement(title: string, content: string): Promise<boolean> {
+export async function detectIfAdvertisement(
+  title: string,
+  content: string,
+): Promise<boolean> {
   const truncated = truncateToApproximateTokens(content, 1500);
   const out = await genText(
     [
@@ -112,15 +140,24 @@ export async function detectIfAdvertisement(title: string, content: string): Pro
     ],
     { model: AI_MODEL, temperature: 0.1, maxTokens: 10 },
   );
-  return (out ?? '').trim().toUpperCase().includes('AD') && !(out ?? '').toUpperCase().includes('ARTICLE');
+  return (
+    (out ?? '').trim().toUpperCase().includes('AD') &&
+    !(out ?? '').toUpperCase().includes('ARTICLE')
+  );
 }
 
-export async function generateArticleSummary(title: string, content: string): Promise<string | null> {
+export async function generateArticleSummary(
+  title: string,
+  content: string,
+): Promise<string | null> {
   const truncated = truncateToApproximateTokens(content, 3000);
   const summary = await genText(
     [
       { role: 'system', content: SUMMARY_PROMPT },
-      { role: 'user', content: `Title: ${title}\n\nSource article:\n${truncated}` },
+      {
+        role: 'user',
+        content: `Title: ${title}\n\nSource article:\n${truncated}`,
+      },
     ],
     { model: AI_MODEL, temperature: 0.4, maxTokens: 1000 },
   );
@@ -132,7 +169,10 @@ export async function generateArticleSummary(title: string, content: string): Pr
 
 /** Scrape + summarize + image one article, then create its FileMarkdown.
  * The bot-comment conversation is created separately in Phase 3 wiring. */
-export async function dispatchArticleScrape(db: NewsDb, articleId: string): Promise<void> {
+export async function dispatchArticleScrape(
+  db: NewsDb,
+  articleId: string,
+): Promise<void> {
   const article = await db.getDoc(collections.newsArticle, articleId);
   if (!isDefined(article)) return;
   if (article.fileId) return; // already processed
@@ -159,8 +199,10 @@ export async function dispatchArticleScrape(db: NewsDb, articleId: string): Prom
   }
 
   // AI summary (fallback to extracted content).
-  const summary = (await generateArticleSummary(article.title, content)) ?? content;
-  const feedName = newsFeeds.find((f) => f.id === article.feedId)?.name ?? article.feedId;
+  const summary =
+    (await generateArticleSummary(article.title, content)) ?? content;
+  const feedName =
+    newsFeeds.find((f) => f.id === article.feedId)?.name ?? article.feedId;
   const markdown = [
     summary,
     '',
@@ -186,7 +228,9 @@ export async function dispatchArticleScrape(db: NewsDb, articleId: string): Prom
     markdown,
     title: article.title,
     text: summary.slice(0, 500),
-    thumbnail: imageUri ? { type: 'public', uri: imageUri, width: 1280, height: 720 } : null,
+    thumbnail: imageUri
+      ? { type: 'public', uri: imageUri, width: 1280, height: 720 }
+      : null,
     tags: [category],
     uris: article.uri ? [article.uri] : undefined,
     sourceUri: article.uri,

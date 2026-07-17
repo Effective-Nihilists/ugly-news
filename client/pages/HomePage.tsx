@@ -4,7 +4,12 @@ import { useRouter } from '../router';
 import { navClick } from '../nav';
 import { PlayIcon } from '../components/Icon';
 import { requestPushPermission } from '../push';
-import { BlindspotStrip, TopStoriesRail, UglyTakeSection, type UglyTakeCard } from '../newsUi';
+import {
+  BlindspotStrip,
+  TopStoriesRail,
+  UglyTakeSection,
+  type UglyTakeCard,
+} from '../newsUi';
 import { composeTicker } from '../../shared/news/satire-ui';
 
 /**
@@ -139,28 +144,38 @@ function FrontPage(): React.ReactElement | null {
       .catch(() => {
         if (alive) setFailed(true);
       });
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, []);
 
   // Hide the whole section until we have stories — keeps the marketing page
   // intact on a cold cache, shows the real paper once articles exist.
-  if (failed || (items?.length === 0)) return null;
+  if (failed || items?.length === 0) return null;
 
   // A front-page lead should be visual — pick the first image-bearing story as
   // the lead (fall back to the newest) so the hero never renders imageless.
   const all = items ?? [];
-  const leadIdx = Math.max(0, all.findIndex((c) => c.thumbnailUri));
+  const leadIdx = Math.max(
+    0,
+    all.findIndex((c) => c.thumbnailUri),
+  );
   const lead = all[leadIdx];
   // Cap the secondary column so it doesn't tower over the lead (which would
   // stretch the hero image to an ungainly height). 8 keeps the columns balanced.
   const rest = all.filter((_, i) => i !== leadIdx).slice(0, 8);
   const fmt = (ms: number) =>
-    new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
+    new Date(ms)
+      .toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      .toUpperCase();
 
   return (
     <section
       id="front"
-      style={{ padding: 'clamp(28px,5vw,56px) clamp(20px,5vw,64px)', borderBottom: `3px double ${C.ink}` }}
+      style={{
+        padding: 'clamp(28px,5vw,56px) clamp(20px,5vw,64px)',
+        borderBottom: `3px double ${C.ink}`,
+      }}
     >
       <div
         style={{
@@ -177,21 +192,51 @@ function FrontPage(): React.ReactElement | null {
         }}
       >
         <span>Off the wire — latest</span>
-        <a href="/archive" onClick={navClick(() => { router.push('archive', {}); })} className="un-link" style={{ color: C.accent, textDecoration: 'none' }} data-id="full-archive">Full archive →</a>
+        <a
+          href="/archive"
+          onClick={navClick(() => {
+            router.push('archive', {});
+          })}
+          className="un-link"
+          style={{ color: C.accent, textDecoration: 'none' }}
+          data-id="full-archive"
+        >
+          Full archive →
+        </a>
       </div>
 
       {!items && (
-        <p style={{ fontFamily: 'IBM Plex Mono, monospace', color: C.muted }}>Setting today’s type…</p>
+        <p style={{ fontFamily: 'IBM Plex Mono, monospace', color: C.muted }}>
+          Setting today’s type…
+        </p>
       )}
 
       {items && lead && (
         <div
           className="un-front-grid"
-          style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 'clamp(20px,3vw,44px)' }}
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1.5fr 1fr',
+            gap: 'clamp(20px,3vw,44px)',
+          }}
         >
           {/* Lead story — flex column whose image fills the cell the grid
               stretches to the secondary column's height (kills the empty gap). */}
-          <a href={`/article/${lead.id}`} onClick={navClick(() => { router.push('article/:id', { id: lead.id }); })} className="un-card un-lead un-fade" style={{ textDecoration: 'none', color: C.ink, display: 'flex', flexDirection: 'column', height: '100%' }} data-id="a">
+          <a
+            href={`/article/${lead.id}`}
+            onClick={navClick(() => {
+              router.push('article/:id', { id: lead.id });
+            })}
+            className="un-card un-lead un-fade"
+            style={{
+              textDecoration: 'none',
+              color: C.ink,
+              display: 'flex',
+              flexDirection: 'column',
+              height: '100%',
+            }}
+            data-id="a"
+          >
             <div
               style={{
                 position: 'relative',
@@ -208,7 +253,14 @@ function FrontPage(): React.ReactElement | null {
                   src={lead.thumbnailUri}
                   alt=""
                   className="un-card-img"
-                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    display: 'block',
+                  }}
                 />
               ) : (
                 <div
@@ -220,25 +272,68 @@ function FrontPage(): React.ReactElement | null {
                     background: `repeating-linear-gradient(45deg, ${C.ink}, ${C.ink} 11px, #241f1b 11px, #241f1b 22px)`,
                   }}
                 >
-                  <span style={{ fontFamily: 'Anton, sans-serif', fontSize: 'clamp(36px,6vw,76px)', color: 'rgba(241,236,224,0.16)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <span
+                    style={{
+                      fontFamily: 'Anton, sans-serif',
+                      fontSize: 'clamp(36px,6vw,76px)',
+                      color: 'rgba(241,236,224,0.16)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.04em',
+                    }}
+                  >
                     Ugly Press
                   </span>
                 </div>
               )}
             </div>
             {lead.category && (
-              <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: C.accent, marginBottom: 8 }}>
+              <div
+                style={{
+                  fontFamily: 'IBM Plex Mono, monospace',
+                  fontSize: 11.5,
+                  letterSpacing: '0.18em',
+                  textTransform: 'uppercase',
+                  color: C.accent,
+                  marginBottom: 8,
+                }}
+              >
                 {lead.category}
               </div>
             )}
-            <h2 className="un-card-title" style={{ fontFamily: 'Anton, sans-serif', fontWeight: 400, fontSize: 'clamp(30px,4.4vw,52px)', lineHeight: 0.94, textTransform: 'uppercase', margin: '0 0 12px' }}>
+            <h2
+              className="un-card-title"
+              style={{
+                fontFamily: 'Anton, sans-serif',
+                fontWeight: 400,
+                fontSize: 'clamp(30px,4.4vw,52px)',
+                lineHeight: 0.94,
+                textTransform: 'uppercase',
+                margin: '0 0 12px',
+              }}
+            >
               {lead.title}
             </h2>
-            <p style={{ fontFamily: 'Spectral, serif', fontSize: 18, lineHeight: 1.5, margin: '0 0 8px' }}>
+            <p
+              style={{
+                fontFamily: 'Spectral, serif',
+                fontSize: 18,
+                lineHeight: 1.5,
+                margin: '0 0 8px',
+              }}
+            >
               {lead.summary}
             </p>
-            <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.muted }}>
-              {fmt(lead.createdMs)}{lead.feedId ? ` · ${lead.feedId}` : ''} · Read →
+            <div
+              style={{
+                fontFamily: 'IBM Plex Mono, monospace',
+                fontSize: 11,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                color: C.muted,
+              }}
+            >
+              {fmt(lead.createdMs)}
+              {lead.feedId ? ` · ${lead.feedId}` : ''} · Read →
             </div>
           </a>
 
@@ -248,7 +343,9 @@ function FrontPage(): React.ReactElement | null {
               <a
                 key={a.id}
                 href={`/article/${a.id}`}
-                onClick={navClick(() => { router.push('article/:id', { id: a.id }); })}
+                onClick={navClick(() => {
+                  router.push('article/:id', { id: a.id });
+                })}
                 className="un-card un-row un-fade"
                 style={{
                   textDecoration: 'none',
@@ -259,24 +356,68 @@ function FrontPage(): React.ReactElement | null {
                   padding: '14px 0',
                   borderTop: i === 0 ? 'none' : `1px solid rgba(26,23,20,0.18)`,
                   animationDelay: `${0.05 * i}s`,
-                }} data-id="a-2"
+                }}
+                data-id="a-2"
               >
                 <div>
                   {a.category && (
-                    <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10.5, letterSpacing: '0.16em', textTransform: 'uppercase', color: C.accent, marginBottom: 4 }}>
+                    <div
+                      style={{
+                        fontFamily: 'IBM Plex Mono, monospace',
+                        fontSize: 10.5,
+                        letterSpacing: '0.16em',
+                        textTransform: 'uppercase',
+                        color: C.accent,
+                        marginBottom: 4,
+                      }}
+                    >
                       {a.category}
                     </div>
                   )}
-                  <h3 className="un-card-title" style={{ fontFamily: 'Spectral, serif', fontWeight: 600, fontSize: 18, lineHeight: 1.2, margin: '0 0 4px' }}>
+                  <h3
+                    className="un-card-title"
+                    style={{
+                      fontFamily: 'Spectral, serif',
+                      fontWeight: 600,
+                      fontSize: 18,
+                      lineHeight: 1.2,
+                      margin: '0 0 4px',
+                    }}
+                  >
                     {a.title}
                   </h3>
-                  <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10.5, letterSpacing: '0.08em', textTransform: 'uppercase', color: C.muted }}>
-                    {fmt(a.createdMs)}{a.feedId ? ` · ${a.feedId}` : ''}
+                  <div
+                    style={{
+                      fontFamily: 'IBM Plex Mono, monospace',
+                      fontSize: 10.5,
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      color: C.muted,
+                    }}
+                  >
+                    {fmt(a.createdMs)}
+                    {a.feedId ? ` · ${a.feedId}` : ''}
                   </div>
                 </div>
                 {a.thumbnailUri && (
-                  <div style={{ overflow: 'hidden', border: `1px solid rgba(26,23,20,0.18)`, alignSelf: 'start' }}>
-                    <img src={a.thumbnailUri} alt="" className="un-card-img" style={{ width: 84, height: 64, objectFit: 'cover', display: 'block' }} />
+                  <div
+                    style={{
+                      overflow: 'hidden',
+                      border: `1px solid rgba(26,23,20,0.18)`,
+                      alignSelf: 'start',
+                    }}
+                  >
+                    <img
+                      src={a.thumbnailUri}
+                      alt=""
+                      className="un-card-img"
+                      style={{
+                        width: 84,
+                        height: 64,
+                        objectFit: 'cover',
+                        display: 'block',
+                      }}
+                    />
                   </div>
                 )}
               </a>
@@ -308,9 +449,18 @@ function PodcastSpotlight(): React.ReactElement {
   React.useEffect(() => {
     let alive = true;
     rpc<{ podcast: PodcastSummary | null }>('newsPodcastGetDefault', {})
-      .then((r) => { if (alive) { setPod(r.podcast); setLoaded(true); } })
-      .catch(() => { if (alive) setLoaded(true); });
-    return () => { alive = false; };
+      .then((r) => {
+        if (alive) {
+          setPod(r.podcast);
+          setLoaded(true);
+        }
+      })
+      .catch(() => {
+        if (alive) setLoaded(true);
+      });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const ready = !!pod && pod.generationStatus === 'complete' && !!pod.audioUri;
@@ -324,9 +474,16 @@ function PodcastSpotlight(): React.ReactElement {
       : 'A fresh episode every morning';
 
   const eq = (
-    <div aria-hidden style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 18 }}>
+    <div
+      aria-hidden
+      style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 18 }}
+    >
       {[0, 1, 2, 3, 4].map((i) => (
-        <span key={i} className="un-eq-bar" style={{ height: '100%', animationDelay: `${i * 0.12}s` }} />
+        <span
+          key={i}
+          className="un-eq-bar"
+          style={{ height: '100%', animationDelay: `${i * 0.12}s` }}
+        />
       ))}
     </div>
   );
@@ -355,7 +512,9 @@ function PodcastSpotlight(): React.ReactElement {
         {/* Play button → podcast page */}
         <a
           href="/podcast"
-          onClick={navClick(() => { router.push('podcast', {}); })}
+          onClick={navClick(() => {
+            router.push('podcast', {});
+          })}
           aria-label="Play today’s podcast"
           style={{
             flexShrink: 0,
@@ -369,9 +528,16 @@ function PodcastSpotlight(): React.ReactElement {
             textDecoration: 'none',
             boxShadow: `0 0 0 4px ${C.ink}, 0 0 0 6px ${C.accent}`,
           }}
-          className="un-pod-play" data-id="play-todays-podcast"
+          className="un-pod-play"
+          data-id="play-todays-podcast"
         >
-          <PlayIcon style={{ width: 'clamp(28px,4.4vw,42px)', height: 'clamp(28px,4.4vw,42px)', marginLeft: '8%' }} />
+          <PlayIcon
+            style={{
+              width: 'clamp(28px,4.4vw,42px)',
+              height: 'clamp(28px,4.4vw,42px)',
+              marginLeft: '8%',
+            }}
+          />
         </a>
 
         {/* Episode meta */}
@@ -419,10 +585,19 @@ function PodcastSpotlight(): React.ReactElement {
           >
             {loaded ? statusLabel : 'Tuning in…'}
           </div>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: 12,
+              flexWrap: 'wrap',
+              alignItems: 'center',
+            }}
+          >
             <a
               href="/podcast"
-              onClick={navClick(() => { router.push('podcast', {}); })}
+              onClick={navClick(() => {
+                router.push('podcast', {});
+              })}
               className="un-pod-cta"
               style={{
                 fontFamily: 'IBM Plex Mono, monospace',
@@ -437,7 +612,8 @@ function PodcastSpotlight(): React.ReactElement {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 10,
-              }} data-id="a-3"
+              }}
+              data-id="a-3"
             >
               {ready ? 'Listen now' : 'Open the podcast'} →
             </a>
@@ -488,7 +664,8 @@ function isLoggedIn(): boolean {
 
 /** ugly.bot OAuth popup → /auth/verify → reload (same flow as AuthDemoPage). */
 function openLogin(): void {
-  const w = 480, h = 640;
+  const w = 480,
+    h = 640;
   window.open(
     `https://ugly.bot/oauth?origin=${encodeURIComponent(window.location.origin)}`,
     'ugly-bot-login',
@@ -503,12 +680,18 @@ function openLogin(): void {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code: data.code }),
-    }).then((res) => { if (res.ok) window.location.reload(); });
+    }).then((res) => {
+      if (res.ok) window.location.reload();
+    });
   }
   window.addEventListener('message', onMessage);
 }
 
-interface EmailPref { emailAllowed: boolean; timezone: string; lang: string }
+interface EmailPref {
+  emailAllowed: boolean;
+  timezone: string;
+  lang: string;
+}
 
 /** The 8 A.M. Edition subscribe widget — login-gated toggle that writes the
  *  user's email preference + detected timezone (drives the 8am-local cron). */
@@ -517,43 +700,81 @@ function EmailSignup(): React.ReactElement {
   const [pref, setPref] = React.useState<EmailPref | null>(null);
   const [busy, setBusy] = React.useState(false);
   const tz = React.useMemo(() => {
-    try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch { return 'UTC'; }
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    } catch {
+      return 'UTC';
+    }
   }, []);
 
   React.useEffect(() => {
     if (!loggedIn) return;
-    rpc<EmailPref>('newsEmailPrefGet', {}).then(setPref).catch(() => { setPref({ emailAllowed: false, timezone: tz, lang: 'en' }); });
+    rpc<EmailPref>('newsEmailPrefGet', {})
+      .then(setPref)
+      .catch(() => {
+        setPref({ emailAllowed: false, timezone: tz, lang: 'en' });
+      });
   }, [loggedIn, tz]);
 
   async function subscribe(next: boolean): Promise<void> {
     setBusy(true);
     try {
-      const r = await rpc<EmailPref>('newsEmailPrefSet', { emailAllowed: next, timezone: tz, lang: 'en' });
+      const r = await rpc<EmailPref>('newsEmailPrefSet', {
+        emailAllowed: next,
+        timezone: tz,
+        lang: 'en',
+      });
       setPref(r);
       // Subscribing also opts into the "new episode" push — register the device
       // (best-effort: a denied browser prompt must not fail the email opt-in).
       if (next) {
-        try { await requestPushPermission(); } catch { /* permission denied / unsupported */ }
+        try {
+          await requestPushPermission();
+        } catch {
+          /* permission denied / unsupported */
+        }
       }
-    } catch { /* surfaced by the disabled state */ }
+    } catch {
+      /* surfaced by the disabled state */
+    }
     setBusy(false);
   }
 
   const btn: React.CSSProperties = {
-    fontFamily: 'IBM Plex Mono, monospace', fontWeight: 600, letterSpacing: '0.12em',
-    textTransform: 'uppercase', fontSize: 12, padding: '12px 18px', cursor: 'pointer',
-    border: 'none', background: C.ink, color: C.paper, transition: 'background 0.2s ease',
+    fontFamily: 'IBM Plex Mono, monospace',
+    fontWeight: 600,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+    fontSize: 12,
+    padding: '12px 18px',
+    cursor: 'pointer',
+    border: 'none',
+    background: C.ink,
+    color: C.paper,
+    transition: 'background 0.2s ease',
   };
 
   if (!loggedIn) {
     return (
       <div style={{ marginTop: 14 }}>
-        <button style={btn} onClick={openLogin}
+        <button
+          style={btn}
+          onClick={openLogin}
           onMouseEnter={(e) => (e.currentTarget.style.background = C.accent)}
-          onMouseLeave={(e) => (e.currentTarget.style.background = C.ink)} data-id="sign-in-with-ugly">
+          onMouseLeave={(e) => (e.currentTarget.style.background = C.ink)}
+          data-id="sign-in-with-ugly"
+        >
           Sign in with ugly.bot →
         </button>
-        <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10.5, letterSpacing: '0.06em', color: C.muted, marginTop: 8 }}>
+        <div
+          style={{
+            fontFamily: 'IBM Plex Mono, monospace',
+            fontSize: 10.5,
+            letterSpacing: '0.06em',
+            color: C.muted,
+            marginTop: 8,
+          }}
+        >
           Sign in to get the edition in your inbox.
         </div>
       </div>
@@ -561,31 +782,80 @@ function EmailSignup(): React.ReactElement {
   }
 
   if (!pref) {
-    return <div style={{ marginTop: 14, fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: C.muted }}>Checking your subscription…</div>;
+    return (
+      <div
+        style={{
+          marginTop: 14,
+          fontFamily: 'IBM Plex Mono, monospace',
+          fontSize: 12,
+          color: C.muted,
+        }}
+      >
+        Checking your subscription…
+      </div>
+    );
   }
 
   return (
     <div style={{ marginTop: 14 }}>
       {pref.emailAllowed ? (
         <>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase', color: C.accent, marginBottom: 10 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              fontFamily: 'IBM Plex Mono, monospace',
+              fontSize: 12,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: C.accent,
+              marginBottom: 10,
+            }}
+          >
             ★ Subscribed — 8 a.m. {pref.timezone} + podcast ping
           </div>
-          <button style={{ ...btn, background: 'transparent', color: C.ink, boxShadow: `inset 0 0 0 2px ${C.ink}` }} disabled={busy}
-            onClick={() => { void subscribe(false); }} data-id="button">
+          <button
+            style={{
+              ...btn,
+              background: 'transparent',
+              color: C.ink,
+              boxShadow: `inset 0 0 0 2px ${C.ink}`,
+            }}
+            disabled={busy}
+            onClick={() => {
+              void subscribe(false);
+            }}
+            data-id="button"
+          >
             {busy ? '…' : 'Unsubscribe'}
           </button>
         </>
       ) : (
         <>
-          <button style={btn} disabled={busy}
-            onClick={() => { void subscribe(true); }}
+          <button
+            style={btn}
+            disabled={busy}
+            onClick={() => {
+              void subscribe(true);
+            }}
             onMouseEnter={(e) => (e.currentTarget.style.background = C.accent)}
-            onMouseLeave={(e) => (e.currentTarget.style.background = C.ink)} data-id="button-2">
+            onMouseLeave={(e) => (e.currentTarget.style.background = C.ink)}
+            data-id="button-2"
+          >
             {busy ? 'Subscribing…' : 'Email me at 8 a.m. →'}
           </button>
-          <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10.5, letterSpacing: '0.06em', color: C.muted, marginTop: 8 }}>
-            Delivered 8 a.m. in {pref.timezone} — plus a ping when the daily podcast drops.
+          <div
+            style={{
+              fontFamily: 'IBM Plex Mono, monospace',
+              fontSize: 10.5,
+              letterSpacing: '0.06em',
+              color: C.muted,
+              marginTop: 8,
+            }}
+          >
+            Delivered 8 a.m. in {pref.timezone} — plus a ping when the daily
+            podcast drops.
           </div>
         </>
       )}
@@ -784,7 +1054,14 @@ function Hero({ name }: { name?: string | undefined }): React.ReactElement {
           <a href="#front" className="un-cta" data-id="read-today">
             Read today →
           </a>
-          <a href="/podcast" onClick={navClick(() => { router.push('podcast', {}); })} className="un-cta ghost" data-id="todays-podcast">
+          <a
+            href="/podcast"
+            onClick={navClick(() => {
+              router.push('podcast', {});
+            })}
+            className="un-cta ghost"
+            data-id="todays-podcast"
+          >
             <PlayIcon size={14} /> Today’s podcast
           </a>
           <a href="#daily" className="un-cta ghost" data-id="get-the-8-a">
@@ -902,12 +1179,41 @@ function Sections(): React.ReactElement {
               {s.body}
             </p>
             {i === 0 && (
-              <a href="#front" className="un-link" style={{ display: 'inline-block', marginTop: 14, fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.ink }} data-id="read-the-wire">
+              <a
+                href="#front"
+                className="un-link"
+                style={{
+                  display: 'inline-block',
+                  marginTop: 14,
+                  fontFamily: 'IBM Plex Mono, monospace',
+                  fontSize: 12,
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  color: C.ink,
+                }}
+                data-id="read-the-wire"
+              >
                 Read the wire →
               </a>
             )}
             {i === 1 && (
-              <a href="/podcast" onClick={navClick(() => { router.push('podcast', {}); })} className="un-link" style={{ display: 'inline-block', marginTop: 14, fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.ink }} data-id="open-the-podcast">
+              <a
+                href="/podcast"
+                onClick={navClick(() => {
+                  router.push('podcast', {});
+                })}
+                className="un-link"
+                style={{
+                  display: 'inline-block',
+                  marginTop: 14,
+                  fontFamily: 'IBM Plex Mono, monospace',
+                  fontSize: 12,
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  color: C.ink,
+                }}
+                data-id="open-the-podcast"
+              >
                 Open the podcast →
               </a>
             )}
@@ -940,11 +1246,15 @@ function Manifesto(): React.ReactElement {
           margin: '0 auto',
         }}
       >
-        <span style={{ color: C.accent, fontFamily: 'Anton', fontStyle: 'normal' }}>
+        <span
+          style={{ color: C.accent, fontFamily: 'Anton', fontStyle: 'normal' }}
+        >
           “
         </span>
         All the news that’s fit to summarize — and a lot that isn’t.
-        <span style={{ color: C.accent, fontFamily: 'Anton', fontStyle: 'normal' }}>
+        <span
+          style={{ color: C.accent, fontFamily: 'Anton', fontStyle: 'normal' }}
+        >
           ”
         </span>
       </div>
@@ -1002,11 +1312,21 @@ export default function HomePage(): React.ReactElement {
   React.useEffect(() => {
     let alive = true;
     rpc<{ items: UglyTakeCard[] }>('newsUglyTakes', { limit: 8 })
-      .then((r) => { if (alive) setTakes(r.items); })
-      .catch(() => { /* satire is optional; leave the static ticker */ });
-    return () => { alive = false; };
+      .then((r) => {
+        if (alive) setTakes(r.items);
+      })
+      .catch(() => {
+        /* satire is optional; leave the static ticker */
+      });
+    return () => {
+      alive = false;
+    };
   }, []);
-  const tickerLines = composeTicker(TICKER, takes.map((t) => t.satireTitle), { max: 10 });
+  const tickerLines = composeTicker(
+    TICKER,
+    takes.map((t) => t.satireTitle),
+    { max: 10 },
+  );
   const name = app?.user?.name ?? undefined;
   const router = useRouter();
   const dateStr = new Date()
@@ -1054,7 +1374,8 @@ export default function HomePage(): React.ReactElement {
       <FinalCTA />
       <footer
         style={{
-          padding: '26px clamp(20px,5vw,64px) calc(26px + env(safe-area-inset-bottom))',
+          padding:
+            '26px clamp(20px,5vw,64px) calc(26px + env(safe-area-inset-bottom))',
           display: 'flex',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
@@ -1067,11 +1388,51 @@ export default function HomePage(): React.ReactElement {
         }}
       >
         <span>
-          The Ugly Press · <a className="un-link" href="/ugly-takes" onClick={navClick(() => { router.push('ugly-takes', {}); })} style={{ color: C.ink }} data-id="satire">Satire</a> · <a className="un-link" href="/archive" onClick={navClick(() => { router.push('archive', {}); })} style={{ color: C.ink }} data-id="archive">Archive</a> · <a className="un-link" href="/podcast" onClick={navClick(() => { router.push('podcast', {}); })} style={{ color: C.ink }} data-id="podcast">Podcast</a>
+          The Ugly Press ·{' '}
+          <a
+            className="un-link"
+            href="/ugly-takes"
+            onClick={navClick(() => {
+              router.push('ugly-takes', {});
+            })}
+            style={{ color: C.ink }}
+            data-id="satire"
+          >
+            Satire
+          </a>{' '}
+          ·{' '}
+          <a
+            className="un-link"
+            href="/archive"
+            onClick={navClick(() => {
+              router.push('archive', {});
+            })}
+            style={{ color: C.ink }}
+            data-id="archive"
+          >
+            Archive
+          </a>{' '}
+          ·{' '}
+          <a
+            className="un-link"
+            href="/podcast"
+            onClick={navClick(() => {
+              router.push('podcast', {});
+            })}
+            style={{ color: C.ink }}
+            data-id="podcast"
+          >
+            Podcast
+          </a>
         </span>
         <span>
           Printed by{' '}
-          <a className="un-link" href="https://ugly.bot" style={{ color: C.ink }} data-id="ugly-bot">
+          <a
+            className="un-link"
+            href="https://ugly.bot"
+            style={{ color: C.ink }}
+            data-id="ugly-bot"
+          >
             ugly.bot
           </a>
         </span>

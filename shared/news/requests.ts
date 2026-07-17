@@ -146,7 +146,10 @@ export const newsRequestDefs = {
       skip: z.number().min(0).default(0),
       category: z.enum(newsCategoryValues).optional(),
     }),
-    output: z.object({ items: z.array(ClusterCardSchema), hasMore: z.boolean() }),
+    output: z.object({
+      items: z.array(ClusterCardSchema),
+      hasMore: z.boolean(),
+    }),
     rateLimit: { max: 60, window: 60 },
   }),
   // Newest Ugly Takes (labeled satire) — powers the home feature/rail, the
@@ -187,7 +190,10 @@ export const newsRequestDefs = {
       limit: z.number().min(1).max(60).default(30),
       skip: z.number().min(0).default(0),
     }),
-    output: z.object({ items: z.array(PodcastCardSchema), hasMore: z.boolean() }),
+    output: z.object({
+      items: z.array(PodcastCardSchema),
+      hasMore: z.boolean(),
+    }),
     rateLimit: { max: 60, window: 60 },
   }),
 
@@ -219,7 +225,10 @@ export const newsRequestDefs = {
     output: empty,
   }),
   newsSavedGet: authReq({
-    input: z.object({ limit: z.number(), beforeSavedAt: z.number().optional() }),
+    input: z.object({
+      limit: z.number(),
+      beforeSavedAt: z.number().optional(),
+    }),
     output: z.object({ items: z.array(z.string()), hasMore: z.boolean() }),
   }),
   newsIsSaved: authReq({
@@ -276,7 +285,10 @@ export const newsRequestDefs = {
 
   // ─── Podcast ──────────────────────────────────────────────────────────
   newsPodcastGet: authReq({
-    input: z.object({ podcastId: z.string().optional(), date: z.string().optional() }),
+    input: z.object({
+      podcastId: z.string().optional(),
+      date: z.string().optional(),
+    }),
     output: z.object({ podcast: PodcastDocSchema.nullable() }),
   }),
   newsPodcastGetDefault: req({
@@ -299,7 +311,10 @@ export const newsRequestDefs = {
     output: z.object({ initialized: z.boolean() }),
   }),
   newsPodcastRegenerate: authReq({
-    input: z.object({ date: z.string().optional(), replaceDefault: z.boolean().optional() }),
+    input: z.object({
+      date: z.string().optional(),
+      replaceDefault: z.boolean().optional(),
+    }),
     output: z.object({ success: z.boolean(), podcastId: z.string() }),
     rateLimit: { max: 5, window: 300 },
   }),

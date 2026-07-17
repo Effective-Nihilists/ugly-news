@@ -43,8 +43,17 @@ export default function SafeAreaTestPage() {
 
   return (
     <PageLayout>
-      <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <Text size="xl" weight="bold">Safe Area Test</Text>
+      <div
+        style={{
+          padding: 16,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 12,
+        }}
+      >
+        <Text size="xl" weight="bold">
+          Safe Area Test
+        </Text>
 
         <div
           data-id="sa-values"
@@ -57,12 +66,25 @@ export default function SafeAreaTestPage() {
             fontSize: 13,
           }}
         >
-          <div>safe-area.top: <span data-id="sa-top">{insets.top}</span></div>
-          <div>safe-area.right: <span data-id="sa-right">{insets.right}</span></div>
-          <div>safe-area.bottom: <span data-id="sa-bottom">{insets.bottom}</span></div>
-          <div>safe-area.left: <span data-id="sa-left">{insets.left}</span></div>
-          <div>keyboard-open: <span data-id="kb-height">{String(isKbOpen)}</span></div>
-          <div>keyboard-open: <span data-id="kb-open">{isKbOpen ? 'true' : 'false'}</span></div>
+          <div>
+            safe-area.top: <span data-id="sa-top">{insets.top}</span>
+          </div>
+          <div>
+            safe-area.right: <span data-id="sa-right">{insets.right}</span>
+          </div>
+          <div>
+            safe-area.bottom: <span data-id="sa-bottom">{insets.bottom}</span>
+          </div>
+          <div>
+            safe-area.left: <span data-id="sa-left">{insets.left}</span>
+          </div>
+          <div>
+            keyboard-open: <span data-id="kb-height">{String(isKbOpen)}</span>
+          </div>
+          <div>
+            keyboard-open:{' '}
+            <span data-id="kb-open">{isKbOpen ? 'true' : 'false'}</span>
+          </div>
         </div>
 
         <Button data-id="toggle-debug-overlay" onClick={toggleDebug}>

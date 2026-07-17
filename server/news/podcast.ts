@@ -68,7 +68,9 @@ export async function newsPodcastGetDefault(
       [{ $match: {} }, { $sort: { date: -1 } }],
       { limit: 10 },
     );
-    const latestComplete = recent.find((p) => p.generationStatus === 'complete' && !!p.audioUri);
+    const latestComplete = recent.find(
+      (p) => p.generationStatus === 'complete' && !!p.audioUri,
+    );
     if (latestComplete) podcast = latestComplete;
   }
 
@@ -108,7 +110,13 @@ export async function newsPodcastRegenerate(
   const date = input.date ?? todayDateString(Date.now());
   const replaceDefault = input.replaceDefault ?? false;
   const targetUserId = replaceDefault ? null : userId;
-  const podcastId = targetUserId ? `${date}_${targetUserId}` : `${date}_default`;
-  await enqueueTask('podcastGenerate', { date, userId: targetUserId, replaceDefault });
+  const podcastId = targetUserId
+    ? `${date}_${targetUserId}`
+    : `${date}_default`;
+  await enqueueTask('podcastGenerate', {
+    date,
+    userId: targetUserId,
+    replaceDefault,
+  });
   return { success: true, podcastId };
 }

@@ -43,5 +43,7 @@ export async function runNewsRetention(db: NewsDb, now: number): Promise<void> {
   const cutoff = now - RETENTION_MS;
   await db.deleteQuery(collections.newsArticle, { created: { $lt: cutoff } });
   await db.deleteQuery(collections.file, { created: { $lt: cutoff } });
-  await db.deleteQuery(collections.newsCluster, { lastUpdatedAt: { $lt: cutoff } });
+  await db.deleteQuery(collections.newsCluster, {
+    lastUpdatedAt: { $lt: cutoff },
+  });
 }

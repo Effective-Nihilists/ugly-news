@@ -10,11 +10,17 @@
 // (`AI_PROXY_TOKEN`, minted at publish), exactly the shape AiText/AiImage use
 // in owner mode. Pure `fetch` — bundles for Node and Workers.
 import type { ImageGenModel } from 'ugly-app/shared';
-import { createEmbeddingClient, getAdapter } from 'ugly-app/server/adapter/workers';
+import {
+  createEmbeddingClient,
+  getAdapter,
+} from 'ugly-app/server/adapter/workers';
 import { base64ToBytes } from '../../shared/news/WAV';
 import type { NewsCategory } from '../../shared/news/types';
 
-export interface ChatMessage { role: 'system' | 'user' | 'assistant'; content: string }
+export interface ChatMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
 
 // NOTE: must match the live host. `api.ugly.bot` does NOT resolve — verified
 // against the proxy; the working host is `ugly.bot/v1/ai` (same default
@@ -24,7 +30,10 @@ const DEFAULT_AI_PROXY_URL = 'https://ugly.bot/v1/ai';
 
 function aiProxy(): { baseUrl: string; token: string } {
   /* eslint-disable @typescript-eslint/dot-notation */
-  const baseUrl = (process.env['AI_PROXY_URL'] ?? DEFAULT_AI_PROXY_URL).replace(/\/$/, '');
+  const baseUrl = (process.env['AI_PROXY_URL'] ?? DEFAULT_AI_PROXY_URL).replace(
+    /\/$/,
+    '',
+  );
   const token = process.env['AI_PROXY_TOKEN'] ?? '';
   /* eslint-enable @typescript-eslint/dot-notation */
   return { baseUrl, token };
@@ -62,32 +71,50 @@ async function backoffDelay(attempt: number): Promise<void> {
  * permanent 4xx or after exhausting retries — or `null` if every attempt threw
  * before producing a response.
  */
-async function postAi(baseUrl: string, path: string, token: string, body: unknown): Promise<Response | null> {
+async function postAi(
+  baseUrl: string,
+  path: string,
+  token: string,
+  body: unknown,
+): Promise<Response | null> {
   let lastRes: Response | null = null;
   for (let attempt = 1; attempt <= AI_MAX_ATTEMPTS; attempt++) {
     try {
       const res = await fetch(`${baseUrl}${path}`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(body),
       });
       if (res.ok || !isRetryableStatus(res.status)) return res;
       lastRes = res;
-      console.warn(`[news/ai] ${path} ${res.status} (attempt ${attempt}/${AI_MAX_ATTEMPTS})${attempt < AI_MAX_ATTEMPTS ? ' — backing off' : ' — giving up'}`);
+      console.warn(
+        `[news/ai] ${path} ${res.status} (attempt ${attempt}/${AI_MAX_ATTEMPTS})${attempt < AI_MAX_ATTEMPTS ? ' — backing off' : ' — giving up'}`,
+      );
     } catch (error) {
       lastRes = null;
-      console.warn(`[news/ai] ${path} network error (attempt ${attempt}/${AI_MAX_ATTEMPTS})`, error);
+      console.warn(
+        `[news/ai] ${path} network error (attempt ${attempt}/${AI_MAX_ATTEMPTS})`,
+        error,
+      );
     }
     if (attempt < AI_MAX_ATTEMPTS) await backoffDelay(attempt);
   }
   return lastRes;
 }
 
-interface ContentPart { type: string; text?: string; thinking?: string }
+interface ContentPart {
+  type: string;
+  text?: string;
+  thinking?: string;
+}
 /** The proxy returns `message.content` as a string OR an array of parts
  *  (gpt → string; reasoning models → [{type:'thinking'}, {type:'text'}]). */
 function extractContent(data: unknown): string {
-  const msg = (data as { message?: { content?: unknown }; content?: unknown }).message;
+  const msg = (data as { message?: { content?: unknown }; content?: unknown })
+    .message;
   const content = msg?.content ?? (data as { content?: unknown }).content;
   if (typeof content === 'string') return content.trim();
   if (Array.isArray(content)) {
@@ -107,19 +134,29 @@ export async function genText(
   opts: { model: string; temperature?: number; maxTokens?: number },
 ): Promise<string | null> {
   const { baseUrl, token } = aiProxy();
-  if (!token) { console.warn('[news/ai] genText: AI_PROXY_TOKEN not set'); return null; }
+  if (!token) {
+    console.warn('[news/ai] genText: AI_PROXY_TOKEN not set');
+    return null;
+  }
   const res = await postAi(baseUrl, '/text', token, {
     model: opts.model,
     messages,
     userId: 'uglyBot',
     options: {
-      ...(opts.temperature !== undefined ? { temperature: opts.temperature } : {}),
+      ...(opts.temperature !== undefined
+        ? { temperature: opts.temperature }
+        : {}),
       ...(opts.maxTokens !== undefined ? { maxTokens: opts.maxTokens } : {}),
     },
   });
-  if (!res) { console.warn('[news/ai] genText: no response after retries'); return null; }
+  if (!res) {
+    console.warn('[news/ai] genText: no response after retries');
+    return null;
+  }
   if (!res.ok) {
-    console.warn(`[news/ai] genText ${res.status}: ${(await res.text().catch(() => '')).slice(0, 200)}`);
+    console.warn(
+      `[news/ai] genText ${res.status}: ${(await res.text().catch(() => '')).slice(0, 200)}`,
+    );
     return null;
   }
   try {
@@ -136,23 +173,38 @@ export async function genImage(
   opts?: { model?: ImageGenModel; negative?: string },
 ): Promise<string | null> {
   const { baseUrl, token } = aiProxy();
-  if (!token) { console.warn('[news/ai] genImage: AI_PROXY_TOKEN not set'); return null; }
-  const fullPrompt = opts?.negative ? `${prompt}\n\nAvoid: ${opts.negative}` : prompt;
+  if (!token) {
+    console.warn('[news/ai] genImage: AI_PROXY_TOKEN not set');
+    return null;
+  }
+  const fullPrompt = opts?.negative
+    ? `${prompt}\n\nAvoid: ${opts.negative}`
+    : prompt;
   const res = await postAi(baseUrl, '/image', token, {
     model: opts?.model ?? 'flux_1_dev',
     prompt: fullPrompt,
     userId: 'uglyBot',
     options: { aspectRatio: 'landscape_16_9' },
   });
-  if (!res) { console.warn('[news/ai] genImage: no response after retries'); return null; }
+  if (!res) {
+    console.warn('[news/ai] genImage: no response after retries');
+    return null;
+  }
   if (!res.ok) {
-    console.warn(`[news/ai] genImage ${res.status}: ${(await res.text().catch(() => '')).slice(0, 200)}`);
+    console.warn(
+      `[news/ai] genImage ${res.status}: ${(await res.text().catch(() => '')).slice(0, 200)}`,
+    );
     return null;
   }
   try {
-    const data = (await res.json()) as { url?: string; base64?: string; mime?: string };
+    const data = (await res.json()) as {
+      url?: string;
+      base64?: string;
+      mime?: string;
+    };
     if (data.url) return data.url;
-    if (data.base64) return await hostGeneratedImage(data.base64, data.mime ?? 'image/png');
+    if (data.base64)
+      return await hostGeneratedImage(data.base64, data.mime ?? 'image/png');
     return null;
   } catch (error) {
     console.warn('[news/ai] genImage: failed to parse response', error);
@@ -191,7 +243,10 @@ export async function generateUglyPressImage(
 // content-addressed by sha256 so identical renders dedupe — and return the
 // same-origin URL, exactly like podcast audio / the TTS cache. On any storage
 // failure we drop the (decorative) image rather than fall back to a data URI.
-async function hostGeneratedImage(base64: string, mime: string): Promise<string | null> {
+async function hostGeneratedImage(
+  base64: string,
+  mime: string,
+): Promise<string | null> {
   try {
     const bytes = base64ToBytes(base64);
     // Copy into a plain ArrayBuffer so digest() accepts it (Uint8Array may be
@@ -199,14 +254,23 @@ async function hostGeneratedImage(base64: string, mime: string): Promise<string 
     const ab = new ArrayBuffer(bytes.byteLength);
     new Uint8Array(ab).set(bytes);
     const digest = await crypto.subtle.digest('SHA-256', ab);
-    const hash = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
-    const ext = mime.includes('png') ? 'png' : mime.includes('webp') ? 'webp' : 'jpg';
+    const hash = [...new Uint8Array(digest)]
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+    const ext = mime.includes('png')
+      ? 'png'
+      : mime.includes('webp')
+        ? 'webp'
+        : 'jpg';
     const key = `gen-images/${hash}.${ext}`;
     const storage = getAdapter().storage;
     await storage.put('public', key, bytes, mime);
     return storage.url('public', key);
   } catch (error) {
-    console.warn('[news/ai] genImage: R2 upload failed — dropping image', error);
+    console.warn(
+      '[news/ai] genImage: R2 upload failed — dropping image',
+      error,
+    );
     return null;
   }
 }
@@ -234,7 +298,10 @@ export async function embed(text: string): Promise<number[] | null> {
 }
 
 /** ~4 chars/token heuristic truncation (ported from ugly.bot Helper). */
-export function truncateToApproximateTokens(text: string, maxTokens: number): string {
+export function truncateToApproximateTokens(
+  text: string,
+  maxTokens: number,
+): string {
   const maxChars = maxTokens * 4;
   return text.length <= maxChars ? text : text.slice(0, maxChars);
 }

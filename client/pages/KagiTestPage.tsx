@@ -1,11 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Button,
-  Card,
-  Input,
-  PageLayout,
-  useApp,
-} from 'ugly-app/client';
+import { Button, Card, Input, PageLayout, useApp } from 'ugly-app/client';
 
 type Mode = 'search' | 'summarize' | 'enrich-web' | 'enrich-news';
 
@@ -77,7 +71,10 @@ export default function KagiTestPage(): React.ReactElement {
           query,
         })) as SearchResult;
         const elapsed = Date.now() - started;
-        addLog(`Done in ${fmt(elapsed)} — ${result.items.length} results${result.related ? `, ${result.related.length} related` : ''}`, 'ok');
+        addLog(
+          `Done in ${fmt(elapsed)} — ${result.items.length} results${result.related ? `, ${result.related.length} related` : ''}`,
+          'ok',
+        );
         setSearchResult(result);
       } else if (mode === 'summarize') {
         if (!url.trim() && !query.trim()) return;
@@ -96,7 +93,10 @@ export default function KagiTestPage(): React.ReactElement {
           query,
         })) as SearchResult;
         const elapsed = Date.now() - started;
-        addLog(`Done in ${fmt(elapsed)} — ${result.items.length} results`, 'ok');
+        addLog(
+          `Done in ${fmt(elapsed)} — ${result.items.length} results`,
+          'ok',
+        );
         setSearchResult(result);
       } else {
         if (!query.trim()) return;
@@ -105,7 +105,10 @@ export default function KagiTestPage(): React.ReactElement {
           query,
         })) as SearchResult;
         const elapsed = Date.now() - started;
-        addLog(`Done in ${fmt(elapsed)} — ${result.items.length} results`, 'ok');
+        addLog(
+          `Done in ${fmt(elapsed)} — ${result.items.length} results`,
+          'ok',
+        );
         setSearchResult(result);
       }
     } catch (err) {
@@ -126,7 +129,9 @@ export default function KagiTestPage(): React.ReactElement {
     <PageLayout
       header={
         <div>
-          <a href="/test" data-id="tests">← Tests</a>
+          <a href="/test" data-id="tests">
+            ← Tests
+          </a>
         </div>
       }
     >
@@ -144,7 +149,8 @@ export default function KagiTestPage(): React.ReactElement {
               }}
               style={{
                 fontWeight: mode === m.key ? 'bold' : 'normal',
-              }} data-id="label"
+              }}
+              data-id="label"
             >
               {m.label}
             </button>
@@ -158,7 +164,8 @@ export default function KagiTestPage(): React.ReactElement {
                 label="URL (leave empty to summarize text)"
                 value={url}
                 onChange={setUrl}
-                placeholder="https://example.com/article" data-id="url-leave-empty-to"
+                placeholder="https://example.com/article"
+                data-id="url-leave-empty-to"
               />
             )}
 
@@ -171,11 +178,18 @@ export default function KagiTestPage(): React.ReactElement {
                   mode === 'summarize'
                     ? 'Paste text to summarize…'
                     : 'Search query…'
-                } data-id="input"
+                }
+                data-id="input"
               />
             )}
 
-            <Button onClick={() => { void handleRun(); }} disabled={!canRun} data-id="button">
+            <Button
+              onClick={() => {
+                void handleRun();
+              }}
+              disabled={!canRun}
+              data-id="button"
+            >
               {loading ? 'Running…' : 'Run'}
             </Button>
           </div>
@@ -208,12 +222,15 @@ export default function KagiTestPage(): React.ReactElement {
             {searchResult.items.map((item, i) => (
               <Card key={i}>
                 <div>
-                  <a href={item.url} target="_blank" rel="noreferrer" data-id="a">
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    data-id="a"
+                  >
                     <strong>{item.title}</strong>
                   </a>
-                  <p style={{ fontSize: '0.85em', opacity: 0.7 }}>
-                    {item.url}
-                  </p>
+                  <p style={{ fontSize: '0.85em', opacity: 0.7 }}>{item.url}</p>
                   <p>{item.snippet}</p>
                   {item.thumbnail && (
                     <img
@@ -240,7 +257,8 @@ export default function KagiTestPage(): React.ReactElement {
                           border: 'none',
                           cursor: 'pointer',
                           textDecoration: 'underline',
-                        }} data-id="button-2"
+                        }}
+                        data-id="button-2"
                       >
                         {r}
                       </button>

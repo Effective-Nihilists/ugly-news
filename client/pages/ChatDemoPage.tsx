@@ -58,7 +58,8 @@ function makeSeedMessages(): ChatMessage[] {
       id: 'msg-4',
       conversationId: 'conv-demo',
       userId: MOCK_USER_ID,
-      markdown: 'That looks great! Let me try a list:\n\n- Item one\n- Item two\n- **Item three** with emphasis',
+      markdown:
+        'That looks great! Let me try a list:\n\n- Item one\n- Item two\n- **Item three** with emphasis',
       text: 'That looks great! Let me try a list.',
       created: now - 420_000,
       updated: now - 420_000,
@@ -101,34 +102,37 @@ export default function ChatDemoPage(): React.ReactElement {
     return MOCK_USERS[userId] ?? null;
   }, []);
 
-  const handleSend = useCallback((text: string) => {
-    const msg: ChatMessage = {
-      id: makeId(),
-      conversationId: 'conv-demo',
-      userId: MOCK_USER_ID,
-      text,
-      created: Date.now(),
-      updated: Date.now(),
-      ...(mode === 'markdown' ? { markdown: text } : {}),
-    };
-    setMessages((prev) => [...prev, msg]);
-
-    // Simulate a bot reply after a short delay
-    setTimeout(() => {
-      const reply: ChatMessage = {
+  const handleSend = useCallback(
+    (text: string) => {
+      const msg: ChatMessage = {
         id: makeId(),
         conversationId: 'conv-demo',
-        userId: 'bot-helper',
-        text: `Got it! You said: "${text.slice(0, 80)}"`,
+        userId: MOCK_USER_ID,
+        text,
         created: Date.now(),
         updated: Date.now(),
-        ...(mode === 'markdown'
-          ? { markdown: `Got it! You said:\n\n> ${text.slice(0, 120)}` }
-          : {}),
+        ...(mode === 'markdown' ? { markdown: text } : {}),
       };
-      setMessages((prev) => [...prev, reply]);
-    }, 800);
-  }, [mode]);
+      setMessages((prev) => [...prev, msg]);
+
+      // Simulate a bot reply after a short delay
+      setTimeout(() => {
+        const reply: ChatMessage = {
+          id: makeId(),
+          conversationId: 'conv-demo',
+          userId: 'bot-helper',
+          text: `Got it! You said: "${text.slice(0, 80)}"`,
+          created: Date.now(),
+          updated: Date.now(),
+          ...(mode === 'markdown'
+            ? { markdown: `Got it! You said:\n\n> ${text.slice(0, 120)}` }
+            : {}),
+        };
+        setMessages((prev) => [...prev, reply]);
+      }, 800);
+    },
+    [mode],
+  );
 
   const handleDelete = useCallback((messageId: string) => {
     setMessages((prev) => prev.filter((m) => m.id !== messageId));
@@ -137,21 +141,35 @@ export default function ChatDemoPage(): React.ReactElement {
   return (
     <PageLayout
       header={
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
           <Text weight="bold">Chat Demo</Text>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <Text size="sm" style={{ opacity: 0.6 }}>Mode:</Text>
+            <Text size="sm" style={{ opacity: 0.6 }}>
+              Mode:
+            </Text>
             <Button
               size="sm"
               variant={mode === 'basic' ? 'primary' : 'secondary'}
-              onClick={() => { setMode('basic'); }} data-id="basic-text"
+              onClick={() => {
+                setMode('basic');
+              }}
+              data-id="basic-text"
             >
               Basic Text
             </Button>
             <Button
               size="sm"
               variant={mode === 'markdown' ? 'primary' : 'secondary'}
-              onClick={() => { setMode('markdown'); }} data-id="full-markdown"
+              onClick={() => {
+                setMode('markdown');
+              }}
+              data-id="full-markdown"
             >
               Full Markdown
             </Button>
@@ -159,8 +177,14 @@ export default function ChatDemoPage(): React.ReactElement {
         </div>
       }
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
-
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 16,
+          height: '100%',
+        }}
+      >
         {/* Description card */}
         <Card>
           <Text size="xl" weight="bold">
@@ -172,7 +196,8 @@ export default function ChatDemoPage(): React.ReactElement {
               : 'Using ChatView + ChatTextInput + ChatTextContent. Plain text only, no formatting.'}
           </Text>
           <Text size="sm" style={{ marginTop: 4, opacity: 0.6 }}>
-            Demonstrates: mock messages, reactions, bot replies, send/delete, mode toggle
+            Demonstrates: mock messages, reactions, bot replies, send/delete,
+            mode toggle
           </Text>
         </Card>
 
@@ -195,9 +220,7 @@ export default function ChatDemoPage(): React.ReactElement {
               onSend={handleSend}
               onDelete={handleDelete}
               getUser={getUser}
-              renderContent={(msg) => (
-                <ChatTextContent text={msg.text ?? ''} />
-              )}
+              renderContent={(msg) => <ChatTextContent text={msg.text ?? ''} />}
             >
               <ChatTextInput placeholder="Type a message..." autoFocus />
             </ChatView>

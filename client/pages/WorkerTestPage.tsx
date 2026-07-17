@@ -44,7 +44,10 @@ export default function WorkerTestPage(): React.ReactElement {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ input: { text } }),
       });
-      const json = (await res.json()) as { error?: string; result?: { id: string; verified: boolean } };
+      const json = (await res.json()) as {
+        error?: string;
+        result?: { id: string; verified: boolean };
+      };
       if (json.error) {
         addLog(`Server error: ${json.error}`, 'err');
       } else if (json.result?.verified) {
@@ -60,14 +63,19 @@ export default function WorkerTestPage(): React.ReactElement {
 
   async function handleConsoleError(): Promise<void> {
     const msg = `[WorkerTest] console.error test ${Date.now()}`;
-    addLog(`Triggering server console.error via /api/testWorkerConsoleError...`);
+    addLog(
+      `Triggering server console.error via /api/testWorkerConsoleError...`,
+    );
     try {
       const res = await fetch('/api/testWorkerConsoleError', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ input: { message: msg } }),
       });
-      const json = (await res.json()) as { error?: string; result?: { logged: boolean } };
+      const json = (await res.json()) as {
+        error?: string;
+        result?: { logged: boolean };
+      };
       if (json.error) {
         addLog(`Server error: ${json.error}`, 'err');
       } else if (json.result?.logged) {
@@ -85,7 +93,9 @@ export default function WorkerTestPage(): React.ReactElement {
     <PageLayout
       header={
         <div>
-          <a href="/test" data-id="tests">← Tests</a>
+          <a href="/test" data-id="tests">
+            ← Tests
+          </a>
         </div>
       }
     >
@@ -95,7 +105,12 @@ export default function WorkerTestPage(): React.ReactElement {
         <Card>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <h3>Throw Exception</h3>
-            <Button data-id="btn-worker-throw" onClick={() => { void handleThrowException(); }}>
+            <Button
+              data-id="btn-worker-throw"
+              onClick={() => {
+                void handleThrowException();
+              }}
+            >
               Trigger Worker Throw
             </Button>
           </div>
@@ -104,7 +119,12 @@ export default function WorkerTestPage(): React.ReactElement {
         <Card>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <h3>DB Mutation</h3>
-            <Button data-id="btn-worker-db" onClick={() => { void handleDbMutation(); }}>
+            <Button
+              data-id="btn-worker-db"
+              onClick={() => {
+                void handleDbMutation();
+              }}
+            >
               Trigger DB Write / Read / Delete
             </Button>
           </div>
@@ -113,7 +133,12 @@ export default function WorkerTestPage(): React.ReactElement {
         <Card>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <h3>Console Error</h3>
-            <Button data-id="btn-worker-console-error" onClick={() => { void handleConsoleError(); }}>
+            <Button
+              data-id="btn-worker-console-error"
+              onClick={() => {
+                void handleConsoleError();
+              }}
+            >
               Trigger Server console.error
             </Button>
           </div>
@@ -123,7 +148,11 @@ export default function WorkerTestPage(): React.ReactElement {
           <div data-id="worker-test-logs">
             {logs.map((entry, i) => (
               <div key={i}>
-                {entry.kind === 'err' ? '\u2717' : entry.kind === 'ok' ? '\u2713' : '\u00b7'}{' '}
+                {entry.kind === 'err'
+                  ? '\u2717'
+                  : entry.kind === 'ok'
+                    ? '\u2713'
+                    : '\u00b7'}{' '}
                 {entry.msg}
               </div>
             ))}

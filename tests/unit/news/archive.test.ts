@@ -4,14 +4,29 @@ import { newsArchive, newsPodcastArchive } from '../../../server/news/public';
 // Minimal fake of the framework Db — the archive handlers only call getQuery.
 // Captures the (collection, pipeline, options) so we can assert query shaping.
 function fakeDb(rows: unknown[]) {
-  const calls: { coll: string; pipeline: Record<string, unknown>[]; opts: { limit?: number; skip?: number } }[] = [];
-  const searchCalls: { query: string; opts: { limit?: number; filter?: Record<string, unknown> } }[] = [];
+  const calls: {
+    coll: string;
+    pipeline: Record<string, unknown>[];
+    opts: { limit?: number; skip?: number };
+  }[] = [];
+  const searchCalls: {
+    query: string;
+    opts: { limit?: number; filter?: Record<string, unknown> };
+  }[] = [];
   const db = {
-    getQuery: async (coll: string, pipeline: Record<string, unknown>[], opts: { limit?: number; skip?: number }) => {
+    getQuery: async (
+      coll: string,
+      pipeline: Record<string, unknown>[],
+      opts: { limit?: number; skip?: number },
+    ) => {
       calls.push({ coll, pipeline, opts });
       return rows.slice(0, opts.limit ?? rows.length);
     },
-    searchDocs: async (_coll: unknown, query: string, opts: { limit?: number; filter?: Record<string, unknown> }) => {
+    searchDocs: async (
+      _coll: unknown,
+      query: string,
+      opts: { limit?: number; filter?: Record<string, unknown> },
+    ) => {
       searchCalls.push({ query, opts });
       return rows.slice(0, opts.limit ?? rows.length);
     },
@@ -46,7 +61,12 @@ describe('newsArchive', () => {
     expect(calls[0].opts).toEqual({ limit: 3, skip: 0 }); // limit+1
     expect(out.hasMore).toBe(true);
     expect(out.items).toHaveLength(2);
-    expect(out.items[0]).toMatchObject({ id: 'a', title: 'Title a', thumbnailUri: 'https://img/a.jpg', category: 'tech' });
+    expect(out.items[0]).toMatchObject({
+      id: 'a',
+      title: 'Title a',
+      thumbnailUri: 'https://img/a.jpg',
+      category: 'tech',
+    });
     expect(typeof out.items[0]!.createdMs).toBe('number');
   });
 
@@ -62,9 +82,17 @@ describe('newsArchive', () => {
 
   it('keyword search scans a recent window and substring-filters title/summary (case-insensitive)', async () => {
     const rows = [
-      story('a', new Date('2026-06-14T10:00:00Z'), { title: 'Iran deal signed Sunday' }),
-      story('b', new Date('2026-06-14T09:00:00Z'), { title: 'Cats rule the internet', text: 'nothing here' }),
-      story('c', new Date('2026-06-13T09:00:00Z'), { title: 'Markets react to IRAN news', text: 'x' }),
+      story('a', new Date('2026-06-14T10:00:00Z'), {
+        title: 'Iran deal signed Sunday',
+      }),
+      story('b', new Date('2026-06-14T09:00:00Z'), {
+        title: 'Cats rule the internet',
+        text: 'nothing here',
+      }),
+      story('c', new Date('2026-06-13T09:00:00Z'), {
+        title: 'Markets react to IRAN news',
+        text: 'x',
+      }),
     ];
     const { db, calls, searchCalls } = fakeDb(rows);
     const out = await newsArchive(db, { limit: 10, skip: 0, query: ' iran ' });
@@ -76,7 +104,9 @@ describe('newsArchive', () => {
 
   it('paginates search results by slicing the filtered set', async () => {
     const rows = Array.from({ length: 25 }, (_, i) =>
-      story(`s${i}`, new Date('2026-06-14T10:00:00Z'), { title: `Breaking news item ${i}` }),
+      story(`s${i}`, new Date('2026-06-14T10:00:00Z'), {
+        title: `Breaking news item ${i}`,
+      }),
     );
     const { db } = fakeDb(rows);
     const out = await newsArchive(db, { limit: 10, skip: 10, query: 'news' });

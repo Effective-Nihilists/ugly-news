@@ -1,12 +1,19 @@
 import { dbDefaults } from 'ugly-app/shared';
 import { collections } from '../../shared/collections';
 import type { FileMarkdown, NewsCluster } from '../../shared/collections';
-import { isSubstantiveSummary, toBiasBucket } from '../../shared/news/cluster-logic';
+import {
+  isSubstantiveSummary,
+  toBiasBucket,
+} from '../../shared/news/cluster-logic';
 import { feedIdToSourceId, sourceById } from '../../shared/news/sourceBias';
 import { uglyBotId } from '../../shared/news/Bot';
 import type { BiasBucket } from '../../shared/news/schemas';
 import type { NewsCategory } from '../../shared/news/types';
-import { generateUglyPressImage, genText, truncateToApproximateTokens } from './ai';
+import {
+  generateUglyPressImage,
+  genText,
+  truncateToApproximateTokens,
+} from './ai';
 import type { NewsDb } from './db';
 import { enqueueTask } from './queue';
 
@@ -32,7 +39,10 @@ function bucketForFeed(feedId: string): BiasBucket | 'unrated' {
  * Scheduled sweep: pick clusters that have crossed the synthesis / satire gates
  * and fan out the (expensive) AI jobs. Gated + capped so cost stays bounded.
  */
-export async function dispatchClusterSweep(db: NewsDb, now: number = Date.now()): Promise<void> {
+export async function dispatchClusterSweep(
+  db: NewsDb,
+  now: number = Date.now(),
+): Promise<void> {
   const recent = await db.getQuery<NewsCluster & { _id: string }>(
     'newsCluster',
     [
@@ -49,7 +59,8 @@ export async function dispatchClusterSweep(db: NewsDb, now: number = Date.now())
   const toSynth = recent
     .filter(
       (c) =>
-        (!isSubstantiveSummary(c.neutralSummary) || !isSubstantiveSummary(c.framingSummary)) &&
+        (!isSubstantiveSummary(c.neutralSummary) ||
+          !isSubstantiveSummary(c.framingSummary)) &&
         c.articleCount >= 2 &&
         distinctBuckets(c.biasBreakdown) >= 2,
     )
@@ -58,7 +69,9 @@ export async function dispatchClusterSweep(db: NewsDb, now: number = Date.now())
   // Satire: the most prominent clusters without an Ugly Take yet. Prefer ones
   // that already have a neutral summary (richer context → sharper jokes), but
   // fall back to title-only clusters so the satire desk is never starved.
-  const eligible = recent.filter((c) => c.uglyTakeFileId === null && c.articleCount >= SATIRE_MIN_ARTICLES);
+  const eligible = recent.filter(
+    (c) => c.uglyTakeFileId === null && c.articleCount >= SATIRE_MIN_ARTICLES,
+  );
   const toSatire = [
     ...eligible.filter((c) => c.neutralSummary !== null),
     ...eligible.filter((c) => c.neutralSummary === null),
@@ -130,11 +143,25 @@ const FRAMING_PROMPT = `You compare how the LEFT, CENTER, and RIGHT frame the SA
 Be even-handed and specific about emphasis/word choice; do not take a side. If a side has no coverage, say "Largely uncovered."`;
 
 /** Group member file summaries by bias bucket and build a prompt context block. */
-function buildCoverageContext(files: (FileMarkdown & { _id: string })[]): string {
-  const groups: Record<string, string[]> = { Left: [], Center: [], Right: [], Other: [] };
+function buildCoverageContext(
+  files: (FileMarkdown & { _id: string })[],
+): string {
+  const groups: Record<string, string[]> = {
+    Left: [],
+    Center: [],
+    Right: [],
+    Other: [],
+  };
   for (const f of files) {
     const bucket = f.feedId ? bucketForFeed(f.feedId) : 'unrated';
-    const label = bucket === 'left' ? 'Left' : bucket === 'right' ? 'Right' : bucket === 'center' ? 'Center' : 'Other';
+    const label =
+      bucket === 'left'
+        ? 'Left'
+        : bucket === 'right'
+          ? 'Right'
+          : bucket === 'center'
+            ? 'Center'
+            : 'Other';
     const line = `- ${f.title ?? 'Untitled'}: ${truncateToApproximateTokens(f.text ?? f.markdown ?? '', 120)}`;
     groups[label]!.push(line);
   }
@@ -145,14 +172,21 @@ function buildCoverageContext(files: (FileMarkdown & { _id: string })[]): string
 }
 
 /** Generate the neutral + framing summaries for a multi-side cluster. */
-export async function dispatchClusterSynthesize(db: NewsDb, clusterId: string): Promise<void> {
+export async function dispatchClusterSynthesize(
+  db: NewsDb,
+  clusterId: string,
+): Promise<void> {
   const cluster = await db.getDoc(collections.newsCluster, clusterId);
   if (!cluster) {
     console.warn(`[cluster-synth] cluster ${clusterId} not found — skipping`);
     return;
   }
   const c = cluster as NewsCluster & { _id: string };
-  if (isSubstantiveSummary(c.neutralSummary) && isSubstantiveSummary(c.framingSummary) && c.synthesizedAt) {
+  if (
+    isSubstantiveSummary(c.neutralSummary) &&
+    isSubstantiveSummary(c.framingSummary) &&
+    c.synthesizedAt
+  ) {
     console.log(`[cluster-synth] ${clusterId} already synthesized — skipping`);
     return;
   }
@@ -161,26 +195,41 @@ export async function dispatchClusterSynthesize(db: NewsDb, clusterId: string): 
     { $match: { _id: { $in: c.fileIds.slice(0, 12) } } },
   ]);
   if (files.length === 0) {
-    console.warn(`[cluster-synth] cluster ${clusterId} has no member files — skipping`);
+    console.warn(
+      `[cluster-synth] cluster ${clusterId} has no member files — skipping`,
+    );
     return;
   }
-  console.log(`[cluster-synth] synthesizing ${clusterId} "${c.title.slice(0, 60)}" from ${files.length} files`);
+  console.log(
+    `[cluster-synth] synthesizing ${clusterId} "${c.title.slice(0, 60)}" from ${files.length} files`,
+  );
   const context = buildCoverageContext(files);
 
   const [neutral, framing] = await Promise.all([
-    genSummary(NEUTRAL_PROMPT, c.title, context, { temperature: 0.3, maxTokens: 500 }),
-    genSummary(FRAMING_PROMPT, c.title, context, { temperature: 0.4, maxTokens: 320 }),
+    genSummary(NEUTRAL_PROMPT, c.title, context, {
+      temperature: 0.3,
+      maxTokens: 500,
+    }),
+    genSummary(FRAMING_PROMPT, c.title, context, {
+      temperature: 0.4,
+      maxTokens: 320,
+    }),
   ]);
 
   // Only persist substantive output; keep whatever was there otherwise (null or old
   // garbage — the sweep re-picks non-substantive clusters, so they retry next time).
   const nextNeutral = neutral ?? c.neutralSummary;
   const nextFraming = framing ?? c.framingSummary;
-  const bothGood = isSubstantiveSummary(nextNeutral) && isSubstantiveSummary(nextFraming);
+  const bothGood =
+    isSubstantiveSummary(nextNeutral) && isSubstantiveSummary(nextFraming);
   if (!neutral && !framing) {
-    console.error(`[cluster-synth] both summaries non-substantive for ${clusterId} after retry — AI proxy down/truncating; leaving for next sweep`);
+    console.error(
+      `[cluster-synth] both summaries non-substantive for ${clusterId} after retry — AI proxy down/truncating; leaving for next sweep`,
+    );
   } else {
-    console.log(`[cluster-synth] ${clusterId}: neutral=${nextNeutral ? `${nextNeutral.length}c` : 'null'} framing=${nextFraming ? `${nextFraming.length}c` : 'null'} synthesized=${bothGood}`);
+    console.log(
+      `[cluster-synth] ${clusterId}: neutral=${nextNeutral ? `${nextNeutral.length}c` : 'null'} framing=${nextFraming ? `${nextFraming.length}c` : 'null'} synthesized=${bothGood}`,
+    );
   }
 
   // Backfill ONE generated "Ugly Press" image for the story, only when no member
@@ -191,7 +240,8 @@ export async function dispatchClusterSynthesize(db: NewsDb, clusterId: string): 
   let topImageUri = c.topImageUri;
   if (!topImageUri) {
     topImageUri = await generateUglyPressImage(c.title, c.category);
-    if (topImageUri) console.log(`[cluster-synth] generated top image for ${clusterId}`);
+    if (topImageUri)
+      console.log(`[cluster-synth] generated top image for ${clusterId}`);
   }
 
   await db.setDoc(collections.newsCluster, {
@@ -224,11 +274,17 @@ async function genSummary(
         { role: 'system', content: system },
         { role: 'user', content: `Story: ${title}\n\n${context}` },
       ],
-      { model: 'deepseek_v4_flash', temperature: opts.temperature, maxTokens: opts.maxTokens },
+      {
+        model: 'deepseek_v4_flash',
+        temperature: opts.temperature,
+        maxTokens: opts.maxTokens,
+      },
     );
     if (isSubstantiveSummary(out)) return out;
     if (attempt === 0) {
-      console.warn(`[cluster-synth] non-substantive summary (${(out ?? '').length}c) — retrying once`);
+      console.warn(
+        `[cluster-synth] non-substantive summary (${(out ?? '').length}c) — retrying once`,
+      );
     }
   }
   return null;
@@ -244,8 +300,14 @@ const SATIRE_PROMPT = `You are a headline writer for "The Ugly Press" satire des
 
 /** Parse the H1 (or first line) as the satire headline. */
 function satireTitle(markdown: string): string {
-  const firstLine = markdown.split('\n').find((l) => l.trim().length > 0) ?? 'The Ugly Take';
-  return firstLine.replace(/^#+\s*/, '').trim().slice(0, 200) || 'The Ugly Take';
+  const firstLine =
+    markdown.split('\n').find((l) => l.trim().length > 0) ?? 'The Ugly Take';
+  return (
+    firstLine
+      .replace(/^#+\s*/, '')
+      .trim()
+      .slice(0, 200) || 'The Ugly Take'
+  );
 }
 
 /**
@@ -254,7 +316,10 @@ function satireTitle(markdown: string): string {
  * (those filter public:true); only the cluster page reads it by id and renders
  * it behind the SATIRE stamp.
  */
-export async function dispatchClusterSatirize(db: NewsDb, clusterId: string): Promise<void> {
+export async function dispatchClusterSatirize(
+  db: NewsDb,
+  clusterId: string,
+): Promise<void> {
   const cluster = await db.getDoc(collections.newsCluster, clusterId);
   if (!cluster) {
     console.warn(`[cluster-satire] cluster ${clusterId} not found — skipping`);
@@ -262,21 +327,30 @@ export async function dispatchClusterSatirize(db: NewsDb, clusterId: string): Pr
   }
   const c = cluster as NewsCluster & { _id: string };
   if (c.uglyTakeFileId) {
-    console.log(`[cluster-satire] ${clusterId} already has Ugly Take ${c.uglyTakeFileId} — skipping`);
+    console.log(
+      `[cluster-satire] ${clusterId} already has Ugly Take ${c.uglyTakeFileId} — skipping`,
+    );
     return;
   }
 
-  console.log(`[cluster-satire] generating Ugly Take for ${clusterId} "${c.title.slice(0, 60)}"`);
+  console.log(
+    `[cluster-satire] generating Ugly Take for ${clusterId} "${c.title.slice(0, 60)}"`,
+  );
   const basis = c.neutralSummary ?? c.title;
   const markdown = await genText(
     [
       { role: 'system', content: SATIRE_PROMPT },
-      { role: 'user', content: `Real story: ${c.title}\n\nWhat actually happened:\n${truncateToApproximateTokens(basis, 800)}` },
+      {
+        role: 'user',
+        content: `Real story: ${c.title}\n\nWhat actually happened:\n${truncateToApproximateTokens(basis, 800)}`,
+      },
     ],
     { model: 'gpt_4o', temperature: 0.95, maxTokens: 700 },
   );
   if (!markdown) {
-    console.error(`[cluster-satire] genText returned null for ${clusterId} — AI proxy down/rate-limited; no Ugly Take generated`);
+    console.error(
+      `[cluster-satire] genText returned null for ${clusterId} — AI proxy down/rate-limited; no Ugly Take generated`,
+    );
     return;
   }
 
@@ -286,7 +360,8 @@ export async function dispatchClusterSatirize(db: NewsDb, clusterId: string): Pr
   // Reuse the cluster's top image (guaranteed by dispatchClusterSynthesize for
   // qualifying clusters) rather than minting a second one. Only generate here if
   // it's still missing — satire can fire before synthesis for some clusters.
-  const image = c.topImageUri ?? (await generateUglyPressImage(title, category));
+  const image =
+    c.topImageUri ?? (await generateUglyPressImage(title, category));
 
   const satireFileId = `satire_${c._id}`;
   const file: FileMarkdown & { _id: string } = {
@@ -297,7 +372,9 @@ export async function dispatchClusterSatirize(db: NewsDb, clusterId: string): Pr
     markdown,
     title,
     text: title,
-    thumbnail: image ? { type: 'public', uri: image, width: 1280, height: 720 } : null,
+    thumbnail: image
+      ? { type: 'public', uri: image, width: 1280, height: 720 }
+      : null,
     tags: [category],
     sourceUri: null,
     feedId: null,
@@ -323,5 +400,7 @@ export async function dispatchClusterSatirize(db: NewsDb, clusterId: string): Pr
     ...dbDefaults(),
     created: (c as { created?: Date }).created ?? new Date(),
   });
-  console.log(`[cluster-satire] done ${clusterId}: file=${satireFileId} title="${title.slice(0, 60)}" image=${image ? 'yes' : 'no'}`);
+  console.log(
+    `[cluster-satire] done ${clusterId}: file=${satireFileId} title="${title.slice(0, 60)}" image=${image ? 'yes' : 'no'}`,
+  );
 }

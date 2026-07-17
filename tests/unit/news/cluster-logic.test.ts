@@ -138,30 +138,56 @@ describe('averageFactuality', () => {
 describe('clusterAcceptsArticle (date gating)', () => {
   const now = 1_000 * DAY; // arbitrary fixed "now"
   it('accepts a fresh article into a recently-active young cluster', () => {
-    const timing = { firstSeenAt: now - 6 * HOUR, lastUpdatedAt: now - 1 * HOUR };
+    const timing = {
+      firstSeenAt: now - 6 * HOUR,
+      lastUpdatedAt: now - 1 * HOUR,
+    };
     expect(clusterAcceptsArticle(timing, now, now)).toBe(true);
   });
   it('rejects a cluster older than the max age (anchored to firstSeenAt)', () => {
     // active 1h ago, but it first appeared 6 days ago → too old to keep growing
-    const timing = { firstSeenAt: now - 6 * DAY, lastUpdatedAt: now - 1 * HOUR };
+    const timing = {
+      firstSeenAt: now - 6 * DAY,
+      lastUpdatedAt: now - 1 * HOUR,
+    };
     expect(clusterAcceptsArticle(timing, now, now)).toBe(false);
   });
   it('rejects an article whose own date is far from the cluster activity', () => {
-    const timing = { firstSeenAt: now - 6 * HOUR, lastUpdatedAt: now - 1 * HOUR };
+    const timing = {
+      firstSeenAt: now - 6 * HOUR,
+      lastUpdatedAt: now - 1 * HOUR,
+    };
     // a 5-day-old backfilled article should not merge into a current cluster
     expect(clusterAcceptsArticle(timing, now - 5 * DAY, now)).toBe(false);
   });
   it('honors custom windows', () => {
-    const timing = { firstSeenAt: now - 2 * DAY, lastUpdatedAt: now - 2 * HOUR };
-    expect(clusterAcceptsArticle(timing, now, now, { maxClusterAgeMs: 1 * DAY })).toBe(false);
-    expect(clusterAcceptsArticle(timing, now, now, { maxClusterAgeMs: 3 * DAY })).toBe(true);
+    const timing = {
+      firstSeenAt: now - 2 * DAY,
+      lastUpdatedAt: now - 2 * HOUR,
+    };
+    expect(
+      clusterAcceptsArticle(timing, now, now, { maxClusterAgeMs: 1 * DAY }),
+    ).toBe(false);
+    expect(
+      clusterAcceptsArticle(timing, now, now, { maxClusterAgeMs: 3 * DAY }),
+    ).toBe(true);
   });
 });
 
 describe('computeClusterScore', () => {
   it('ranks a broad, multi-side, fresh, engaged cluster above a narrow stale one', () => {
-    const big = computeClusterScore({ articleCount: 30, distinctBuckets: 3, ageHours: 1, engagement: 50 });
-    const small = computeClusterScore({ articleCount: 2, distinctBuckets: 1, ageHours: 40, engagement: 0 });
+    const big = computeClusterScore({
+      articleCount: 30,
+      distinctBuckets: 3,
+      ageHours: 1,
+      engagement: 50,
+    });
+    const small = computeClusterScore({
+      articleCount: 2,
+      distinctBuckets: 1,
+      ageHours: 40,
+      engagement: 0,
+    });
     expect(big).toBeGreaterThan(small);
   });
 });
@@ -178,7 +204,9 @@ describe('isSubstantiveSummary', () => {
     // Real broken prod values from clus_file_foxnews_politics_291e1dc1 and peers.
     expect(isSubstantiveSummary('A **')).toBe(false);
     expect(isSubstantiveSummary('A')).toBe(false);
-    expect(isSubstantiveSummary('**Left:** Left-leaning outlets frame the')).toBe(false); // 40c
+    expect(
+      isSubstantiveSummary('**Left:** Left-leaning outlets frame the'),
+    ).toBe(false); // 40c
   });
 
   it('accepts real summaries at/above the threshold', () => {

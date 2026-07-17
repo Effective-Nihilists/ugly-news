@@ -20,22 +20,26 @@ const xml = new XMLParser({
 });
 
 interface RSSItem {
-  guid?: string | { '#text'?: string; [k: string]: unknown };
-  id?: string;
-  isoDate?: string;
-  pubDate?: string;
-  published?: string;
-  updated?: string;
-  description?: string;
-  content?: string | { '#text'?: string };
+  'guid'?: string | { '#text'?: string; [k: string]: unknown };
+  'id'?: string;
+  'isoDate'?: string;
+  'pubDate'?: string;
+  'published'?: string;
+  'updated'?: string;
+  'description'?: string;
+  'content'?: string | { '#text'?: string };
   'content:encoded'?: string;
-  summary?: string;
-  link?: string | { '@_href'?: string } | { '@_href'?: string }[];
-  title?: string | { '#text'?: string };
-  'media:content'?: { '@_url'?: string; '@_medium'?: string; '@_type'?: string }[];
+  'summary'?: string;
+  'link'?: string | { '@_href'?: string } | { '@_href'?: string }[];
+  'title'?: string | { '#text'?: string };
+  'media:content'?: {
+    '@_url'?: string;
+    '@_medium'?: string;
+    '@_type'?: string;
+  }[];
   'media:thumbnail'?: { '@_url'?: string }[];
-  enclosure?: { '@_url'?: string; '@_type'?: string };
-  image?: { url?: string } | string;
+  'enclosure'?: { '@_url'?: string; '@_type'?: string };
+  'image'?: { url?: string } | string;
 }
 
 function textOf(v: unknown): string | undefined {
@@ -62,7 +66,10 @@ function linkOf(item: RSSItem): string | null {
 /** Fetch a feed URL and normalize RSS 2.0 / Atom into a flat item list. */
 async function fetchFeedItems(url: string): Promise<RSSItem[]> {
   const res = await fetch(url, {
-    headers: { 'user-agent': 'Mozilla/5.0 (compatible; UglyNews/1.0; +https://ugly.press)' },
+    headers: {
+      'user-agent':
+        'Mozilla/5.0 (compatible; UglyNews/1.0; +https://ugly.press)',
+    },
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const body = await res.text();
@@ -90,20 +97,48 @@ function stableHash(input: string): string {
 // `&mdash;`) that React would render literally. Decode numeric (decimal + hex)
 // and the common named entities. Worker-safe (no DOM / deps).
 const NAMED_ENTITIES: Record<string, string> = {
-  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ',
-  hellip: '…', mdash: '—', ndash: '–', rsquo: '’', lsquo: '‘',
-  rdquo: '”', ldquo: '“', laquo: '«', raquo: '»', copy: '©',
-  reg: '®', trade: '™', deg: '°', middot: '·', bull: '•', euro: '€',
-  pound: '£', cent: '¢', frac12: '½', frac14: '¼', frac34: '¾',
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  apos: "'",
+  nbsp: ' ',
+  hellip: '…',
+  mdash: '—',
+  ndash: '–',
+  rsquo: '’',
+  lsquo: '‘',
+  rdquo: '”',
+  ldquo: '“',
+  laquo: '«',
+  raquo: '»',
+  copy: '©',
+  reg: '®',
+  trade: '™',
+  deg: '°',
+  middot: '·',
+  bull: '•',
+  euro: '€',
+  pound: '£',
+  cent: '¢',
+  frac12: '½',
+  frac14: '¼',
+  frac34: '¾',
 };
 
 export function decodeHtmlEntities(input: string): string {
   if (!input?.includes('&')) return input;
   return input
-    .replace(/&#x([0-9a-fA-F]+);/g, (_m: string, hex: string) => codePoint(parseInt(hex, 16)))
-    .replace(/&#(\d+);/g, (_m: string, dec: string) => codePoint(parseInt(dec, 10)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_m: string, hex: string) =>
+      codePoint(parseInt(hex, 16)),
+    )
+    .replace(/&#(\d+);/g, (_m: string, dec: string) =>
+      codePoint(parseInt(dec, 10)),
+    )
     .replace(/&([a-zA-Z][a-zA-Z0-9]+);/g, (m: string, name: string) =>
-      Object.prototype.hasOwnProperty.call(NAMED_ENTITIES, name) ? NAMED_ENTITIES[name]! : m,
+      Object.prototype.hasOwnProperty.call(NAMED_ENTITIES, name)
+        ? NAMED_ENTITIES[name]!
+        : m,
     );
 }
 
@@ -133,7 +168,10 @@ export function extractImageFromRSSItem(item: RSSItem): string | null {
   if (item['media:content']?.length) {
     for (const media of item['media:content']) {
       const url = media['@_url'];
-      if (url && (media['@_medium'] === 'image' || media['@_type']?.startsWith('image/'))) {
+      if (
+        url &&
+        (media['@_medium'] === 'image' || media['@_type']?.startsWith('image/'))
+      ) {
         return url;
       }
       if (url && /\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(url)) return url;
@@ -143,7 +181,10 @@ export function extractImageFromRSSItem(item: RSSItem): string | null {
     const url = item['media:thumbnail'][0]?.['@_url'];
     if (url) return url;
   }
-  if (item.enclosure?.['@_url'] && item.enclosure['@_type']?.startsWith('image/')) {
+  if (
+    item.enclosure?.['@_url'] &&
+    item.enclosure['@_type']?.startsWith('image/')
+  ) {
     return item.enclosure['@_url'];
   }
   if (item.image) {
@@ -175,7 +216,8 @@ export async function dispatchNewsFeedDownload(
       const guidText =
         textOf(item.guid) ??
         (typeof item.guid === 'string' ? item.guid : undefined);
-      const rawGuid = guidText ?? item.id ?? item.isoDate ?? item.pubDate ?? item.published;
+      const rawGuid =
+        guidText ?? item.id ?? item.isoDate ?? item.pubDate ?? item.published;
       if (!isDefined(rawGuid)) continue;
       const _id = `${feed.id}_${stableHash(rawGuid)}`;
 
@@ -183,9 +225,12 @@ export async function dispatchNewsFeedDownload(
 
       const imageUri = extractImageFromRSSItem(item);
       const contentHtml =
-        [item['content:encoded'], textOf(item.content), item.description, item.summary].find(
-          (x) => !isStringEmpty(x),
-        ) ?? '';
+        [
+          item['content:encoded'],
+          textOf(item.content),
+          item.description,
+          item.summary,
+        ].find((x) => !isStringEmpty(x)) ?? '';
       const contentMarkdown = htmlToMarkdown(contentHtml);
       if (isStringEmpty(contentMarkdown)) continue;
 
@@ -195,13 +240,16 @@ export async function dispatchNewsFeedDownload(
       // English-only. franc returns 'und' below minLength, so short items fail
       // open (kept); we only drop items detected as a confident non-English
       // language (e.g. Spanish sports feeds, foreign-language GDELT slips).
-      const lang = franc(`${title}. ${contentMarkdown}`.slice(0, 600), { minLength: 25 });
+      const lang = franc(`${title}. ${contentMarkdown}`.slice(0, 600), {
+        minLength: 25,
+      });
       if (lang !== 'eng' && lang !== 'und') {
         continue;
       }
 
       const uri = linkOf(item);
-      const dateStr = item.isoDate ?? item.published ?? item.pubDate ?? item.updated;
+      const dateStr =
+        item.isoDate ?? item.published ?? item.pubDate ?? item.updated;
       const parsedMs = dateStr ? Date.parse(dateStr) : NaN;
       const createdMs = Number.isNaN(parsedMs) ? Date.now() : parsedMs;
 
@@ -227,7 +275,10 @@ export async function dispatchNewsFeedDownload(
 
       if (uri) await enqueueTask('articleScrape', { articleId: _id });
     } catch (error) {
-      console.error('[NEWS] Failed to process RSS item', { feedId: feed.id, error });
+      console.error('[NEWS] Failed to process RSS item', {
+        feedId: feed.id,
+        error,
+      });
     }
   }
 }
@@ -235,7 +286,9 @@ export async function dispatchNewsFeedDownload(
 /** Enqueue a download job for every configured feed (called by newsHourly). */
 export async function newsRefreshAllFeeds(): Promise<void> {
   await Promise.all(
-    newsFeeds.map((feed) => enqueueTask('newsFeedDownload', { feedId: feed.id })),
+    newsFeeds.map((feed) =>
+      enqueueTask('newsFeedDownload', { feedId: feed.id }),
+    ),
   );
 }
 

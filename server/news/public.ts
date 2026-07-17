@@ -1,6 +1,10 @@
 import type { DBObject, TypedDB } from 'ugly-app/shared';
 import { collections } from '../../shared/collections';
-import type { FileMarkdown, NewsArticle, NewsPodcast } from '../../shared/collections';
+import type {
+  FileMarkdown,
+  NewsArticle,
+  NewsPodcast,
+} from '../../shared/collections';
 import { uglyBotId } from '../../shared/news/Bot';
 import { decodeHtmlEntities } from './download';
 import { embed } from './ai';
@@ -10,15 +14,60 @@ type Db = TypedDB<Record<string, DBObject>>;
 // Stopwords dropped from a keyword query so natural-language questions
 // ("latest news on AI regulation") still match by their content terms.
 const STOP = new Set([
-  'the', 'a', 'an', 'of', 'on', 'in', 'to', 'for', 'and', 'or', 'is', 'are',
-  'was', 'were', 'be', 'about', 'with', 'what', 'whats', 'who', 'when', 'where',
-  'why', 'how', 'latest', 'news', 'recent', 'tell', 'me', 'show', 'find', 'any',
-  'this', 'that', 'these', 'those', 'do', 'does', 'did', 'i', 'you', 'it',
+  'the',
+  'a',
+  'an',
+  'of',
+  'on',
+  'in',
+  'to',
+  'for',
+  'and',
+  'or',
+  'is',
+  'are',
+  'was',
+  'were',
+  'be',
+  'about',
+  'with',
+  'what',
+  'whats',
+  'who',
+  'when',
+  'where',
+  'why',
+  'how',
+  'latest',
+  'news',
+  'recent',
+  'tell',
+  'me',
+  'show',
+  'find',
+  'any',
+  'this',
+  'that',
+  'these',
+  'those',
+  'do',
+  'does',
+  'did',
+  'i',
+  'you',
+  'it',
 ]);
 
 /** Significant lowercased terms (≥3 chars, non-stopword) from a query. */
 function queryTerms(q: string): string[] {
-  return [...new Set(q.toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length >= 3 && !STOP.has(t)))];
+  return [
+    ...new Set(
+      q
+        .toLowerCase()
+        .split(/[^a-z0-9]+/)
+        .filter((t) => t.length >= 3 && !STOP.has(t)),
+    ),
+  ];
 }
 
 export interface NewsCard {
@@ -56,15 +105,22 @@ function ms(created: unknown): number {
 }
 
 function snippet(s: string, n = 220): string {
-  const t = s.replace(/[#>*_`[\]]/g, '').replace(/\s+/g, ' ').trim();
+  const t = s
+    .replace(/[#>*_`[\]]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
   return t.length > n ? `${t.slice(0, n)}…` : t;
 }
 
-function fileToCard(f: FileMarkdown & { _id: string; created?: unknown }): NewsCard {
+function fileToCard(
+  f: FileMarkdown & { _id: string; created?: unknown },
+): NewsCard {
   return {
     id: f._id,
     title: decodeHtmlEntities(f.title ?? 'Untitled'),
-    summary: decodeHtmlEntities(f.text ? snippet(f.text) : snippet(f.markdown ?? '')),
+    summary: decodeHtmlEntities(
+      f.text ? snippet(f.text) : snippet(f.markdown ?? ''),
+    ),
     thumbnailUri: f.thumbnail?.uri ?? null,
     category: f.category ?? f.tags?.[0] ?? null,
     feedId: f.feedId ?? null,
@@ -72,7 +128,9 @@ function fileToCard(f: FileMarkdown & { _id: string; created?: unknown }): NewsC
   };
 }
 
-function articleToCard(a: NewsArticle & { _id: string; created?: unknown }): NewsCard {
+function articleToCard(
+  a: NewsArticle & { _id: string; created?: unknown },
+): NewsCard {
   return {
     id: a._id,
     title: decodeHtmlEntities(a.title),
@@ -111,7 +169,11 @@ function diversify(cards: NewsCard[], limit: number): NewsCard[] {
     added = false;
     for (const q of queues) {
       const next = q.shift();
-      if (next) { out.push(next); added = true; if (out.length >= limit) break; }
+      if (next) {
+        out.push(next);
+        added = true;
+        if (out.length >= limit) break;
+      }
     }
   }
   return out;
@@ -137,11 +199,11 @@ export async function newsLatest(
   // monopolized by whichever feed synced last (e.g. an all-techcrunch run).
   // Round-robin across feeds and float image-bearing stories up — a news
   // front page should be varied and visual, not one source in recency order.
-  const pool = await db.getQuery<FileMarkdown & { _id: string; created?: unknown }>(
-    'file',
-    [{ $match: fileMatch }, { $sort: { created: -1 } }],
-    { limit: Math.max(limit * 6, 90) },
-  );
+  const pool = await db.getQuery<
+    FileMarkdown & { _id: string; created?: unknown }
+  >('file', [{ $match: fileMatch }, { $sort: { created: -1 } }], {
+    limit: Math.max(limit * 6, 90),
+  });
   if (pool.length > 0) {
     const cards = pool.map(fileToCard);
     return { items: diversify(cards, limit) };
@@ -150,11 +212,11 @@ export async function newsLatest(
   // Fallback: raw articles (skip ads / unscraped-empty).
   const artMatch: Record<string, unknown> = { scrapeStatus: { $ne: 'ad' } };
   if (input.category) artMatch.categories = input.category;
-  const articles = await db.getQuery<NewsArticle & { _id: string; created?: unknown }>(
-    'newsArticle',
-    [{ $match: artMatch }, { $sort: { created: -1 } }],
-    { limit },
-  );
+  const articles = await db.getQuery<
+    NewsArticle & { _id: string; created?: unknown }
+  >('newsArticle', [{ $match: artMatch }, { $sort: { created: -1 } }], {
+    limit,
+  });
   return { items: articles.map(articleToCard) };
 }
 
@@ -166,11 +228,20 @@ export async function newsLatest(
  */
 export async function newsArchive(
   db: Db,
-  input: { query?: string | undefined; limit?: number | undefined; skip?: number | undefined; category?: string | undefined },
+  input: {
+    query?: string | undefined;
+    limit?: number | undefined;
+    skip?: number | undefined;
+    category?: string | undefined;
+  },
 ): Promise<{ items: NewsCard[]; hasMore: boolean }> {
   const limit = Math.min(Math.max(input.limit ?? 30, 1), 60);
   const skip = Math.max(input.skip ?? 0, 0);
-  const filter: Record<string, unknown> = { public: true, userId: uglyBotId, type: 'markdown' };
+  const filter: Record<string, unknown> = {
+    public: true,
+    userId: uglyBotId,
+    type: 'markdown',
+  };
   if (input.category) filter.category = input.category;
   const q = input.query?.trim();
 
@@ -195,15 +266,23 @@ export async function newsArchive(
       skip,
     });
     const hasMore = rows.length > limit;
-    return { items: rows.slice(0, limit).map((r) => fileToCard(r as FileMarkdown & { _id: string; created?: unknown })), hasMore };
+    return {
+      items: rows
+        .slice(0, limit)
+        .map((r) =>
+          fileToCard(r as FileMarkdown & { _id: string; created?: unknown }),
+        ),
+      hasMore,
+    };
   }
 
   // Browse: true reverse-chronological with offset pagination.
-  const rows = await db.getQuery<FileMarkdown & { _id: string; created?: unknown }>(
-    'file',
-    [{ $match: filter }, { $sort: { created: -1 } }],
-    { limit: limit + 1, skip },
-  );
+  const rows = await db.getQuery<
+    FileMarkdown & { _id: string; created?: unknown }
+  >('file', [{ $match: filter }, { $sort: { created: -1 } }], {
+    limit: limit + 1,
+    skip,
+  });
   const hasMore = rows.length > limit;
   return { items: rows.slice(0, limit).map(fileToCard), hasMore };
 }

@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { renderDailyNewsEmail, type NewsEmailArticle } from '../../../server/news/email';
+import {
+  renderDailyNewsEmail,
+  type NewsEmailArticle,
+} from '../../../server/news/email';
 
 // Every shareable link in the daily email must be a central short link
 // (https://ugly.bot/l/<code>) so it deep-links into the app + renders an OG card.
@@ -67,7 +70,10 @@ describe('renderDailyNewsEmail links', () => {
       },
       'June 28, 2026',
       { topStories: [cluster('cl1')], blindspot: [] },
-      { ...articles, pickedForYou: [{ ...article('p1'), thumbnailUri: bigData }] },
+      {
+        ...articles,
+        pickedForYou: [{ ...article('p1'), thumbnailUri: bigData }],
+      },
       { title: 'Pod', duration: '5 min', uri: `${SHORT}podcode` },
       `${SHORT}homecode`,
       { ...uglyTake, imageUri: bigData },
@@ -90,7 +96,10 @@ describe('renderDailyNewsEmail links', () => {
         buttonText: 'Open Ugly News',
       },
       'June 28, 2026',
-      { topStories: [cluster('cl1'), cluster('cl2', 'right')], blindspot: [cluster('bs1', 'left')] },
+      {
+        topStories: [cluster('cl1'), cluster('cl2', 'right')],
+        blindspot: [cluster('bs1', 'left')],
+      },
       articles,
       { title: 'Pod', duration: '5 min', uri: `${SHORT}podcode` },
       `${SHORT}homecode`,
@@ -101,7 +110,9 @@ describe('renderDailyNewsEmail links', () => {
     expect(hrefs.length).toBeGreaterThan(0);
     expect(hrefs).toContain(`${SHORT}takecode`); // the Ugly Take block links out
     for (const href of hrefs) {
-      expect(href.startsWith(SHORT), `non-short link in email: ${href}`).toBe(true);
+      expect(href.startsWith(SHORT), `non-short link in email: ${href}`).toBe(
+        true,
+      );
     }
   });
 });

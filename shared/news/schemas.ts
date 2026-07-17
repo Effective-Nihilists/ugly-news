@@ -85,7 +85,13 @@ export const biasValues = [
 export const BiasSchema = z.enum(biasValues);
 export type Bias = z.infer<typeof BiasSchema>;
 
-export const factualityValues = ['very-low', 'low', 'mixed', 'high', 'very-high'] as const;
+export const factualityValues = [
+  'very-low',
+  'low',
+  'mixed',
+  'high',
+  'very-high',
+] as const;
 export const FactualitySchema = z.enum(factualityValues);
 export type Factuality = z.infer<typeof FactualitySchema>;
 
@@ -223,7 +229,12 @@ export const SpeakerEmotionSchema = z.enum([
   'whispering',
   'neutral',
 ]);
-export const NonVerbalCueSchema = z.enum(['breathe', 'sigh', 'laugh', 'chuckle']);
+export const NonVerbalCueSchema = z.enum([
+  'breathe',
+  'sigh',
+  'laugh',
+  'chuckle',
+]);
 export const ListenerReactionSchema = z.enum([
   'nod',
   'laugh',

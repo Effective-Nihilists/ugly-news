@@ -1,7 +1,11 @@
 import type { DBObject, TypedDB } from 'ugly-app/shared';
 import { collections } from '../../shared/collections';
 import type { FileMarkdown, NewsCluster } from '../../shared/collections';
-import { computeBiasBreakdown, detectBlindspot, toBiasBucket } from '../../shared/news/cluster-logic';
+import {
+  computeBiasBreakdown,
+  detectBlindspot,
+  toBiasBucket,
+} from '../../shared/news/cluster-logic';
 import { feedIdToSourceId, sourceById } from '../../shared/news/sourceBias';
 import { getDomainRating, normalizeDomain } from './domainBias';
 import type {
@@ -20,7 +24,10 @@ type UglyTakeCard = z.infer<typeof UglyTakeCardSchema>;
 const RECENT_MS = 4 * 24 * 60 * 60 * 1000; // Top Stories window
 
 function snippet(s: string, n = 220): string {
-  const t = s.replace(/[#>*_`[\]]/g, '').replace(/\s+/g, ' ').trim();
+  const t = s
+    .replace(/[#>*_`[\]]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
   return t.length > n ? `${t.slice(0, n)}…` : t;
 }
 
@@ -47,7 +54,9 @@ export async function newsTopStories(
   input: { limit?: number | undefined; category?: string | undefined },
 ): Promise<{ items: ClusterCard[] }> {
   const limit = Math.min(Math.max(input.limit ?? 12, 1), 40);
-  const match: Record<string, unknown> = { lastUpdatedAt: { $gte: Date.now() - RECENT_MS } };
+  const match: Record<string, unknown> = {
+    lastUpdatedAt: { $gte: Date.now() - RECENT_MS },
+  };
   if (input.category) match.category = input.category;
   const rows = await db.getQuery<NewsCluster & { _id: string }>(
     'newsCluster',
@@ -65,7 +74,10 @@ export async function newsBlindspot(
   const limit = Math.min(Math.max(input.limit ?? 12, 1), 40);
   const rows = await db.getQuery<NewsCluster & { _id: string }>(
     'newsCluster',
-    [{ $match: { blindspotSide: { $in: ['left', 'right'] } } }, { $sort: { lastUpdatedAt: -1 } }],
+    [
+      { $match: { blindspotSide: { $in: ['left', 'right'] } } },
+      { $sort: { lastUpdatedAt: -1 } },
+    ],
     { limit },
   );
   return { items: rows.map(toCard) };
@@ -81,7 +93,10 @@ export async function newsUglyTakes(
   const limit = Math.min(Math.max(input.limit ?? 12, 1), 40);
   const rows = await db.getQuery<NewsCluster & { _id: string }>(
     'newsCluster',
-    [{ $match: { uglyTakeFileId: { $ne: null } } }, { $sort: { satirizedAt: -1 } }],
+    [
+      { $match: { uglyTakeFileId: { $ne: null } } },
+      { $sort: { satirizedAt: -1 } },
+    ],
     { limit },
   );
   const items: UglyTakeCard[] = [];
@@ -107,7 +122,11 @@ export async function newsUglyTakes(
 /** Paginated cluster browse, newest-first, optional desk filter. */
 export async function newsClusterArchive(
   db: Db,
-  input: { limit?: number | undefined; skip?: number | undefined; category?: string | undefined },
+  input: {
+    limit?: number | undefined;
+    skip?: number | undefined;
+    category?: string | undefined;
+  },
 ): Promise<{ items: ClusterCard[]; hasMore: boolean }> {
   const limit = Math.min(Math.max(input.limit ?? 30, 1), 60);
   const skip = Math.max(input.skip ?? 0, 0);
@@ -148,7 +167,8 @@ export async function newsClusterGet(
     const sid = f.feedId ? feedIdToSourceId[f.feedId] : undefined;
     const src = sid ? sourceById[sid] : undefined;
     const domain = normalizeDomain(f.sourceUri);
-    const key = sid ?? (domain ? `domain:${domain}` : `feed:${f.feedId ?? f._id}`);
+    const key =
+      sid ?? (domain ? `domain:${domain}` : `feed:${f.feedId ?? f._id}`);
     const existing = byOutlet.get(key);
     if (existing) {
       existing.articleCount += 1;
@@ -179,9 +199,13 @@ export async function newsClusterGet(
 
   // Recompute the bias bar from DISTINCT outlets (curated OR IDIAP-rated) so older
   // clusters (whose stored breakdown was per-article) render correctly.
-  const bucketScore = (b: Cov['bucket']): number | null => (b === 'left' ? -3 : b === 'right' ? 3 : b === 'center' ? 0 : null);
+  const bucketScore = (b: Cov['bucket']): number | null =>
+    b === 'left' ? -3 : b === 'right' ? 3 : b === 'center' ? 0 : null;
   const biasBreakdown = computeBiasBreakdown(
-    coverage.map((x) => ({ biasScore: bucketScore(x.bucket), factuality: null })),
+    coverage.map((x) => ({
+      biasScore: bucketScore(x.bucket),
+      factuality: null,
+    })),
   );
   const blindspotSide = detectBlindspot(biasBreakdown);
   const sourceCount = coverage.filter((x) => x.bucket !== null).length;

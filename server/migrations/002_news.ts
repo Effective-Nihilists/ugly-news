@@ -27,18 +27,40 @@ export async function up(query: typeof pgQuery): Promise<void> {
       updated  TIMESTAMPTZ NOT NULL DEFAULT now(),
       version  INTEGER NOT NULL DEFAULT 1
     )`);
-    await query(`CREATE INDEX IF NOT EXISTS "idx_${t}_data" ON "${t}" USING GIN (data)`);
+    await query(
+      `CREATE INDEX IF NOT EXISTS "idx_${t}_data" ON "${t}" USING GIN (data)`,
+    );
   }
 
   // Hot-path expression indexes (JSONB field accessors used by the feed/email).
-  await query(`CREATE INDEX IF NOT EXISTS "idx_file_type" ON "file" ((data->>'type'))`);
-  await query(`CREATE INDEX IF NOT EXISTS "idx_file_feedId" ON "file" ((data->>'feedId'))`);
-  await query(`CREATE INDEX IF NOT EXISTS "idx_file_userId" ON "file" ((data->>'userId'))`);
-  await query(`CREATE INDEX IF NOT EXISTS "idx_newsArticle_feedId" ON "newsArticle" ((data->>'feedId'))`);
-  await query(`CREATE INDEX IF NOT EXISTS "idx_userNewsRead_userId" ON "userNewsRead" ((data->>'userId'))`);
-  await query(`CREATE INDEX IF NOT EXISTS "idx_userNewsSaved_userId" ON "userNewsSaved" ((data->>'userId'))`);
-  await query(`CREATE INDEX IF NOT EXISTS "idx_userNewsReaction_userId" ON "userNewsReaction" ((data->>'userId'))`);
-  await query(`CREATE INDEX IF NOT EXISTS "idx_userNewsSourceFollow_userId" ON "userNewsSourceFollow" ((data->>'userId'))`);
-  await query(`CREATE INDEX IF NOT EXISTS "idx_newsPodcast_date" ON "newsPodcast" ((data->>'date'))`);
-  await query(`CREATE INDEX IF NOT EXISTS "idx_userNewsEmailPref_timezone" ON "userNewsEmailPref" ((data->>'timezone'))`);
+  await query(
+    `CREATE INDEX IF NOT EXISTS "idx_file_type" ON "file" ((data->>'type'))`,
+  );
+  await query(
+    `CREATE INDEX IF NOT EXISTS "idx_file_feedId" ON "file" ((data->>'feedId'))`,
+  );
+  await query(
+    `CREATE INDEX IF NOT EXISTS "idx_file_userId" ON "file" ((data->>'userId'))`,
+  );
+  await query(
+    `CREATE INDEX IF NOT EXISTS "idx_newsArticle_feedId" ON "newsArticle" ((data->>'feedId'))`,
+  );
+  await query(
+    `CREATE INDEX IF NOT EXISTS "idx_userNewsRead_userId" ON "userNewsRead" ((data->>'userId'))`,
+  );
+  await query(
+    `CREATE INDEX IF NOT EXISTS "idx_userNewsSaved_userId" ON "userNewsSaved" ((data->>'userId'))`,
+  );
+  await query(
+    `CREATE INDEX IF NOT EXISTS "idx_userNewsReaction_userId" ON "userNewsReaction" ((data->>'userId'))`,
+  );
+  await query(
+    `CREATE INDEX IF NOT EXISTS "idx_userNewsSourceFollow_userId" ON "userNewsSourceFollow" ((data->>'userId'))`,
+  );
+  await query(
+    `CREATE INDEX IF NOT EXISTS "idx_newsPodcast_date" ON "newsPodcast" ((data->>'date'))`,
+  );
+  await query(
+    `CREATE INDEX IF NOT EXISTS "idx_userNewsEmailPref_timezone" ON "userNewsEmailPref" ((data->>'timezone'))`,
+  );
 }

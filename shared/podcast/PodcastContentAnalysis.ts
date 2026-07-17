@@ -23,12 +23,7 @@ export type CameraEnergy = 'fast' | 'normal' | 'slow';
 
 /** Listener reaction types for non-speaking host */
 export type ListenerReaction =
-  | 'nod'
-  | 'laugh'
-  | 'shocked'
-  | 'agree'
-  | 'empathize'
-  | 'bored';
+  'nod' | 'laugh' | 'shocked' | 'agree' | 'empathize' | 'bored';
 
 /** Gesture hint types for avatar animations */
 export type GestureType =

@@ -35,8 +35,16 @@ function resolveProdDatabaseUrl(): string {
     fs.readFileSync(path.join(process.cwd(), '.uglyapp'), 'utf8'),
   ) as { projectId?: string };
   if (!projectId) throw new Error('.uglyapp has no projectId');
-  const stateFile = path.join(os.homedir(), '.ugly-studio', 'projects', projectId, 'publish-state.json');
-  const state = JSON.parse(fs.readFileSync(stateFile, 'utf8')) as { neon?: { connectionString?: string } };
+  const stateFile = path.join(
+    os.homedir(),
+    '.ugly-studio',
+    'projects',
+    projectId,
+    'publish-state.json',
+  );
+  const state = JSON.parse(fs.readFileSync(stateFile, 'utf8')) as {
+    neon?: { connectionString?: string };
+  };
   const url = state.neon?.connectionString;
   if (!url) throw new Error(`No neon.connectionString in ${stateFile}`);
   return url;
@@ -92,7 +100,12 @@ async function main(): Promise<void> {
        ON CONFLICT (_id) DO UPDATE SET data = EXCLUDED.data, updated = now()`,
       [
         `${userId}:${s._id}`,
-        JSON.stringify({ userId, fileId: s._id, savedAt: Date.now(), ...dbDefaults() }),
+        JSON.stringify({
+          userId,
+          fileId: s._id,
+          savedAt: Date.now(),
+          ...dbDefaults(),
+        }),
       ],
     );
     saved++;

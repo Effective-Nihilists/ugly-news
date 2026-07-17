@@ -44,7 +44,8 @@ export const cronTasks = defineWorkers({
   // same reason clusterSweep was folded onto an existing hourly trigger.)
   pruneOldNews: defineWorker({
     schedule: '0 10 * * *',
-    description: 'Prune news content older than the rolling retention window (90d)',
+    description:
+      'Prune news content older than the rolling retention window (90d)',
     timeout: 60_000,
   }),
 
@@ -57,7 +58,8 @@ export const cronTasks = defineWorkers({
   // is strictly serial (concurrency 1) with no burst, while each job keeps its
   // own 60s budget.
   clusterSweepStep: defineWorker({
-    description: 'Process one queued cluster synth/satire op, then chain the rest',
+    description:
+      'Process one queued cluster synth/satire op, then chain the rest',
     input: z.object({
       queue: z.array(
         z.object({ type: z.enum(['synth', 'satire']), clusterId: z.string() }),
@@ -71,17 +73,20 @@ export const cronTasks = defineWorkers({
     timeout: 60_000,
   }),
   clusterSatirize: defineWorker({
-    description: 'Generate the labeled Ugly Take satire companion for a cluster',
+    description:
+      'Generate the labeled Ugly Take satire companion for a cluster',
     input: z.object({ clusterId: z.string() }),
     timeout: 60_000,
   }),
   newsFeedDownload: defineWorker({
-    description: 'Download + parse one RSS feed, create articles, enqueue scrapes',
+    description:
+      'Download + parse one RSS feed, create articles, enqueue scrapes',
     input: z.object({ feedId: z.string() }),
     timeout: 60_000,
   }),
   articleScrape: defineWorker({
-    description: 'Scrape + summarize + image one article, create its file + bot comment',
+    description:
+      'Scrape + summarize + image one article, create its file + bot comment',
     input: z.object({ articleId: z.string() }),
     timeout: 60_000,
   }),

@@ -67,50 +67,104 @@ export type CollabDoc = InferDocType<typeof CollabDocSchema>;
 export const collections = defineCollections({
   todo: {
     schema: TodoSchema,
-    meta: { db: d1, cache: false, trackable: true, public: false, cascadeFrom: null, trackKeys: ['userId'] },
+    meta: {
+      db: d1,
+      cache: false,
+      trackable: true,
+      public: false,
+      cascadeFrom: null,
+      trackKeys: ['userId'],
+    },
     indexes: [{ fields: { userId: 1 } }],
   },
   conversation: {
     schema: ConversationSchema,
-    meta: { db: d1, cache: false, trackable: false, public: false, cascadeFrom: null },
+    meta: {
+      db: d1,
+      cache: false,
+      trackable: false,
+      public: false,
+      cascadeFrom: null,
+    },
   },
   message: {
     schema: MessageSchema,
-    meta: { db: d1, cache: false, trackable: false, public: false, cascadeFrom: 'conversation', trackKeys: ['conversationId'] },
+    meta: {
+      db: d1,
+      cache: false,
+      trackable: false,
+      public: false,
+      cascadeFrom: 'conversation',
+      trackKeys: ['conversationId'],
+    },
     // trackKey conversationId; also the cascade-from-conversation child lookup.
     indexes: [{ fields: { conversationId: 1 } }],
   },
   collabDoc: {
     schema: CollabDocSchema,
-    meta: { db: d1, cache: false, trackable: false, public: false, cascadeFrom: null },
+    meta: {
+      db: d1,
+      cache: false,
+      trackable: false,
+      public: false,
+      cascadeFrom: null,
+    },
   },
 
   // ─── News ──────────────────────────────────────────────────────────────
   // RSS feed registry (small, read often → cache; publicly readable).
   newsFeed: {
     schema: NewsFeedDocSchema,
-    meta: { db: d1, cache: true, trackable: false, public: true, cascadeFrom: null },
+    meta: {
+      db: d1,
+      cache: true,
+      trackable: false,
+      public: true,
+      cascadeFrom: null,
+    },
   },
   // Raw scraped articles (intermediate; the user-facing article is the `file`).
   newsArticle: {
     schema: NewsArticleSchema,
-    meta: { db: d1, cache: false, trackable: false, public: false, cascadeFrom: null },
+    meta: {
+      db: d1,
+      cache: false,
+      trackable: false,
+      public: false,
+      cascadeFrom: null,
+    },
     // `created` (system column) index backs the retention prune's `created < cutoff`
     // filter (see server/news/retention.ts).
-    indexes: [{ fields: { feedId: 1 } }, { fields: { scrapedAt: -1 } }, { fields: { created: -1 } }],
+    indexes: [
+      { fields: { feedId: 1 } },
+      { fields: { scrapedAt: -1 } },
+      { fields: { created: -1 } },
+    ],
   },
   // Outlet bias/factuality/ownership registry (small, read often → cache;
   // publicly readable so the bias bar + source chips can render unauthenticated).
   newsSource: {
     schema: NewsSourceSchema,
-    meta: { db: d1, cache: true, trackable: false, public: true, cascadeFrom: null },
+    meta: {
+      db: d1,
+      cache: true,
+      trackable: false,
+      public: true,
+      cascadeFrom: null,
+    },
   },
   // Story clusters — the "same story across many outlets" unit that powers The
   // Spread / The Blindspot / The Ugly Take. Publicly readable; trackable so the
   // home rail can live-update as coverage grows.
   newsCluster: {
     schema: NewsClusterSchema,
-    meta: { db: d1, cache: false, trackable: true, public: true, cascadeFrom: null },
+    meta: {
+      db: d1,
+      cache: false,
+      trackable: true,
+      public: true,
+      cascadeFrom: null,
+    },
     indexes: [
       { fields: { category: 1 } },
       { fields: { lastUpdatedAt: -1 } },
@@ -122,7 +176,11 @@ export const collections = defineCollections({
   file: {
     schema: FileMarkdownSchema,
     meta: {
-      db: d1, cache: false, trackable: true, public: true, cascadeFrom: null,
+      db: d1,
+      cache: false,
+      trackable: true,
+      public: true,
+      cascadeFrom: null,
       // In-D1 SQLite FTS5 over title/text.
       search: { fields: ['title', 'text'], language: 'english' },
       // 512-dim article embedding OUT-OF-BAND in Cloudflare Vectorize (keyed by
@@ -148,46 +206,104 @@ export const collections = defineCollections({
   },
   userFilePreference: {
     schema: UserFilePreferenceSchema,
-    meta: { db: d1, cache: false, trackable: false, public: false, cascadeFrom: null, trackKeys: ['userId'] },
+    meta: {
+      db: d1,
+      cache: false,
+      trackable: false,
+      public: false,
+      cascadeFrom: null,
+      trackKeys: ['userId'],
+    },
     indexes: [{ fields: { userId: 1 } }],
   },
   newsPodcast: {
     schema: NewsPodcastSchema,
-    meta: { db: d1, cache: false, trackable: true, public: true, cascadeFrom: null },
+    meta: {
+      db: d1,
+      cache: false,
+      trackable: true,
+      public: true,
+      cascadeFrom: null,
+    },
     indexes: [{ fields: { date: -1 } }],
   },
   // ─── Per-user news state ─────────────────────────────────────────────────
   userNewsRead: {
     schema: UserNewsReadSchema,
-    meta: { db: d1, cache: false, trackable: false, public: false, cascadeFrom: null, trackKeys: ['userId'] },
+    meta: {
+      db: d1,
+      cache: false,
+      trackable: false,
+      public: false,
+      cascadeFrom: null,
+      trackKeys: ['userId'],
+    },
     indexes: [{ fields: { userId: 1 } }],
   },
   userNewsSaved: {
     schema: UserNewsSavedSchema,
-    meta: { db: d1, cache: false, trackable: true, public: false, cascadeFrom: null, trackKeys: ['userId'] },
+    meta: {
+      db: d1,
+      cache: false,
+      trackable: true,
+      public: false,
+      cascadeFrom: null,
+      trackKeys: ['userId'],
+    },
     indexes: [{ fields: { userId: 1, savedAt: -1 } }],
   },
   userNewsReaction: {
     schema: UserNewsReactionSchema,
-    meta: { db: d1, cache: false, trackable: false, public: false, cascadeFrom: null, trackKeys: ['userId'] },
+    meta: {
+      db: d1,
+      cache: false,
+      trackable: false,
+      public: false,
+      cascadeFrom: null,
+      trackKeys: ['userId'],
+    },
     indexes: [{ fields: { userId: 1 } }],
   },
   userNewsSourceFollow: {
     schema: UserNewsSourceFollowSchema,
-    meta: { db: d1, cache: false, trackable: false, public: false, cascadeFrom: null, trackKeys: ['userId'] },
+    meta: {
+      db: d1,
+      cache: false,
+      trackable: false,
+      public: false,
+      cascadeFrom: null,
+      trackKeys: ['userId'],
+    },
     indexes: [{ fields: { userId: 1 } }],
   },
   userNewsPreference: {
     schema: UserNewsPreferenceSchema,
-    meta: { db: d1, cache: false, trackable: false, public: false, cascadeFrom: null, trackKeys: ['userId'] },
+    meta: {
+      db: d1,
+      cache: false,
+      trackable: false,
+      public: false,
+      cascadeFrom: null,
+      trackKeys: ['userId'],
+    },
     indexes: [{ fields: { userId: 1 } }],
   },
   userNewsEmailPref: {
     schema: UserNewsEmailPrefSchema,
-    meta: { db: d1, cache: false, trackable: false, public: false, cascadeFrom: null, trackKeys: ['userId'] },
+    meta: {
+      db: d1,
+      cache: false,
+      trackable: false,
+      public: false,
+      cascadeFrom: null,
+      trackKeys: ['userId'],
+    },
     // userEmailHourly filters { timezone, emailAllowed }; podcast dispatch filters
     // { emailAllowed }; trackKey subscription reads by userId.
-    indexes: [{ fields: { timezone: 1, emailAllowed: 1 } }, { fields: { userId: 1 } }],
+    indexes: [
+      { fields: { timezone: 1, emailAllowed: 1 } },
+      { fields: { userId: 1 } },
+    ],
   },
 });
 
@@ -204,6 +320,8 @@ export type NewsPodcast = InferDocType<typeof NewsPodcastSchema>;
 export type UserNewsRead = InferDocType<typeof UserNewsReadSchema>;
 export type UserNewsSaved = InferDocType<typeof UserNewsSavedSchema>;
 export type UserNewsReaction = InferDocType<typeof UserNewsReactionSchema>;
-export type UserNewsSourceFollow = InferDocType<typeof UserNewsSourceFollowSchema>;
+export type UserNewsSourceFollow = InferDocType<
+  typeof UserNewsSourceFollowSchema
+>;
 export type UserNewsPreference = InferDocType<typeof UserNewsPreferenceSchema>;
 export type UserNewsEmailPref = InferDocType<typeof UserNewsEmailPrefSchema>;

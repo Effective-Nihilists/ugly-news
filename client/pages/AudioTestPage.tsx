@@ -104,7 +104,12 @@ function CanvasVizView({
   return (
     <canvas
       ref={canvasRef}
-      style={{ width: '100%', height: 200, borderRadius: 8, background: '#111' }}
+      style={{
+        width: '100%',
+        height: 200,
+        borderRadius: 8,
+        background: '#111',
+      }}
     />
   );
 }
@@ -119,7 +124,9 @@ function VisualizerView({
   analyzer: AnalyserNode | null;
 }) {
   if (canvasVizTypes.has(vizType)) {
-    return <CanvasVizView type={vizType as CanvasVizType} analyzer={analyzer} />;
+    return (
+      <CanvasVizView type={vizType as CanvasVizType} analyzer={analyzer} />
+    );
   }
   if (vizType === 'mic') {
     return analyzer ? (
@@ -130,11 +137,17 @@ function VisualizerView({
   }
   if (blobVizTypes.has(vizType)) {
     return (
-      <div style={{ height: 300, display: 'flex', overflow: 'hidden', borderRadius: 8, background: '#111', pointerEvents: 'none' }}>
-        <BlobVisualizer
-          style={vizType as BlobStyleType}
-          analyzer={analyzer}
-        />
+      <div
+        style={{
+          height: 300,
+          display: 'flex',
+          overflow: 'hidden',
+          borderRadius: 8,
+          background: '#111',
+          pointerEvents: 'none',
+        }}
+      >
+        <BlobVisualizer style={vizType as BlobStyleType} analyzer={analyzer} />
       </div>
     );
   }
@@ -167,8 +180,12 @@ function useMicAnalyzer() {
   }, []);
 
   const stop = useCallback(() => {
-    streamRef.current?.getTracks().forEach((t) => { t.stop(); });
-    void ctxRef.current?.close().catch(() => { /* noop */ });
+    streamRef.current?.getTracks().forEach((t) => {
+      t.stop();
+    });
+    void ctxRef.current?.close().catch(() => {
+      /* noop */
+    });
     ctxRef.current = null;
     analyzerRef.current = null;
     streamRef.current = null;
@@ -224,7 +241,9 @@ function useTTSAnalyzer() {
   }, []);
 
   const close = useCallback(() => {
-    void ctxRef.current?.close().catch(() => { /* noop */ });
+    void ctxRef.current?.close().catch(() => {
+      /* noop */
+    });
     ctxRef.current = null;
     analyzerRef.current = null;
     gainRef.current = null;
@@ -269,7 +288,10 @@ function STTSection({ socket }: { socket: UglyBotSocket }) {
     unsubsRef.current.push(
       socket.on('stt:transcript', (data) => {
         if (data.streamId && data.streamId !== streamId) return;
-        addLog(`Transcript${data.isFinal ? ' (final)' : ''}: ${data.text ?? ''}`, data.isFinal ? 'ok' : 'info');
+        addLog(
+          `Transcript${data.isFinal ? ' (final)' : ''}: ${data.text ?? ''}`,
+          data.isFinal ? 'ok' : 'info',
+        );
         setTranscript(data.text ?? '');
         if (data.isFinal && data.text) {
           const finalText = data.text;
@@ -279,13 +301,19 @@ function STTSection({ socket }: { socket: UglyBotSocket }) {
       }),
       socket.on('stt:error', (data) => {
         if (data.streamId && data.streamId !== streamId) return;
-        const errMsg = typeof data.message === 'string' ? data.message : JSON.stringify(data.message ?? data);
+        const errMsg =
+          typeof data.message === 'string'
+            ? data.message
+            : JSON.stringify(data.message ?? data);
         addLog(`STT error: ${errMsg}`, 'err');
         stopListening();
       }),
       socket.on('stt:stopped', (data) => {
         if (data.streamId && data.streamId !== streamId) return;
-        addLog(`STT stopped — sent ${chunkCountRef.current} audio chunks`, 'ok');
+        addLog(
+          `STT stopped — sent ${chunkCountRef.current} audio chunks`,
+          'ok',
+        );
         unsubAll();
         socket.release();
       }),
@@ -300,7 +328,9 @@ function STTSection({ socket }: { socket: UglyBotSocket }) {
     chunkCountRef.current = 0;
 
     const started = Date.now();
-    addLog(`Mode: ${sttMode}${sttMode === 'continuous' ? ' (VAD enabled)' : ''}`);
+    addLog(
+      `Mode: ${sttMode}${sttMode === 'continuous' ? ' (VAD enabled)' : ''}`,
+    );
 
     // Start mic + socket in parallel for faster startup
     if (!recorderRef.current) recorderRef.current = new AudioRecorder();
@@ -308,7 +338,9 @@ function STTSection({ socket }: { socket: UglyBotSocket }) {
       mic.start(),
       recorderRef.current.start((audio) => {
         chunkCountRef.current++;
-        console.log(`[STT] audio chunk #${chunkCountRef.current} (${audio.length} b64 chars)`);
+        console.log(
+          `[STT] audio chunk #${chunkCountRef.current} (${audio.length} b64 chars)`,
+        );
         socket.send('stt:audio', { streamId, audio });
       }),
     ]);
@@ -368,7 +400,7 @@ function STTSection({ socket }: { socket: UglyBotSocket }) {
   }
 
   // Cleanup on unmount
-  useEffect(() => {  
+  useEffect(() => {
     return () => {
       recorderRef.current?.stop();
       mic.stop();
@@ -388,8 +420,11 @@ function STTSection({ socket }: { socket: UglyBotSocket }) {
         {(['continuous', 'push-to-talk'] as STTMode[]).map((m) => (
           <button
             key={m}
-            onClick={() => { if (!listening) setSTTMode(m); }}
-            style={{ fontWeight: sttMode === m ? 'bold' : 'normal' }} data-id="button"
+            onClick={() => {
+              if (!listening) setSTTMode(m);
+            }}
+            style={{ fontWeight: sttMode === m ? 'bold' : 'normal' }}
+            data-id="button"
           >
             {m === 'continuous' ? 'Continuous (VAD)' : 'Push to Talk'}
           </button>
@@ -401,10 +436,15 @@ function STTSection({ socket }: { socket: UglyBotSocket }) {
         <label>Visualizer: </label>
         <select
           value={vizType}
-          onChange={(e) => { setVizType(e.target.value as VizType); }} data-id="select"
+          onChange={(e) => {
+            setVizType(e.target.value as VizType);
+          }}
+          data-id="select"
         >
           {vizOptions.map((v) => (
-            <option key={v.key} value={v.key}>{v.label}</option>
+            <option key={v.key} value={v.key}>
+              {v.label}
+            </option>
           ))}
         </select>
       </div>
@@ -451,7 +491,9 @@ function STTSection({ socket }: { socket: UglyBotSocket }) {
       {/* Transcript */}
       {(transcript || transcriptHistory.length > 0) && (
         <Card>
-          <p><strong>Transcript</strong></p>
+          <p>
+            <strong>Transcript</strong>
+          </p>
           {transcriptHistory.map((t, i) => (
             <p key={i}>{t}</p>
           ))}
@@ -463,7 +505,10 @@ function STTSection({ socket }: { socket: UglyBotSocket }) {
 
       {/* Logs */}
       {logs.length > 0 && (
-        <div data-id="stt-logs" style={{ marginTop: 8, fontSize: '0.85em', opacity: 0.7 }}>
+        <div
+          data-id="stt-logs"
+          style={{ marginTop: 8, fontSize: '0.85em', opacity: 0.7 }}
+        >
           {logs.map((entry, i) => (
             <div key={i} data-log-kind={entry.kind}>
               {entry.kind === 'err' ? '✗' : entry.kind === 'ok' ? '✓' : '·'}{' '}
@@ -481,19 +526,32 @@ function STTSection({ socket }: { socket: UglyBotSocket }) {
 let ttsCounter = 0;
 
 function TTSSection({ socket }: { socket: UglyBotSocket }) {
-  const [text, setText] = useState('The quick brown fox jumps over the lazy dog. Hello, this is a text to speech test.');
+  const [text, setText] = useState(
+    'The quick brown fox jumps over the lazy dog. Hello, this is a text to speech test.',
+  );
   const [voice, setVoice] = useState('');
   const [vizType, setVizType] = useState<VizType>('wave');
   const [playing, setPlaying] = useState(false);
   const [currentWord, setCurrentWord] = useState('');
-  const [wordHistory, setWordHistory] = useState<{ word: string; active: boolean }[]>([]);
+  const [wordHistory, setWordHistory] = useState<
+    { word: string; active: boolean }[]
+  >([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
 
   const ttsAudio = useTTSAnalyzer();
   const streamIdRef = useRef<string | null>(null);
   const playStartRef = useRef(0);
-  const pendingWordsRef = useRef<{ word: string; idx?: number; startMs?: number }[]>([]);
-  const wordTimersRef = useRef<{ timer: ReturnType<typeof setTimeout>; word: string; idx: number | undefined; startMs: number | undefined }[]>([]);
+  const pendingWordsRef = useRef<
+    { word: string; idx?: number; startMs?: number }[]
+  >([]);
+  const wordTimersRef = useRef<
+    {
+      timer: ReturnType<typeof setTimeout>;
+      word: string;
+      idx: number | undefined;
+      startMs: number | undefined;
+    }[]
+  >([]);
   const unsubsRef = useRef<(() => void)[]>([]);
 
   function addLog(msg: string, kind: LogEntry['kind'] = 'info') {
@@ -522,14 +580,21 @@ function TTSSection({ socket }: { socket: UglyBotSocket }) {
     }
   }
 
-  function scheduleWord(word: string, idx: number | undefined, startMs: number | undefined) {
-    const delay = typeof startMs === 'number' && playStartRef.current
-      ? startMs - (Date.now() - playStartRef.current)
-      : 0;
+  function scheduleWord(
+    word: string,
+    idx: number | undefined,
+    startMs: number | undefined,
+  ) {
+    const delay =
+      typeof startMs === 'number' && playStartRef.current
+        ? startMs - (Date.now() - playStartRef.current)
+        : 0;
     if (delay > 10) {
       const timer = setTimeout(() => {
         applyWord(word, idx);
-        wordTimersRef.current = wordTimersRef.current.filter((t) => t.timer !== timer);
+        wordTimersRef.current = wordTimersRef.current.filter(
+          (t) => t.timer !== timer,
+        );
       }, delay);
       wordTimersRef.current.push({ timer, word, idx, startMs });
     } else {
@@ -549,7 +614,9 @@ function TTSSection({ socket }: { socket: UglyBotSocket }) {
     addLog(`Subscribing to events for stream ${streamId}`);
     unsubsRef.current.push(
       socket.on('tts:chunk', (data) => {
-        addLog(`Got tts:chunk streamId=${data.streamId} (expected=${streamId}) audioLen=${data.audio?.length ?? 0}`);
+        addLog(
+          `Got tts:chunk streamId=${data.streamId} (expected=${streamId}) audioLen=${data.audio?.length ?? 0}`,
+        );
         if (data.streamId !== streamId) return;
         if (data.audio) {
           const isFirst = !playStartRef.current;
@@ -563,13 +630,20 @@ function TTSSection({ socket }: { socket: UglyBotSocket }) {
       }),
       socket.on('tts:word', (data) => {
         if (data.streamId !== streamId) return;
-        const word = data.word ?? (data as Record<string, unknown>).text as string | undefined;
-        const idx = (data as Record<string, unknown>).wordIndex as number | undefined;
+        const word =
+          data.word ??
+          ((data as Record<string, unknown>).text as string | undefined);
+        const idx = (data as Record<string, unknown>).wordIndex as
+          number | undefined;
         addLog(`Word: "${word}" idx=${idx} startMs=${data.startMs}`);
         if (word != null) {
           if (!playStartRef.current) {
             // Audio hasn't started yet — queue for later
-            pendingWordsRef.current.push({ word, ...(idx != null ? { idx } : {}), ...(data.startMs != null ? { startMs: data.startMs } : {}) });
+            pendingWordsRef.current.push({
+              word,
+              ...(idx != null ? { idx } : {}),
+              ...(data.startMs != null ? { startMs: data.startMs } : {}),
+            });
           } else {
             scheduleWord(word, idx, data.startMs);
           }
@@ -597,7 +671,9 @@ function TTSSection({ socket }: { socket: UglyBotSocket }) {
         // Wait for all word timers to fire naturally before finishing
         if (wordTimersRef.current.length > 0) {
           // Find the max remaining delay across all pending word timers
-          const elapsed = playStartRef.current ? Date.now() - playStartRef.current : 0;
+          const elapsed = playStartRef.current
+            ? Date.now() - playStartRef.current
+            : 0;
           let maxRemainingMs = 0;
           for (const t of wordTimersRef.current) {
             if (typeof t.startMs === 'number') {
@@ -612,7 +688,10 @@ function TTSSection({ socket }: { socket: UglyBotSocket }) {
         }
       }),
       socket.on('tts:error', (data) => {
-        addLog(`Got tts:error streamId=${data.streamId} msg=${data.message}`, 'err');
+        addLog(
+          `Got tts:error streamId=${data.streamId} msg=${data.message}`,
+          'err',
+        );
         if (data.streamId !== streamId) return;
         for (const t of wordTimersRef.current) clearTimeout(t.timer);
         wordTimersRef.current = [];
@@ -640,7 +719,10 @@ function TTSSection({ socket }: { socket: UglyBotSocket }) {
     setLogs([]);
 
     // Build word list for transcript highlighting
-    const words = text.trim().split(/\s+/).map((w) => ({ word: w, active: false }));
+    const words = text
+      .trim()
+      .split(/\s+/)
+      .map((w) => ({ word: w, active: false }));
     setWordHistory(words);
 
     ttsAudio.init();
@@ -684,7 +766,7 @@ function TTSSection({ socket }: { socket: UglyBotSocket }) {
     setCurrentWord('');
   }
 
-  useEffect(() => {  
+  useEffect(() => {
     return () => {
       if (streamIdRef.current) {
         socket.send('tts:cancel', { streamId: streamIdRef.current });
@@ -703,10 +785,15 @@ function TTSSection({ socket }: { socket: UglyBotSocket }) {
         <label>Visualizer: </label>
         <select
           value={vizType}
-          onChange={(e) => { setVizType(e.target.value as VizType); }} data-id="select-2"
+          onChange={(e) => {
+            setVizType(e.target.value as VizType);
+          }}
+          data-id="select-2"
         >
           {vizOptions.map((v) => (
-            <option key={v.key} value={v.key}>{v.label}</option>
+            <option key={v.key} value={v.key}>
+              {v.label}
+            </option>
           ))}
         </select>
       </div>
@@ -722,26 +809,40 @@ function TTSSection({ socket }: { socket: UglyBotSocket }) {
           label="Text to speak"
           value={text}
           onChange={setText}
-          placeholder="Enter text for TTS…" data-id="text-to-speak"
+          placeholder="Enter text for TTS…"
+          data-id="text-to-speak"
         />
         <Input
           label="Voice ID (optional)"
           value={voice}
           onChange={setVoice}
-          placeholder="e.g. inworld-alex" data-id="voice-id-optional"
+          placeholder="e.g. inworld-alex"
+          data-id="voice-id-optional"
         />
         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-          <Button onClick={() => { void handlePlay(); }} disabled={playing || !text.trim()} data-id="button-2">
+          <Button
+            onClick={() => {
+              void handlePlay();
+            }}
+            disabled={playing || !text.trim()}
+            data-id="button-2"
+          >
             {playing ? 'Playing…' : 'Play'}
           </Button>
-          {playing && <Button onClick={handleStop} data-id="stop">Stop</Button>}
+          {playing && (
+            <Button onClick={handleStop} data-id="stop">
+              Stop
+            </Button>
+          )}
         </div>
       </div>
 
       {/* Word-by-word transcript */}
       {wordHistory.length > 0 && (
         <Card>
-          <p><strong>Transcript</strong></p>
+          <p>
+            <strong>Transcript</strong>
+          </p>
           <p style={{ lineHeight: 1.8 }}>
             {wordHistory.map((w, i) => (
               <span
@@ -751,7 +852,9 @@ function TTSSection({ socket }: { socket: UglyBotSocket }) {
                 style={{
                   padding: '2px 4px',
                   borderRadius: 4,
-                  background: w.active ? 'var(--app-primary, #3b82f6)' : 'transparent',
+                  background: w.active
+                    ? 'var(--app-primary, #3b82f6)'
+                    : 'transparent',
                   color: w.active ? 'white' : 'inherit',
                   transition: 'background 0.15s',
                 }}
@@ -793,7 +896,9 @@ export default function AudioTestPage(): React.ReactElement {
     <PageLayout
       header={
         <div>
-          <a href="/test" data-id="tests">← Tests</a>
+          <a href="/test" data-id="tests">
+            ← Tests
+          </a>
         </div>
       }
     >
@@ -802,14 +907,17 @@ export default function AudioTestPage(): React.ReactElement {
 
         {/* Tab toggle */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-          {([
+          {[
             { key: 'stt' as Tab, label: 'Speech-to-Text' },
             { key: 'tts' as Tab, label: 'Text-to-Speech' },
-          ]).map((t) => (
+          ].map((t) => (
             <button
               key={t.key}
-              onClick={() => { setTab(t.key); }}
-              style={{ fontWeight: tab === t.key ? 'bold' : 'normal' }} data-id="label"
+              onClick={() => {
+                setTab(t.key);
+              }}
+              style={{ fontWeight: tab === t.key ? 'bold' : 'normal' }}
+              data-id="label"
             >
               {t.label}
             </button>
@@ -823,7 +931,10 @@ export default function AudioTestPage(): React.ReactElement {
             <TTSSection socket={uglyBotSocket} />
           )
         ) : (
-          <p>UglyBot socket not available. Make sure the app is configured with an app token.</p>
+          <p>
+            UglyBot socket not available. Make sure the app is configured with
+            an app token.
+          </p>
         )}
       </div>
     </PageLayout>

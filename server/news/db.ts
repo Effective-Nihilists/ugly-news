@@ -36,6 +36,9 @@ export function setNewsPush(fn: NewsPush): void {
 }
 
 export function newsPush(): NewsPush {
-  if (!_push) throw new Error('[news] push accessed before startup — setNewsPush() must run');
+  if (!_push)
+    throw new Error(
+      '[news] push accessed before startup — setNewsPush() must run',
+    );
   return _push;
 }

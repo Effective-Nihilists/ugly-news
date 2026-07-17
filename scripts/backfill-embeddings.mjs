@@ -9,7 +9,10 @@ import { neon } from '@neondatabase/serverless';
 import { readFileSync } from 'fs';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-if (!OPENAI_API_KEY) { console.error('OPENAI_API_KEY required'); process.exit(1); }
+if (!OPENAI_API_KEY) {
+  console.error('OPENAI_API_KEY required');
+  process.exit(1);
+}
 
 const sql = neon(readFileSync('/tmp/news-conn.txt', 'utf8').trim());
 const MODEL = 'text-embedding-3-small';
@@ -20,10 +23,16 @@ const BATCH = 200; // OpenAI inputs per request
 async function embedBatch(texts) {
   const res = await fetch('https://api.openai.com/v1/embeddings', {
     method: 'POST',
-    headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+    headers: {
+      'Authorization': `Bearer ${OPENAI_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify({ model: MODEL, input: texts, dimensions: DIMS }),
   });
-  if (!res.ok) throw new Error(`OpenAI ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  if (!res.ok)
+    throw new Error(
+      `OpenAI ${res.status}: ${(await res.text()).slice(0, 300)}`,
+    );
   const json = await res.json();
   // data is returned in input order; map to pgvector literal strings.
   return json.data
@@ -44,7 +53,9 @@ for (;;) {
   );
   if (rows.length === 0) break;
 
-  const inputs = rows.map((r) => `${r.title}\n\n${r.text}`.slice(0, 8000) || ' ');
+  const inputs = rows.map(
+    (r) => `${r.title}\n\n${r.text}`.slice(0, 8000) || ' ',
+  );
   const vecs = await embedBatch(inputs);
 
   // One UPDATE for the whole batch via unnest(ids[], vecs[]).
@@ -66,4 +77,6 @@ const remaining = await sql.query(
   `SELECT count(*)::int n FROM "file"
    WHERE data->>'type'='markdown' AND data->>'public'='true' AND embedding IS NULL`,
 );
-console.log(`\nDONE. backfilled ${done}; remaining NULL: ${remaining[0].n}; ${((Date.now() - t0) / 1000).toFixed(0)}s`);
+console.log(
+  `\nDONE. backfilled ${done}; remaining NULL: ${remaining[0].n}; ${((Date.now() - t0) / 1000).toFixed(0)}s`,
+);

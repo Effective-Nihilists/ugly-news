@@ -17,7 +17,11 @@ function fmt(ms: number): string {
 
 function createCubeScene(scene: THREE.Scene): THREE.Mesh {
   const geometry = new THREE.BoxGeometry(1, 1, 1);
-  const material = new THREE.MeshStandardMaterial({ color: 0x4f8fff, roughness: 0.4, metalness: 0.3 });
+  const material = new THREE.MeshStandardMaterial({
+    color: 0x4f8fff,
+    roughness: 0.4,
+    metalness: 0.3,
+  });
   const cube = new THREE.Mesh(geometry, material);
   scene.add(cube);
 
@@ -38,7 +42,10 @@ function createAvatarPlaceholder(scene: THREE.Scene): THREE.Group {
 
   // Head
   const headGeo = new THREE.SphereGeometry(0.25, 16, 16);
-  const skinMat = new THREE.MeshStandardMaterial({ color: 0xf0c8a0, roughness: 0.6 });
+  const skinMat = new THREE.MeshStandardMaterial({
+    color: 0xf0c8a0,
+    roughness: 0.6,
+  });
   const head = new THREE.Mesh(headGeo, skinMat);
   head.position.y = 1.6;
   head.name = 'Head';
@@ -46,7 +53,10 @@ function createAvatarPlaceholder(scene: THREE.Scene): THREE.Group {
 
   // Body
   const bodyGeo = new THREE.CapsuleGeometry(0.2, 0.6, 8, 16);
-  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x4488cc, roughness: 0.5 });
+  const bodyMat = new THREE.MeshStandardMaterial({
+    color: 0x4488cc,
+    roughness: 0.5,
+  });
   const body = new THREE.Mesh(bodyGeo, bodyMat);
   body.position.y = 1.0;
   body.name = 'Hips';
@@ -66,7 +76,10 @@ function createAvatarPlaceholder(scene: THREE.Scene): THREE.Group {
 
   // Legs
   const legGeo = new THREE.CapsuleGeometry(0.1, 0.5, 4, 8);
-  const legMat = new THREE.MeshStandardMaterial({ color: 0x334455, roughness: 0.5 });
+  const legMat = new THREE.MeshStandardMaterial({
+    color: 0x334455,
+    roughness: 0.5,
+  });
   const leftLeg = new THREE.Mesh(legGeo, legMat);
   leftLeg.position.set(-0.15, 0.35, 0);
   group.add(leftLeg);
@@ -77,7 +90,10 @@ function createAvatarPlaceholder(scene: THREE.Scene): THREE.Group {
 
   // Floor
   const floorGeo = new THREE.CircleGeometry(2, 32);
-  const floorMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8 });
+  const floorMat = new THREE.MeshStandardMaterial({
+    color: 0x333333,
+    roughness: 0.8,
+  });
   const floor = new THREE.Mesh(floorGeo, floorMat);
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;
@@ -121,13 +137,22 @@ export default function ThreeTestPage(): React.ReactElement {
     const started = Date.now();
     addLog(`Initializing scene: ${activeScene}`);
 
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    const renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: true,
+      alpha: true,
+    });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(canvas.clientWidth, canvas.clientHeight);
     renderer.setClearColor(0x111111, 1);
 
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(50, canvas.clientWidth / canvas.clientHeight, 0.1, 100);
+    const camera = new THREE.PerspectiveCamera(
+      50,
+      canvas.clientWidth / canvas.clientHeight,
+      0.1,
+      100,
+    );
     camera.position.set(0, 1.5, 3);
     camera.lookAt(0, 0.8, 0);
 
@@ -145,17 +170,26 @@ export default function ThreeTestPage(): React.ReactElement {
       if (cameraMode === 'cinematic') {
         try {
           cameraController = new DynamicCameraController(camera);
-          cameraController.addAvatar('placeholder', avatar, { x: 0, y: 0, z: 0 });
+          cameraController.addAvatar('placeholder', avatar, {
+            x: 0,
+            y: 0,
+            z: 0,
+          });
           addLog('DynamicCameraController attached', 'ok');
         } catch (err) {
-          addLog(`CameraController error: ${err instanceof Error ? err.message : String(err)}`, 'err');
+          addLog(
+            `CameraController error: ${err instanceof Error ? err.message : String(err)}`,
+            'err',
+          );
         }
       }
     } else if (activeScene === 'postprocessing') {
       animatable = createCubeScene(scene);
       camera.position.set(2, 2, 3);
       camera.lookAt(0, 0, 0);
-      addLog('Post-processing effects are server-side only (HeadlessEnvironment)');
+      addLog(
+        'Post-processing effects are server-side only (HeadlessEnvironment)',
+      );
     }
 
     addLog(`Scene ready in ${fmt(Date.now() - started)}`, 'ok');
@@ -194,7 +228,7 @@ export default function ThreeTestPage(): React.ReactElement {
       frameCount++;
       const now = performance.now();
       if (now - lastFpsUpdate >= 1000) {
-        setFps(Math.round(frameCount * 1000 / (now - lastFpsUpdate)));
+        setFps(Math.round((frameCount * 1000) / (now - lastFpsUpdate)));
         frameCount = 0;
         lastFpsUpdate = now;
       }
@@ -239,7 +273,9 @@ export default function ThreeTestPage(): React.ReactElement {
     <PageLayout
       header={
         <div>
-          <a href="/test" data-id="tests">← Tests</a>
+          <a href="/test" data-id="tests">
+            ← Tests
+          </a>
         </div>
       }
     >
@@ -248,27 +284,50 @@ export default function ThreeTestPage(): React.ReactElement {
 
         {/* Scene selector */}
         <Card>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: 8,
+              flexWrap: 'wrap',
+              alignItems: 'center',
+            }}
+          >
             {scenes.map((s) => (
               <Button
                 key={s.key}
                 data-id={`three-scene-${s.key}`}
-                onClick={() => { setActiveScene(s.key); setLogs([]); }}
+                onClick={() => {
+                  setActiveScene(s.key);
+                  setLogs([]);
+                }}
                 disabled={activeScene === s.key}
               >
                 {s.label}
               </Button>
             ))}
-            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div
+              style={{
+                marginLeft: 'auto',
+                display: 'flex',
+                gap: 8,
+                alignItems: 'center',
+              }}
+            >
               {activeScene === 'avatar-placeholder' && (
                 <Button
                   data-id="three-camera-mode"
-                  onClick={() => { setCameraMode((m) => m === 'orbit' ? 'cinematic' : 'orbit'); }}
+                  onClick={() => {
+                    setCameraMode((m) =>
+                      m === 'orbit' ? 'cinematic' : 'orbit',
+                    );
+                  }}
                 >
                   Camera: {cameraMode}
                 </Button>
               )}
-              <Text size="sm" style={{ opacity: 0.5 }}>{fps} FPS</Text>
+              <Text size="sm" style={{ opacity: 0.5 }}>
+                {fps} FPS
+              </Text>
             </div>
           </div>
         </Card>
@@ -291,11 +350,28 @@ export default function ThreeTestPage(): React.ReactElement {
         <Card>
           <h2>How it works</h2>
           <ol>
-            <li><strong>Client-side:</strong> Import <code>DynamicCameraController</code> and <code>PostProcessingManager</code> from <code>ugly-app/three/client</code></li>
-            <li><strong>Server-side:</strong> <code>HeadlessEnvironment</code> provides JSDOM + WebGL for server-rendered 3D</li>
-            <li><strong>Video export:</strong> <code>VideoEncoder</code> converts rendered frames to H.264/MP4 via FFmpeg</li>
-            <li><strong>Camera:</strong> <code>DynamicCameraController</code> auto-cycles cinematic shots tracking avatar bones</li>
-            <li><strong>Post-processing:</strong> Bloom, vignette, chromatic aberration, scan lines via <code>PostProcessingManager</code></li>
+            <li>
+              <strong>Client-side:</strong> Import{' '}
+              <code>DynamicCameraController</code> and{' '}
+              <code>PostProcessingManager</code> from{' '}
+              <code>ugly-app/three/client</code>
+            </li>
+            <li>
+              <strong>Server-side:</strong> <code>HeadlessEnvironment</code>{' '}
+              provides JSDOM + WebGL for server-rendered 3D
+            </li>
+            <li>
+              <strong>Video export:</strong> <code>VideoEncoder</code> converts
+              rendered frames to H.264/MP4 via FFmpeg
+            </li>
+            <li>
+              <strong>Camera:</strong> <code>DynamicCameraController</code>{' '}
+              auto-cycles cinematic shots tracking avatar bones
+            </li>
+            <li>
+              <strong>Post-processing:</strong> Bloom, vignette, chromatic
+              aberration, scan lines via <code>PostProcessingManager</code>
+            </li>
           </ol>
         </Card>
 

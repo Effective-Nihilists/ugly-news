@@ -17,10 +17,15 @@ export interface DomainRating {
 // avoid re-querying the same domains every article. Value is wrapped ({ r }) so a
 // cached miss (r: null) is distinguishable from "not in cache" (LRU disallows
 // null values directly).
-const cache = new LRUCache<string, { r: DomainRating | null }>({ max: 8000, ttl: 6 * 60 * 60 * 1000 });
+const cache = new LRUCache<string, { r: DomainRating | null }>({
+  max: 8000,
+  ttl: 6 * 60 * 60 * 1000,
+});
 
 /** Full URL or bare host → registrable-ish domain (drop scheme/path/`www.`). */
-export function normalizeDomain(input: string | null | undefined): string | null {
+export function normalizeDomain(
+  input: string | null | undefined,
+): string | null {
   if (!input) return null;
   let host = input.trim().toLowerCase();
   if (host.includes('://')) {
@@ -30,7 +35,10 @@ export function normalizeDomain(input: string | null | undefined): string | null
       /* not a URL — treat as a bare host */
     }
   }
-  host = host.replace(/^www\./, '').replace(/\/.*$/, '').replace(/:\d+$/, '');
+  host = host
+    .replace(/^www\./, '')
+    .replace(/\/.*$/, '')
+    .replace(/:\d+$/, '');
   return host || null;
 }
 
@@ -39,7 +47,9 @@ export function normalizeDomain(input: string | null | undefined): string | null
  * registrable domain (last two labels). Returns null when the domain isn't in
  * the table — cached negatively so repeat misses don't re-query.
  */
-export async function getDomainRating(input: string | null | undefined): Promise<DomainRating | null> {
+export async function getDomainRating(
+  input: string | null | undefined,
+): Promise<DomainRating | null> {
   const host = normalizeDomain(input);
   if (!host) return null;
   const cached = cache.get(host);
@@ -51,7 +61,10 @@ export async function getDomainRating(input: string | null | undefined): Promise
 
   let rating: DomainRating | null = null;
   try {
-    const rows = await getAdapter().db.query<{ bias_score: number | string; factuality: string | null }>(
+    const rows = await getAdapter().db.query<{
+      bias_score: number | string;
+      factuality: string | null;
+    }>(
       // Prefer the exact host over the registrable-domain fallback.
       `SELECT bias_score, factuality FROM "domainBias"
          WHERE _id = ANY($1)
@@ -60,7 +73,10 @@ export async function getDomainRating(input: string | null | undefined): Promise
     );
     const row = rows[0];
     if (row) {
-      rating = { biasScore: Number(row.bias_score), factuality: (row.factuality as Factuality | null) ?? null };
+      rating = {
+        biasScore: Number(row.bias_score),
+        factuality: (row.factuality as Factuality | null) ?? null,
+      };
     }
   } catch (e) {
     console.warn('[domainBias] lookup failed', e);
