@@ -1,31 +1,12 @@
 import React from 'react';
-import { Button, Card, PageLayout, Text, useApp } from 'ugly-app/client';
-
-function openLogin(): void {
-  window.open(
-    `https://ugly.bot/oauth?origin=${encodeURIComponent(
-      window.location.origin,
-    )}`,
-    'ugly-bot-login',
-    `width=480,height=640,left=${Math.round(
-      window.screenX + (window.outerWidth - 480) / 2,
-    )},top=${Math.round(window.screenY + (window.outerHeight - 640) / 2)}`,
-  );
-  function onMessage(event: MessageEvent): void {
-    if (event.origin !== 'https://ugly.bot') return;
-    const data = event.data as { type?: string; code?: string } | null;
-    if (!data?.type || data.type !== 'ugly-bot-oauth' || !data.code) return;
-    window.removeEventListener('message', onMessage);
-    void fetch('/auth/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: data.code }),
-    }).then((res) => {
-      if (res.ok) window.location.reload();
-    });
-  }
-  window.addEventListener('message', onMessage);
-}
+import {
+  Button,
+  Card,
+  PageLayout,
+  Text,
+  startUglyBotLogin,
+  useApp,
+} from 'ugly-app/client';
 
 function AuthDemoAuthenticated(): React.ReactElement {
   const app = useApp();
@@ -90,7 +71,12 @@ function AuthDemoUnauthenticated(): React.ReactElement {
         <h1>Auth Demo</h1>
         <Card>
           <Text>You are not logged in.</Text>
-          <Button onClick={openLogin} data-id="login-with-ugly-bot">
+          <Button
+            onClick={() => {
+              startUglyBotLogin();
+            }}
+            data-id="login-with-ugly-bot"
+          >
             Login with ugly.bot
           </Button>
         </Card>

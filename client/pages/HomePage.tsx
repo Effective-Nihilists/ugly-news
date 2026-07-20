@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAppOptional } from 'ugly-app/client';
+import { startUglyBotLogin, useAppOptional } from 'ugly-app/client';
 import { useRouter } from '../router';
 import { navClick } from '../nav';
 import { PlayIcon } from '../components/Icon';
@@ -662,31 +662,6 @@ function isLoggedIn(): boolean {
   return !!(window as unknown as { __AUTH_TOKEN__?: string }).__AUTH_TOKEN__;
 }
 
-/** ugly.bot OAuth popup → /auth/verify → reload (same flow as AuthDemoPage). */
-function openLogin(): void {
-  const w = 480,
-    h = 640;
-  window.open(
-    `https://ugly.bot/oauth?origin=${encodeURIComponent(window.location.origin)}`,
-    'ugly-bot-login',
-    `width=${w},height=${h},left=${Math.round(window.screenX + (window.outerWidth - w) / 2)},top=${Math.round(window.screenY + (window.outerHeight - h) / 2)}`,
-  );
-  function onMessage(event: MessageEvent): void {
-    if (event.origin !== 'https://ugly.bot') return;
-    const data = event.data as { type?: string; code?: string } | null;
-    if (data?.type !== 'ugly-bot-oauth' || !data.code) return;
-    window.removeEventListener('message', onMessage);
-    void fetch('/auth/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: data.code }),
-    }).then((res) => {
-      if (res.ok) window.location.reload();
-    });
-  }
-  window.addEventListener('message', onMessage);
-}
-
 interface EmailPref {
   emailAllowed: boolean;
   timezone: string;
@@ -759,7 +734,9 @@ function EmailSignup(): React.ReactElement {
       <div style={{ marginTop: 14 }}>
         <button
           style={btn}
-          onClick={openLogin}
+          onClick={() => {
+            startUglyBotLogin();
+          }}
           onMouseEnter={(e) => (e.currentTarget.style.background = C.accent)}
           onMouseLeave={(e) => (e.currentTarget.style.background = C.ink)}
           data-id="sign-in-with-ugly"
