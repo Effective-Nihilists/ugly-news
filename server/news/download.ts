@@ -42,6 +42,17 @@ interface RSSItem {
   'image'?: { url?: string } | string;
 }
 
+// Ceilings for third-party feed text persisted to D1. Generous enough that no
+// legitimate article is truncated (a long feature runs ~30k chars of HTML), but
+// low enough that a pathological item can never overflow the row.
+const MAX_CONTENT_HTML_CHARS = 200_000;
+const MAX_CONTENT_MARKDOWN_CHARS = 100_000;
+
+/** Truncate stored feed text at a hard ceiling, flagging that it was cut. */
+function capStoredText(text: string, max: number): string {
+  return text.length <= max ? text : `${text.slice(0, max)}\n\n[truncated]`;
+}
+
 function textOf(v: unknown): string | undefined {
   if (typeof v === 'string') return v;
   if (v && typeof v === 'object' && '#text' in v) {
@@ -257,8 +268,17 @@ export async function dispatchNewsFeedDownload(
         _id,
         feedId: feed.id,
         title,
-        contentHtml,
-        contentMarkdown,
+        // Feed payloads are arbitrary third-party HTML — some outlets inline an
+        // entire page (nav, scripts, related-article blocks) into
+        // content:encoded. Stored raw, a single pathological item overflows
+        // D1's per-value limit and the whole ingest dies with
+        // `SQLITE_TOOBIG`. Cap on the way in; downstream only ever reads a
+        // truncated prefix for summarization anyway.
+        contentHtml: capStoredText(contentHtml, MAX_CONTENT_HTML_CHARS),
+        contentMarkdown: capStoredText(
+          contentMarkdown,
+          MAX_CONTENT_MARKDOWN_CHARS,
+        ),
         uri,
         categories: [feed.category],
         imageUri,

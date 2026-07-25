@@ -146,6 +146,27 @@ export async function detectIfAdvertisement(
   );
 }
 
+/**
+ * Hard ceiling for anything derived from scraped article text that gets written
+ * back to the database. A generated summary is naturally short, but the FALLBACK
+ * when generation fails is the raw scraped article, which is unbounded — a
+ * single long-form page or a bad extraction that swallows a whole site's nav can
+ * run to megabytes. Writing that into a doc blows D1's per-value limit and the
+ * queue worker dies with `D1_ERROR: string or blob too big: SQLITE_TOOBIG`,
+ * which is exactly what took the ingest down while AI was failing on 402s.
+ */
+const MAX_SUMMARY_CHARS = 2500;
+
+/** Cap scraped text at the DB-safe ceiling, breaking on a word where possible. */
+function capSummary(text: string): string {
+  if (text.length <= MAX_SUMMARY_CHARS) return text;
+  const cut = text.slice(0, MAX_SUMMARY_CHARS);
+  const lastSpace = cut.lastIndexOf(' ');
+  return (
+    (lastSpace > MAX_SUMMARY_CHARS - 200 ? cut.slice(0, lastSpace) : cut) + '…'
+  );
+}
+
 export async function generateArticleSummary(
   title: string,
   content: string,
@@ -162,7 +183,7 @@ export async function generateArticleSummary(
     { model: AI_MODEL, temperature: 0.4, maxTokens: 1000 },
   );
   if (!summary) return null;
-  return summary.length > 2500 ? summary.slice(0, 2500) : summary;
+  return capSummary(summary);
 }
 
 // ── Main dispatch ──────────────────────────────────────────────────────────
@@ -198,9 +219,13 @@ export async function dispatchArticleScrape(
     return;
   }
 
-  // AI summary (fallback to extracted content).
+  // AI summary, falling back to the scraped content when generation fails (the
+  // AI proxy 402s/401s, rate limits). The fallback MUST be capped: `content` is
+  // unbounded scraped text and flows into both the file markdown and the article
+  // doc below — see MAX_SUMMARY_CHARS.
   const summary =
-    (await generateArticleSummary(article.title, content)) ?? content;
+    (await generateArticleSummary(article.title, content)) ??
+    capSummary(content);
   const feedName =
     newsFeeds.find((f) => f.id === article.feedId)?.name ?? article.feedId;
   const markdown = [
