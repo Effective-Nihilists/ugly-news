@@ -1,7 +1,7 @@
 {
   "name": "ugly-news",
   "packageManager": "pnpm@10.34.5",
-  "version": "0.1.38",
+  "version": "0.1.39",
   "type": "module",
   "scripts": {
     "preinstall": "npx only-allow pnpm",
@@ -39,7 +39,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "three": "^0.183.2",
-    "ugly-app": "0.1.894",
+    "ugly-app": "0.1.899",
     "yjs": "^13.6.30",
     "zod": "^4.3.6"
   },
