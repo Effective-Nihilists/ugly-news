@@ -138,10 +138,10 @@ export default function PodcastPage(): React.ReactElement {
         color: C.ink,
         // Honor the device safe area (viewport-fit=cover is set in index.html).
         boxSizing: 'border-box',
-        paddingTop: 'env(safe-area-inset-top)',
-        paddingBottom: 'env(safe-area-inset-bottom)',
-        paddingLeft: 'env(safe-area-inset-left)',
-        paddingRight: 'env(safe-area-inset-right)',
+        paddingTop: 'var(--safe-area-inset-top, 0px)',
+        paddingBottom: 'var(--safe-area-inset-bottom, 0px)',
+        paddingLeft: 'var(--safe-area-inset-left, 0px)',
+        paddingRight: 'var(--safe-area-inset-right, 0px)',
         backgroundImage:
           'radial-gradient(rgba(26,23,20,0.05) 1px, transparent 1px)',
         backgroundSize: '3px 3px',

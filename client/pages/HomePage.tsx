@@ -1329,9 +1329,9 @@ export default function HomePage(): React.ReactElement {
         // masthead renders under the status bar and edge content under a notch.
         // Bottom inset is applied on the footer so the scroll area still fills.
         boxSizing: 'border-box',
-        paddingTop: 'env(safe-area-inset-top)',
-        paddingLeft: 'env(safe-area-inset-left)',
-        paddingRight: 'env(safe-area-inset-right)',
+        paddingTop: 'var(--safe-area-inset-top, 0px)',
+        paddingLeft: 'var(--safe-area-inset-left, 0px)',
+        paddingRight: 'var(--safe-area-inset-right, 0px)',
         backgroundImage:
           'radial-gradient(rgba(26,23,20,0.05) 1px, transparent 1px)',
         backgroundSize: '3px 3px',
@@ -1352,7 +1352,7 @@ export default function HomePage(): React.ReactElement {
       <footer
         style={{
           padding:
-            '26px clamp(20px,5vw,64px) calc(26px + env(safe-area-inset-bottom))',
+            '26px clamp(20px,5vw,64px) calc(26px + var(--safe-area-inset-bottom, 0px))',
           display: 'flex',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
