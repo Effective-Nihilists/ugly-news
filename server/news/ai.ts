@@ -57,11 +57,53 @@ function isRetryableStatus(status: number): boolean {
   return status === 408 || status === 429 || status >= 500;
 }
 
-/** Sleep for exponential backoff with full jitter. `attempt` is 1-based. */
-async function backoffDelay(attempt: number): Promise<void> {
-  const base = Math.min(500 * 2 ** (attempt - 1), 4000); // 500, 1000, 2000, 4000…
+/**
+ * Sleep for exponential backoff with full jitter. `attempt` is 1-based.
+ *
+ * 429 gets a much longer schedule than a 5xx blip because it is not a blip: the
+ * proxy's limiter is a SLIDING 30-calls-per-60-SECONDS window per token
+ * (PER_TOKEN_BURST.ai in ugly-bot/server/proxy/tokens.ts). Retrying a rate-limit
+ * rejection ~7s later — the old ceiling for every status — lands inside the same
+ * window and is rejected again, which is exactly how ~200 calls/hour burned all
+ * four attempts and gave up. 2/4/8/16s (plus jitter, ~30s worst case) actually
+ * outlives a meaningful slice of the window while staying inside the job budget.
+ */
+async function backoffDelay(attempt: number, status?: number): Promise<void> {
+  const base =
+    status === 429
+      ? Math.min(2000 * 2 ** (attempt - 1), 16_000) // 2s, 4s, 8s, 16s
+      : Math.min(500 * 2 ** (attempt - 1), 4000); // 500, 1000, 2000, 4000…
   const delay = base + Math.random() * base; // full jitter → [base, 2·base)
   await new Promise((resolve) => setTimeout(resolve, delay));
+}
+
+// ── Client-side pacing ──────────────────────────────────────────────────────
+// Backoff alone only reacts to rejection; it never stops us from bursting into
+// the limiter in the first place. The queue handler runs each batch's messages
+// SEQUENTIALLY in one isolate (createWorkersApp's `for (const m of
+// batch.messages)`), so an in-module gate genuinely paces a whole batch of up to
+// 10 article scrapes — the tightest clustering we produce. Cloudflare still runs
+// several batch invocations concurrently, so this is a smoothing measure, not a
+// global bound; if 429s persist the exact fix is a `max_concurrency` on the
+// queue consumer (the framework's ensureQueueConsumer currently sets only
+// batch_size/max_retries/max_wait_time_ms, leaving Cloudflare's autoscaling
+// default in place).
+const MIN_CALL_GAP_MS = 2400; // ≈25 calls/min, headroom under the 30/60s cap
+let lastCallStartedAt = 0;
+let paceChain: Promise<unknown> = Promise.resolve();
+
+/** Serialize proxy calls in this isolate, spacing each one MIN_CALL_GAP_MS. */
+async function pace(): Promise<void> {
+  const mine = paceChain.then(async () => {
+    const since = Date.now() - lastCallStartedAt;
+    if (since < MIN_CALL_GAP_MS) {
+      await new Promise((r) => setTimeout(r, MIN_CALL_GAP_MS - since));
+    }
+    lastCallStartedAt = Date.now();
+  });
+  // Keep the chain alive even if a waiter is abandoned upstream.
+  paceChain = mine.catch(() => undefined);
+  await mine;
 }
 
 /**
@@ -80,6 +122,7 @@ async function postAi(
   let lastRes: Response | null = null;
   for (let attempt = 1; attempt <= AI_MAX_ATTEMPTS; attempt++) {
     try {
+      await pace();
       const res = await fetch(`${baseUrl}${path}`, {
         method: 'POST',
         headers: {
@@ -100,7 +143,9 @@ async function postAi(
         error,
       );
     }
-    if (attempt < AI_MAX_ATTEMPTS) await backoffDelay(attempt);
+    if (attempt < AI_MAX_ATTEMPTS) {
+      await backoffDelay(attempt, lastRes?.status);
+    }
   }
   return lastRes;
 }
@@ -167,7 +212,7 @@ export async function genText(
       // one failure branch here that left no trace, so callers reported
       // "genText returned null" with nothing upstream to explain it.
       console.warn(
-        `[news/ai] genText ${res.status}: 200 OK but no text content (model=${opts.model})`,
+        `[news/ai] genText: ${res.status} OK but no text content (model=${opts.model})`,
       );
       return null;
     }
@@ -218,7 +263,7 @@ export async function genImage(
       return await hostGeneratedImage(data.base64, data.mime ?? 'image/png');
     // Same silent-null trap as genText: a 200 carrying neither url nor base64.
     console.warn(
-      `[news/ai] genImage ${res.status}: 200 OK but no url/base64 in response`,
+      `[news/ai] genImage: ${res.status} OK but no url/base64 in response`,
     );
     return null;
   } catch (error) {
