@@ -26,10 +26,15 @@ interface RSSItem {
   'pubDate'?: string;
   'published'?: string;
   'updated'?: string;
-  'description'?: string;
+  // Atom serves these as elements with attributes (`<summary type="html">`),
+  // which fast-xml-parser hands back as `{ '#text', '@_type' }` — NOT a string.
+  // Typing them as bare `string` is what let an object reach isStringEmpty()
+  // and throw `x.trim is not a function`, silently dropping every item from
+  // such feeds. Keep the honest union so every read must go through textOf().
+  'description'?: string | { '#text'?: string };
   'content'?: string | { '#text'?: string };
-  'content:encoded'?: string;
-  'summary'?: string;
+  'content:encoded'?: string | { '#text'?: string };
+  'summary'?: string | { '#text'?: string };
   'link'?: string | { '@_href'?: string } | { '@_href'?: string }[];
   'title'?: string | { '#text'?: string };
   'media:content'?: {
@@ -48,16 +53,44 @@ interface RSSItem {
 const MAX_CONTENT_HTML_CHARS = 200_000;
 const MAX_CONTENT_MARKDOWN_CHARS = 100_000;
 
+/**
+ * Render an error for a log MESSAGE. Error telemetry persists only the message
+ * string — a second `console.error('msg', { error })` argument is discarded, so
+ * such rows reach D1 with `stack: null, context: null` and cannot be diagnosed
+ * no matter how often they fire. Everything worth knowing has to be inline.
+ */
+function describeError(error: unknown): string {
+  if (error instanceof Error) {
+    const frame = (error.stack ?? '')
+      .split('\n')
+      .map((l) => l.trim())
+      .find((l) => l.startsWith('at '));
+    return `${error.name}: ${error.message}${frame ? ` (${frame})` : ''}`;
+  }
+  return String(error);
+}
+
 /** Truncate stored feed text at a hard ceiling, flagging that it was cut. */
 function capStoredText(text: string, max: number): string {
   return text.length <= max ? text : `${text.slice(0, max)}\n\n[truncated]`;
 }
 
+/**
+ * Read an XML node's text whatever shape fast-xml-parser produced: a bare
+ * string, a `{ '#text': … }` wrapper when the element carried attributes, or a
+ * number when the text was all digits (`<guid>12345</guid>`). Anything else —
+ * including an attributes-only node with no `#text` — reads as absent.
+ * Returning `string | undefined` is what keeps non-strings out of the string
+ * helpers downstream.
+ */
 function textOf(v: unknown): string | undefined {
   if (typeof v === 'string') return v;
+  if (typeof v === 'number') return String(v);
   if (v && typeof v === 'object' && '#text' in v) {
     const t = (v as { '#text'?: unknown })['#text'];
-    return typeof t === 'string' ? t : undefined;
+    if (typeof t === 'string') return t;
+    if (typeof t === 'number') return String(t);
+    return undefined;
   }
   return undefined;
 }
@@ -202,8 +235,13 @@ export function extractImageFromRSSItem(item: RSSItem): string | null {
     if (typeof item.image === 'string') return item.image;
     if (item.image.url) return item.image.url;
   }
+  // Same unwrapping as the ingest path — an attribute-carrying Atom node here
+  // would stringify to "[object Object]" and quietly match no image.
   const contentHtml =
-    item['content:encoded'] ?? textOf(item.content) ?? item.description ?? '';
+    textOf(item['content:encoded']) ??
+    textOf(item.content) ??
+    textOf(item.description) ??
+    '';
   const imgMatch = /<img[^>]+src=["']([^"']+)["']/i.exec(contentHtml);
   if (imgMatch?.[1]) return imgMatch[1];
   return null;
@@ -218,7 +256,12 @@ export async function dispatchNewsFeedDownload(
   try {
     items = await fetchFeedItems(feed.url);
   } catch (error) {
-    console.warn('[NEWS] RSS feed download failed', { feedId: feed.id, error });
+    // Interpolate the detail INTO the message: error telemetry persists only
+    // the message string, so a trailing object arg is dropped and the row lands
+    // in D1 with stack:null/context:null — undiagnosable at any volume.
+    console.warn(
+      `[NEWS] RSS feed download failed [${feed.id}]: ${describeError(error)}`,
+    );
     return;
   }
 
@@ -236,12 +279,9 @@ export async function dispatchNewsFeedDownload(
 
       const imageUri = extractImageFromRSSItem(item);
       const contentHtml =
-        [
-          item['content:encoded'],
-          textOf(item.content),
-          item.description,
-          item.summary,
-        ].find((x) => !isStringEmpty(x)) ?? '';
+        [item['content:encoded'], item.content, item.description, item.summary]
+          .map(textOf)
+          .find((x) => !isStringEmpty(x)) ?? '';
       const contentMarkdown = htmlToMarkdown(contentHtml);
       if (isStringEmpty(contentMarkdown)) continue;
 
@@ -295,10 +335,9 @@ export async function dispatchNewsFeedDownload(
 
       if (uri) await enqueueTask('articleScrape', { articleId: _id });
     } catch (error) {
-      console.error('[NEWS] Failed to process RSS item', {
-        feedId: feed.id,
-        error,
-      });
+      console.error(
+        `[NEWS] Failed to process RSS item [${feed.id}] ${linkOf(item) ?? '(no link)'}: ${describeError(error)}`,
+      );
     }
   }
 }

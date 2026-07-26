@@ -160,7 +160,18 @@ export async function genText(
     return null;
   }
   try {
-    return extractContent(await res.json()) || null;
+    const content = extractContent(await res.json());
+    if (!content) {
+      // A 200 with no usable text (content filter, all-thinking response, or an
+      // unrecognised body shape) used to return null with NO log at all — the
+      // one failure branch here that left no trace, so callers reported
+      // "genText returned null" with nothing upstream to explain it.
+      console.warn(
+        `[news/ai] genText ${res.status}: 200 OK but no text content (model=${opts.model})`,
+      );
+      return null;
+    }
+    return content;
   } catch (error) {
     console.warn('[news/ai] genText: failed to parse response', error);
     return null;
@@ -205,6 +216,10 @@ export async function genImage(
     if (data.url) return data.url;
     if (data.base64)
       return await hostGeneratedImage(data.base64, data.mime ?? 'image/png');
+    // Same silent-null trap as genText: a 200 carrying neither url nor base64.
+    console.warn(
+      `[news/ai] genImage ${res.status}: 200 OK but no url/base64 in response`,
+    );
     return null;
   } catch (error) {
     console.warn('[news/ai] genImage: failed to parse response', error);

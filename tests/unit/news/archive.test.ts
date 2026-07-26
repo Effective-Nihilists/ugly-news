@@ -1,8 +1,18 @@
-import { describe, expect, it } from 'vitest';
-import { newsArchive, newsPodcastArchive } from '../../../server/news/public';
+import { describe, expect, it, vi } from 'vitest';
 
-// Minimal fake of the framework Db — the archive handlers only call getQuery.
-// Captures the (collection, pipeline, options) so we can assert query shaping.
+// public.ts reaches the ugly.bot embedGen proxy for the `near` half of hybrid
+// search. Stub it so the query tests are deterministic and offline; the
+// no-embedding path is covered explicitly below.
+vi.mock('../../../server/news/ai', () => ({
+  embed: vi.fn(async () => Array.from({ length: 512 }, () => 0.01)),
+}));
+
+import { newsArchive, newsPodcastArchive } from '../../../server/news/public';
+import { collections } from '../../../shared/collections';
+
+// Minimal fake of the framework Db. Browse goes through getQuery (aggregation
+// pipeline); search goes through getDocs (hybrid FTS5 + Vectorize, fused with
+// RRF by the framework). Capture both so we can assert query shaping.
 function fakeDb(rows: unknown[]) {
   const calls: {
     coll: string;
@@ -13,7 +23,31 @@ function fakeDb(rows: unknown[]) {
     query: string;
     opts: { limit?: number; filter?: Record<string, unknown> };
   }[] = [];
+  const getDocsCalls: {
+    coll: string;
+    filter: Record<string, unknown>;
+    opts: {
+      search?: string;
+      near?: number[];
+      limit?: number;
+      skip?: number;
+    };
+  }[] = [];
   const db = {
+    getDocs: async (
+      coll: string,
+      filter: Record<string, unknown>,
+      opts: {
+        search?: string;
+        near?: number[];
+        limit?: number;
+        skip?: number;
+      },
+    ) => {
+      getDocsCalls.push({ coll, filter, opts });
+      // The framework returns already-ranked, already-paginated rows.
+      return rows.slice(0, opts.limit ?? rows.length);
+    },
     getQuery: async (
       coll: string,
       pipeline: Record<string, unknown>[],
@@ -32,7 +66,7 @@ function fakeDb(rows: unknown[]) {
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any;
-  return { db, calls, searchCalls };
+  return { db, calls, searchCalls, getDocsCalls };
 }
 
 function story(id: string, created: Date, extra: Record<string, unknown> = {}) {
@@ -80,38 +114,59 @@ describe('newsArchive', () => {
     expect(calls[0].coll).toBe('file');
   });
 
-  it('keyword search scans a recent window and substring-filters title/summary (case-insensitive)', async () => {
+  it('runs a query as one hybrid getDocs call: OR-joined FTS terms + a near vector', async () => {
     const rows = [
       story('a', new Date('2026-06-14T10:00:00Z'), {
         title: 'Iran deal signed Sunday',
       }),
-      story('b', new Date('2026-06-14T09:00:00Z'), {
-        title: 'Cats rule the internet',
-        text: 'nothing here',
-      }),
       story('c', new Date('2026-06-13T09:00:00Z'), {
         title: 'Markets react to IRAN news',
-        text: 'x',
       }),
     ];
-    const { db, calls, searchCalls } = fakeDb(rows);
-    const out = await newsArchive(db, { limit: 10, skip: 0, query: ' iran ' });
+    const { db, calls, getDocsCalls } = fakeDb(rows);
+    const out = await newsArchive(db, {
+      limit: 10,
+      skip: 0,
+      query: ' iran talks ',
+    });
 
-    expect(searchCalls).toHaveLength(0); // FTS not used (column not provisioned)
-    expect(calls[0].opts.limit).toBe(1000); // SEARCH_WINDOW
-    expect(out.items.map((i) => i.id)).toEqual(['a', 'c']); // 'b' filtered out
+    expect(calls).toHaveLength(0); // no browse pipeline on the query path
+    expect(getDocsCalls).toHaveLength(1);
+    const call = getDocsCalls[0]!;
+    expect(call.coll).toBe(collections.file);
+    // Terms are OR-joined so FTS5 doesn't AND them to zero. Stopwords/<3 chars
+    // are dropped by queryTerms.
+    expect(call.opts.search).toBe('iran OR talks');
+    expect(call.opts.near).toHaveLength(512);
+    expect(call.filter['public']).toBe(true);
+    expect(call.filter['type']).toBe('markdown');
+    expect(out.items.map((i) => i.id)).toEqual(['a', 'c']);
   });
 
-  it('paginates search results by slicing the filtered set', async () => {
+  it('degrades to FTS-only when the query embedding is unavailable', async () => {
+    const { embed } = await import('../../../server/news/ai');
+    vi.mocked(embed).mockResolvedValueOnce(null);
+    const { db, getDocsCalls } = fakeDb([]);
+    await newsArchive(db, { limit: 10, skip: 0, query: 'iran' });
+    // `near` must be OMITTED, not passed as null/undefined — the framework
+    // treats its presence as "do a vector search".
+    expect('near' in getDocsCalls[0]!.opts).toBe(false);
+    expect(getDocsCalls[0]!.opts.search).toBe('iran');
+  });
+
+  it('delegates search pagination to getDocs via limit+1 / skip', async () => {
     const rows = Array.from({ length: 25 }, (_, i) =>
       story(`s${i}`, new Date('2026-06-14T10:00:00Z'), {
         title: `Breaking news item ${i}`,
       }),
     );
-    const { db } = fakeDb(rows);
+    const { db, getDocsCalls } = fakeDb(rows);
     const out = await newsArchive(db, { limit: 10, skip: 10, query: 'news' });
+    // Ranking and offsetting happen in D1/Vectorize now, not in JS — the
+    // handler must push skip down rather than over-fetch and slice.
+    expect(getDocsCalls[0]!.opts.limit).toBe(11); // limit + 1 (hasMore probe)
+    expect(getDocsCalls[0]!.opts.skip).toBe(10);
     expect(out.items).toHaveLength(10);
-    expect(out.items[0]!.id).toBe('s10'); // sliced from offset 10
     expect(out.hasMore).toBe(true);
   });
 
