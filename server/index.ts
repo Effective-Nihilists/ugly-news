@@ -17,6 +17,7 @@ import type { Todo } from '../shared/collections';
 import { collections } from '../shared/collections';
 import { resolveUserEmail } from './news/email';
 import * as clusters from './news/clusters';
+import { factClaims } from './news/fact';
 import * as emailPref from './news/emailPref';
 import * as feed from './news/feed';
 import * as podcast from './news/podcast';
@@ -144,6 +145,9 @@ const app = createApp(
     newsArchive: (_userId, input) => pub.newsArchive(newsDb(), input),
     newsPodcastArchive: (_userId, input) =>
       pub.newsPodcastArchive(newsDb(), input),
+
+    // ─── Fact checker (authenticated, user-billed) ───────────────────────
+    factClaims,
 
     // ─── News: "Three Ways" clusters (public) ────────────────────────────
     newsTopStories: (_userId, input) =>

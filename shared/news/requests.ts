@@ -121,6 +121,31 @@ export const UglyTakeCardSchema = z.object({
 
 // News request definitions. Spread into the app's defineRequests() registry.
 export const newsRequestDefs = {
+  // ─── Fact checker (authenticated, USER-billed) ───────────────────────────
+  // authReq because the AI is billed to the caller — see server/news/fact-ai.ts.
+  // `status` is a three-state union, not a boolean: the extension blocks its
+  // popup on 'signed-out' and 'no-credit' with DIFFERENT remedies.
+  factClaims: authReq({
+    input: z.object({
+      url: z.string().max(4000),
+      title: z.string().max(500),
+      text: z.string().max(200_000),
+    }),
+    output: z.object({
+      claims: z.array(
+        z.object({
+          text: z.string(),
+          class: z.enum(['quantitative', 'attribution', 'causal', 'predictive']),
+          checkable: z.boolean(),
+        }),
+      ),
+      status: z.enum(['ok', 'signed-out', 'no-credit']),
+    }),
+    // AI-bearing and user-billed — this limit is abuse control, and it also
+    // stops a runaway content script emptying one user's credit.
+    rateLimit: { max: 20, window: 60 },
+  }),
+
   // ─── "Three Ways" clusters (public) ──────────────────────────────────────
   newsTopStories: req({
     input: z.object({

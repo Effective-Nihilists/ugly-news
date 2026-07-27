@@ -18,6 +18,7 @@ import { collections } from '../shared/collections';
 import { cronTasks } from '../shared/cron';
 import { setNewsPush, type NewsDb } from './news/db';
 import * as clusters from './news/clusters';
+import { factClaims } from './news/fact';
 import * as emailPref from './news/emailPref';
 import * as feed from './news/feed';
 import * as podcast from './news/podcast';
@@ -35,6 +36,7 @@ const requestHandlers: Partial<RequestHandlers<typeof requests>> = {
   newsArticleGet: (_userId, input) => pub.newsArticleGet(wdb(), input),
   newsArchive: (_userId, input) => pub.newsArchive(wdb(), input),
   newsPodcastArchive: (_userId, input) => pub.newsPodcastArchive(wdb(), input),
+  factClaims,
   newsTopStories: (_userId, input) => clusters.newsTopStories(wdb(), input),
   newsClusterGet: (_userId, input) => clusters.newsClusterGet(wdb(), input),
   newsBlindspot: (_userId, input) => clusters.newsBlindspot(wdb(), input),
