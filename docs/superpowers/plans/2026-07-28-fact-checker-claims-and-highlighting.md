@@ -31,6 +31,17 @@
 - **Model for structured extraction is `deepseek_v4_flash`**, matching `cluster-jobs.ts`. `gpt_4o` is reserved for generative prose.
 - **Bias/Factuality enums** are exactly `far-left | left | lean-left | center | lean-right | right | far-right` and `very-low | low | mixed | high | very-high`.
 - **CORS:** `ugly.press` sets no `access-control-*` headers and 404s `OPTIONS`. Verified. Fetching therefore MUST happen in the background worker, never the content script.
+- **Three outcomes, not two.** Every AI-bearing call resolves to `ok`,
+  **`signed-out`** (no/invalid session → send the user through login) or
+  **`no-credit`** (`402 Insufficient balance` → send them to billing). They have
+  different remedies and must never be collapsed into one "error" state.
+  `402` is confirmed as the balance code in `ugly-app/dist/server/uglyBotProxy.js`,
+  which distinguishes owner- from user-billed exhaustion explicitly.
+- **Destinations** (do not invent new ones):
+  - login → `https://ugly.press/` — the framework's `LoginPopup` takes over on
+    landing, so the extension must NOT construct an OAuth URL itself.
+  - billing → `https://ugly.bot/account/billing` — the same external-browser
+    destination `ugly-studio/electron/uglyNative/desktop-caps.ts` opens.
 - **Auth reaches the server by cookie.** `getRequestToken()` accepts either a
   session cookie or an `Authorization: Bearer` header. An extension service
   worker's `fetch` sends cookies for a host in `host_permissions`, so a user
@@ -65,7 +76,7 @@ vi.mock('ugly-app/server', () => ({ getUserToken }));
 const fetchMock = vi.fn();
 vi.stubGlobal('fetch', fetchMock);
 
-const { userBilledText, NotSignedInError } = await import(
+const { userBilledText, NotSignedInError, NoCreditError } = await import(
   '../../../server/news/fact-ai'
 );
 
@@ -108,9 +119,25 @@ describe('userBilledText', () => {
     ).rejects.toBeInstanceOf(NotSignedInError);
   });
 
-  it('returns null on a non-ok response rather than throwing', async () => {
+  it('raises NoCreditError on 402 so the caller can route to billing', async () => {
     getUserToken.mockReturnValue('user-tok');
-    fetchMock.mockResolvedValue({ ok: false, status: 402, text: async () => 'no credit' });
+    fetchMock.mockResolvedValue({ ok: false, status: 402, text: async () => 'no balance' });
+    await expect(
+      userBilledText([{ role: 'user', content: 'hi' }], { model: 'm' }),
+    ).rejects.toBeInstanceOf(NoCreditError);
+  });
+
+  it('raises NotSignedInError on 401 even when a token was present', async () => {
+    getUserToken.mockReturnValue('stale-tok');
+    fetchMock.mockResolvedValue({ ok: false, status: 401, text: async () => '' });
+    await expect(
+      userBilledText([{ role: 'user', content: 'hi' }], { model: 'm' }),
+    ).rejects.toBeInstanceOf(NotSignedInError);
+  });
+
+  it('returns null on any other non-ok response rather than throwing', async () => {
+    getUserToken.mockReturnValue('user-tok');
+    fetchMock.mockResolvedValue({ ok: false, status: 503, text: async () => 'down' });
     expect(
       await userBilledText([{ role: 'user', content: 'hi' }], { model: 'm' }),
     ).toBeNull();
@@ -132,11 +159,19 @@ export interface ChatMessage {
   content: string;
 }
 
-/** Raised when there is no user token — the caller must prompt for sign-in. */
+/** No usable session — the caller must send the user through login. */
 export class NotSignedInError extends Error {
   constructor() {
     super('not signed in');
     this.name = 'NotSignedInError';
+  }
+}
+
+/** 402 from the proxy — the user has credit left, not a bug. Send to billing. */
+export class NoCreditError extends Error {
+  constructor() {
+    super('insufficient balance');
+    this.name = 'NoCreditError';
   }
 }
 
@@ -173,6 +208,10 @@ export async function userBilledText(
       },
     }),
   });
+  // 401 and 402 are user-actionable states with different remedies, so they
+  // are raised rather than folded into a null "something went wrong".
+  if (res.status === 401) throw new NotSignedInError();
+  if (res.status === 402) throw new NoCreditError();
   if (!res.ok) {
     console.warn(`[fact] user-billed text ${String(res.status)}`);
     return null;
@@ -448,9 +487,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const userBilledText = vi.fn();
 class NotSignedInError extends Error {}
+class NoCreditError extends Error {}
 vi.mock('../../../server/news/fact-ai', () => ({
   userBilledText,
   NotSignedInError,
+  NoCreditError,
 }));
 
 const { factClaims } = await import('../../../server/news/fact');
@@ -474,7 +515,7 @@ describe('factClaims', () => {
     );
     const out = await factClaims('u1', { url: 'https://x.test/a', title: 'T', text: TEXT });
     expect(out.claims).toHaveLength(1);
-    expect(out.signedOut).toBe(false);
+    expect(out.status).toBe('ok');
     expect(userBilledText).toHaveBeenCalledOnce();
   });
 
@@ -490,11 +531,17 @@ describe('factClaims', () => {
     expect(userBilledText).not.toHaveBeenCalled();
   });
 
-  it('reports signedOut instead of throwing when there is no user token', async () => {
+  it('reports signed-out instead of throwing when there is no session', async () => {
     userBilledText.mockRejectedValue(new NotSignedInError());
     const out = await factClaims('u1', { url: 'https://x.test/a', title: 'T', text: TEXT });
-    expect(out.signedOut).toBe(true);
+    expect(out.status).toBe('signed-out');
     expect(out.claims).toEqual([]);
+  });
+
+  it('reports no-credit distinctly from signed-out', async () => {
+    userBilledText.mockRejectedValue(new NoCreditError());
+    const out = await factClaims('u1', { url: 'https://x.test/a', title: 'T', text: TEXT });
+    expect(out.status).toBe('no-credit');
   });
 });
 ```
@@ -515,7 +562,10 @@ import {
   parseClaims,
   type RawClaim,
 } from '../../shared/news/fact-claims';
-import { NotSignedInError, userBilledText } from './fact-ai';
+import { NoCreditError, NotSignedInError, userBilledText } from './fact-ai';
+
+/** Distinct because each has a distinct remedy: login, billing, or nothing. */
+export type FactStatus = 'ok' | 'signed-out' | 'no-credit';
 
 /** Below this there is nothing worth a model call. Mirrors the gate's floor. */
 const MIN_TEXT_CHARS = 400;
@@ -523,9 +573,9 @@ const MIN_TEXT_CHARS = 400;
 export async function factClaims(
   _userId: string,
   input: { url: string; title: string; text: string },
-): Promise<{ claims: RawClaim[]; signedOut: boolean }> {
+): Promise<{ claims: RawClaim[]; status: FactStatus }> {
   if (input.text.length < MIN_TEXT_CHARS) {
-    return { claims: [], signedOut: false };
+    return { claims: [], status: 'ok' };
   }
 
   let raw: string | null;
@@ -538,14 +588,14 @@ export async function factClaims(
       { model: 'deepseek_v4_flash', temperature: 0, maxTokens: 1500 },
     );
   } catch (e) {
-    // Surfaced to the extension as a sign-in prompt rather than an error —
-    // authReq() already guarantees a session, so this means the session has no
-    // usable AI token.
-    if (e instanceof NotSignedInError) return { claims: [], signedOut: true };
+    // Neither of these is an error the user can do nothing about, so they are
+    // reported as states with a remedy rather than thrown.
+    if (e instanceof NotSignedInError) return { claims: [], status: 'signed-out' };
+    if (e instanceof NoCreditError) return { claims: [], status: 'no-credit' };
     throw e;
   }
-  if (raw === null) return { claims: [], signedOut: false };
-  return { claims: parseClaims(raw, input.text), signedOut: false };
+  if (raw === null) return { claims: [], status: 'ok' };
+  return { claims: parseClaims(raw, input.text), status: 'ok' };
 }
 ```
 
@@ -568,7 +618,7 @@ In `shared/news/requests.ts`, inside `newsRequestDefs`, add:
           checkable: z.boolean(),
         }),
       ),
-      signedOut: z.boolean(),
+      status: z.enum(['ok', 'signed-out', 'no-credit']),
     }),
     // AI-bearing and user-billed — this limit is abuse control, and it also
     // stops a runaway content script emptying one user's credit.
@@ -985,11 +1035,24 @@ export interface FetchClaimsMessage {
   text: string;
 }
 
+/** Distinct states because each has a distinct remedy. */
+export type FactStatus = 'ok' | 'signed-out' | 'no-credit';
+
 export interface ClaimsResult {
   claims: { text: string; class: ClaimClass; checkable: boolean }[];
   error: string | null;
-  /** True when ugly.press has no usable session — prompt sign-in, do not retry. */
-  signedOut: boolean;
+  status: FactStatus;
+}
+
+/** Where each actionable state sends the user. Not invented — see the plan's
+ *  Global Constraints for where each URL comes from. */
+export const LOGIN_URL = 'https://ugly.press/';
+export const BILLING_URL = 'https://ugly.bot/account/billing';
+
+export const OPEN_URL = 'ugly-fact:open-url' as const;
+export interface OpenUrlMessage {
+  type: typeof OPEN_URL;
+  url: string;
 }
 ```
 
@@ -1016,23 +1079,24 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
           input: { url: msg.url ?? '', title: msg.title ?? '', text: msg.text ?? '' },
         }),
       });
+      // authReq() 401s before the handler runs, so this is the no-session case.
       if (res.status === 401) {
-        sendResponse({ claims: [], error: null, signedOut: true });
+        sendResponse({ claims: [], error: null, status: 'signed-out' });
         return;
       }
       if (!res.ok) {
-        sendResponse({ claims: [], error: `HTTP ${String(res.status)}`, signedOut: false });
+        sendResponse({ claims: [], error: `HTTP ${String(res.status)}`, status: 'ok' });
         return;
       }
       const body = (await res.json()) as {
-        result?: { claims?: unknown; signedOut?: unknown };
+        result?: { claims?: unknown; status?: unknown };
       };
       const claims = Array.isArray(body.result?.claims) ? body.result.claims : [];
-      sendResponse({
-        claims,
-        error: null,
-        signedOut: body.result?.signedOut === true,
-      });
+      const status =
+        body.result?.status === 'signed-out' || body.result?.status === 'no-credit'
+          ? body.result.status
+          : 'ok';
+      sendResponse({ claims, error: null, status });
     } catch (e) {
       sendResponse({ claims: [], error: String(e) });
     }
@@ -1060,10 +1124,11 @@ async function checkClaims(): Promise<void> {
     title: document.title,
     text: map.text,
   });
-  if (result.signedOut) {
-    // Not an error: the user simply has no ugly.press session, and the AI is
-    // billed to them. Surface it so the popup can offer sign-in.
-    document.documentElement.dataset.uglyFactSignedOut = 'true';
+  if (result.status !== 'ok') {
+    // Neither state is a failure the user can do nothing about — record it so
+    // the badge and popup can offer the right remedy.
+    document.documentElement.dataset.uglyFactStatus = result.status;
+    void chrome.runtime.sendMessage({ type: SET_STATUS, status: result.status });
     return;
   }
   if (result.error !== null || result.claims.length === 0) return;
@@ -1147,20 +1212,66 @@ git add extension/src tests/e2e/extension-gate.spec.ts
 git commit -m "feat(extension): anchor and paint claims with CSS.highlights"
 ```
 
-- [ ] **Step 9: Surface the signed-out state in the popup**
+- [ ] **Step 9: Give each actionable state a badge and a remedy**
 
-In `extension/src/popup/index.ts`, when the background reports `signedOut`,
-render a sign-in prompt instead of a silent empty state:
+Extend `extension/src/shared/badge.ts` so the two actionable states are visible
+without opening the popup. Both use an attention badge rather than the silent
+empty tint:
 
 ```ts
-root.innerHTML =
-  `<div class="why">Claim checking is billed to your ugly.press account.
-   <a href="https://ugly.press" target="_blank" rel="noreferrer">Sign in</a>
-   and reload the page.</div>`;
+export function badgeForStatus(status: FactStatus): BadgeState | null {
+  if (status === 'signed-out') {
+    return { text: '!', color: BADGE_ENGAGED, title: 'Sign in to check claims' };
+  }
+  if (status === 'no-credit') {
+    return { text: '!', color: BADGE_DORMANT, title: 'Out of credit — add funds to check claims' };
+  }
+  return null;
+}
 ```
 
-The gate and the source card keep working while signed out — they are local
-and cost nothing. Only claim checking needs an account.
+Add unit tests asserting the two states produce **different** titles and that
+`'ok'` produces `null` — collapsing them is the bug this guards against.
+
+In the background worker, handle `OPEN_URL` by opening a tab:
+
+```ts
+if ((message as { type?: string }).type === OPEN_URL) {
+  void chrome.tabs.create({ url: (message as OpenUrlMessage).url });
+  return undefined;
+}
+```
+
+In `extension/src/popup/index.ts`, render the matching remedy:
+
+```ts
+function remedy(status: FactStatus): string {
+  if (status === 'signed-out') {
+    return `<div class="why">Claim checking is billed to your account.</div>
+      <button class="act" data-url="${LOGIN_URL}">Sign in to ugly.press</button>`;
+  }
+  return `<div class="why">Your ugly.bot balance is empty, so claims could not
+      be checked. The publisher rating above still works.</div>
+      <button class="act" data-url="${BILLING_URL}">Add funds</button>`;
+}
+```
+
+Wire the buttons to `chrome.runtime.sendMessage({ type: OPEN_URL, url })`.
+
+**Do not build a login form.** Landing on `https://ugly.press/` hands off to the
+framework's own `LoginPopup`; reimplementing OAuth in an extension would be both
+redundant and a credential-handling surface we do not want.
+
+**The gate and source card keep working in both states** — they are local and
+cost nothing. Only claim checking needs an account with credit, so the extension
+degrades to its Phase-1 behaviour rather than going blank.
+
+- [ ] **Step 10: E2E both remedies**
+
+Stub `factClaims` to return `{claims:[],status:'signed-out'}` and then
+`'no-credit'`, and assert the popup shows the right button target for each —
+`ugly.press` for one, `ugly.bot/account/billing` for the other. This is the
+regression test for the two states being collapsed.
 
 **Phase A is done here — claims are visible.** Stop and look at real articles before continuing.
 
@@ -1310,7 +1421,7 @@ Retrieval + stance extraction + tally:
 4. Collapse near-duplicate sources into one weighted vote via centroid distance; that is the `independence` value.
 5. Return `{ verdicts: [{ id, score, band, forcedYellowReason, tier, counted, sources[] }] }`.
 
-Declare it with `authReq` in `shared/news/requests.ts`, returning `signedOut` alongside the verdicts exactly as `factClaims` does, with `rateLimit: { max: 10, window: 60 }` — it is the most expensive endpoint here — and wire it in both server entries.
+Declare it with `authReq` in `shared/news/requests.ts`, returning the same `status` union alongside the verdicts exactly as `factClaims` does (a claim run that exhausts credit mid-page must surface `no-credit`, not a half-painted page), with `rateLimit: { max: 10, window: 60 }` — it is the most expensive endpoint here — and wire it in both server entries.
 
 - [ ] **Step 6: Verify**
 
@@ -1375,9 +1486,12 @@ git commit -m "feat(extension): verdict colouring and in-page claim popover"
 - `factSpread` — the bias bar, blindspot and other-side coverage.
 - Suppressions, custom mode, export.
 - The `getClientRects` overlay fallback for browsers without `CSS.highlights`.
-- A sign-in flow of our own. The extension links out to ugly.press; the cookie
-  set there is what authenticates the next call. No token is copied into the
-  extension and the extension never brokers credentials.
+- A sign-in form or OAuth implementation of our own. The extension opens
+  ugly.press and the framework's `LoginPopup` takes over; the cookie set there
+  authenticates the next call. No token is copied into the extension, and the
+  extension never handles credentials.
+- Reading the balance up front. We discover `no-credit` by being told 402, not
+  by polling a balance endpoint before every call.
 
 ## Known risks
 
