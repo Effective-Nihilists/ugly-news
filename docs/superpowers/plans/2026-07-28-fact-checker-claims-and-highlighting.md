@@ -1383,9 +1383,14 @@ git commit -m "feat(extension): verdict colouring and in-page claim popover"
 
 1. **The user must be signed in to ugly.press** for any claim checking, because
    the AI is billed to them. The gate and source card still work signed out, so
-   the extension degrades to Phase-1 behaviour rather than breaking. Worth
-   confirming early that an extension worker's `fetch` really does carry the
-   ugly.press cookie — if it does not, the fallback is reading the token via the
-   `cookies` permission, which is a bigger permission ask.
+   the extension degrades to Phase-1 behaviour rather than breaking.
+
+   **VERIFIED** — an extension service worker's `fetch` does carry the origin's
+   cookies. Measured against a local origin that sets a session cookie:
+   `credentials:'include'` → cookie sent; `'omit'` → not sent; default → sent.
+   The request also carries **no `Origin` header**, which is precisely why CORS
+   never engages for the worker path. Pass `credentials:'include'` explicitly
+   rather than leaning on the default. The `cookies`-permission fallback is not
+   needed.
 2. **Prod-only iteration.** Local dev wants Docker, so the practical loop is deploy-to-prod. Keep `factClaims` cheap and idempotent.
 3. **The stub-vs-worker routing question in Task 4 Step 6.** Page-level `page.route` may not intercept a service-worker fetch; `context.route` is the fallback. Resolve it the first time the test runs rather than guessing.
