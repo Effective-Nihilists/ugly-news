@@ -1,5 +1,6 @@
 import { chromium, expect, test, type BrowserContext } from '@playwright/test';
 import { createReadStream } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { createServer, type Server } from 'node:http';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -126,4 +127,85 @@ test('sets the action title to the gate reason when dormant', async () => {
 test('sets the action title to the publisher when engaged but unrated', async () => {
   const title = await actionTitleFor('article.html');
   expect(title).toContain('Unrated publisher');
+});
+
+/**
+ * Renders the popup and returns its text.
+ *
+ * The popup asks the worker for the ACTIVE tab's report. Opened as an ordinary
+ * tab it would be the active tab itself, so we bring the page back to the front
+ * and reload the popup — that reproduces the real thing, where a popup is not a
+ * tab and the page underneath stays active.
+ */
+async function popupTextFor(file: string): Promise<string> {
+  const page = await context.newPage();
+  await page.goto(`${origin}/${file}`);
+  await page.waitForFunction(
+    () => document.documentElement.dataset['uglyFact'] ?? null,
+    undefined,
+    { timeout: 15_000 },
+  );
+
+  const [worker] = context.serviceWorkers();
+  if (worker === undefined) throw new Error('no extension service worker');
+  const extensionId = new URL(worker.url()).host;
+
+  const popup = await context.newPage();
+  const errors: string[] = [];
+  popup.on('pageerror', (e) => errors.push(String(e)));
+  await popup.goto(`chrome-extension://${extensionId}/popup.html`);
+  await page.bringToFront();
+  await popup.reload();
+  await popup.waitForFunction(
+    () => (document.getElementById('root')?.textContent ?? '') !== '',
+    undefined,
+    { timeout: 10_000 },
+  );
+
+  const text = (await popup.textContent('#root')) ?? '';
+  await popup.close();
+  await page.close();
+  if (errors.length > 0) throw new Error(`popup errored: ${errors.join('; ')}`);
+  return text.replace(/\s+/g, ' ');
+}
+
+test('popup renders the source card and gate ladder for an article', async () => {
+  const text = await popupTextFor('article.html');
+  expect(text).toContain('Unrated source');
+  expect(text).toContain('Declared article type');
+  expect(text).toContain('Tier 0 · page shape');
+  expect(text).toContain('Tier 3 · claims');
+});
+
+test('popup explains itself on a dormant product page', async () => {
+  const text = await popupTextFor('product.html');
+  expect(text).toContain('Dormant');
+  expect(text).toContain('product listing');
+});
+
+/**
+ * The rated-publisher path. The registry is keyed by hostname, so this serves
+ * the article fixture *as* a real rated domain by fulfilling the request
+ * locally — location.hostname becomes bbc.com without touching the network.
+ */
+test('resolves a rated publisher from the bundled registry', async () => {
+  const page = await context.newPage();
+  await page.route('https://www.bbc.com/**', async (route) => {
+    const body = await readFile(join(fixtures, 'article.html'), 'utf8');
+    await route.fulfill({ status: 200, contentType: 'text/html', body });
+  });
+  await page.goto('https://www.bbc.com/news/transit-bill');
+
+  const handle = await page.waitForFunction(
+    () => document.documentElement.dataset['uglyFact'] ?? null,
+    undefined,
+    { timeout: 15_000 },
+  );
+  const report = JSON.parse((await handle.jsonValue()) as string) as Report;
+  await page.close();
+
+  expect(report.host).toBe('www.bbc.com');
+  expect(report.rating).not.toBeNull();
+  expect(report.rating?.name).toBe('BBC News');
+  expect(report.verdict.engage).toBe(true);
 });

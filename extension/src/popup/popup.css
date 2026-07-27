@@ -1,0 +1,126 @@
+:root {
+  --bg: #e7e1d5;
+  --fg: #221c14;
+  --orange: #e8590c;
+  --raise: #f4efe6;
+  --dim: #6b6152;
+  --faint: #9b917f;
+  --line: rgba(120, 105, 80, 0.22);
+  --sunk: rgba(120, 105, 80, 0.1);
+  --c2: #2f9e44;
+  --red: #e03131;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15120e;
+    --fg: #ece4d6;
+    --orange: #ff6a1f;
+    --raise: #221c15;
+    --dim: #a89a84;
+    --faint: #756a58;
+    --line: rgba(255, 240, 210, 0.14);
+    --sunk: rgba(255, 240, 210, 0.06);
+    --c2: #51cf66;
+    --red: #ff6b6b;
+  }
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  width: 320px;
+  padding: 14px;
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  background: var(--bg);
+  color: var(--fg);
+}
+.card {
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+}
+.glyph {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 14px;
+  color: #fff;
+}
+.nm {
+  font-weight: 700;
+  font-size: 14px;
+}
+.meta {
+  font-size: 10px;
+  color: var(--dim);
+  margin-top: 3px;
+  line-height: 1.5;
+}
+.pill {
+  display: inline-block;
+  font-size: 8.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-weight: 700;
+}
+.lab {
+  font-size: 8.5px;
+  letter-spacing: 0.19em;
+  text-transform: uppercase;
+  color: var(--faint);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0 8px;
+}
+.lab::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+.why {
+  font-size: 11px;
+  line-height: 1.55;
+  background: var(--sunk);
+  border-radius: 8px;
+  padding: 9px 11px;
+  color: var(--dim);
+}
+.row {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  font-size: 10px;
+  padding: 7px 9px;
+  background: var(--sunk);
+  border-radius: 7px;
+  margin-bottom: 5px;
+  color: var(--dim);
+}
+.row .k {
+  flex: 1;
+}
+.row .v {
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.row.pass .v {
+  color: var(--c2);
+}
+.row.stop .v {
+  color: var(--red);
+}
+.row.skip .v {
+  color: var(--faint);
+}

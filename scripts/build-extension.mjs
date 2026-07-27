@@ -48,5 +48,6 @@ await copyFile(
   join(out, 'manifest.json'),
 );
 await copyFile(join(src, 'popup', 'popup.html'), join(out, 'popup.html'));
+await copyFile(join(src, 'popup', 'popup.css'), join(out, 'popup.css'));
 
 console.log('extension built →', out);
