@@ -89,3 +89,41 @@ test('reports an unrated host as null rather than guessing', async () => {
   expect(report.host).toBe('127.0.0.1');
   expect(report.rating).toBeNull();
 });
+
+/**
+ * Reads the action title back out of the service worker, which is the only
+ * place chrome.action state is observable — it proves the content script
+ * actually reached the background and that the badge was set for that tab.
+ */
+async function actionTitleFor(file: string): Promise<string> {
+  const page = await context.newPage();
+  await page.goto(`${origin}/${file}`);
+  await page.waitForFunction(
+    () => document.documentElement.dataset['uglyFact'] ?? null,
+    undefined,
+    { timeout: 15_000 },
+  );
+  const [worker] = context.serviceWorkers();
+  if (worker === undefined) throw new Error('no extension service worker');
+  const title = await worker.evaluate(async () => {
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+    if (tab?.id === undefined) return '';
+    return chrome.action.getTitle({ tabId: tab.id });
+  });
+  await page.close();
+  return title;
+}
+
+test('sets the action title to the gate reason when dormant', async () => {
+  const title = await actionTitleFor('product.html');
+  expect(title).toContain('Dormant');
+  expect(title).toContain('product listing');
+});
+
+test('sets the action title to the publisher when engaged but unrated', async () => {
+  const title = await actionTitleFor('article.html');
+  expect(title).toContain('Unrated publisher');
+});
