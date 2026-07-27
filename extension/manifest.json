@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Ugly Fact Checker",
+  "version": "0.1.0",
+  "description": "Shows who published a page and how reliable they are.",
+  "permissions": ["storage"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Ugly Fact Checker"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

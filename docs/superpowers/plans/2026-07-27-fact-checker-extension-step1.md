@@ -8,6 +8,10 @@
 
 **Tech Stack:** TypeScript, esbuild, vitest, Playwright (Chromium with `--load-extension`), MV3.
 
+**One-time setup:** `pnpm exec playwright install chromium` — the extension E2E
+needs the headed Chromium build, which is a separate download from the headless
+shell Playwright installs by default.
+
 ## Global Constraints
 
 - **Package manager is pnpm.** `preinstall` runs `only-allow pnpm`. Never `npm install`.
@@ -1069,6 +1073,15 @@ import { defineConfig, devices } from '@playwright/test';
 // Deliberately standalone: no webServer (these tests load file:// fixtures and
 // must not boot the dev stack) and chromium only (extensions do not load in
 // firefox or webkit).
+//
+// channel: 'chromium' is REQUIRED and load-bearing. Playwright's default
+// chromium runs the OLD headless shell, which silently loads no extensions at
+// all — the content script never runs and no service worker starts, with no
+// error to explain it. 'chromium' selects the new headless mode, which does.
+// Measured: default headless → cs=false sw=0; channel 'chromium' → cs=true sw=1.
+//
+// Setup: this needs the HEADED chromium build, which is a separate download
+// from the headless shell. Run `pnpm exec playwright install chromium` once.
 export default defineConfig({
   testDir: './tests/e2e',
   testMatch: /extension-.*\.spec\.ts/,
@@ -1077,7 +1090,9 @@ export default defineConfig({
   reporter: 'list',
   outputDir: 'test-results-extension',
   timeout: 60_000,
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'], channel: 'chromium' } },
+  ],
 });
 ```
 
@@ -1113,6 +1128,8 @@ let context: BrowserContext;
 test.beforeAll(async () => {
   // Extensions require a persistent context and a headed-capable channel.
   context = await chromium.launchPersistentContext('', {
+    // channel is required — see playwright.extension.config.ts for why.
+    channel: 'chromium',
     args: [`--disable-extensions-except=${distPath}`, `--load-extension=${distPath}`],
   });
 });

@@ -16,3 +16,6 @@ coverage/
 # ugly-studio state — throwaway local dev/IDE state (dev-server log, session &
 # codebase index, sandbox, bundled minio/postgres). None of it is committed.
 .ugly-studio/
+
+# MV3 extension build output
+extension/dist/

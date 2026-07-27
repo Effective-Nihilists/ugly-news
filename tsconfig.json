@@ -17,6 +17,6 @@
     "rootDir": "./",
     "sourceMap": true
   },
-  "include": ["src", "shared", "server", "client"],
+  "include": ["src", "shared", "server", "client", "extension"],
   "exclude": ["node_modules", "dist"]
 }
