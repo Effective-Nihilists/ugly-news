@@ -4,11 +4,11 @@
 
 **Goal:** Real claims detected by AI, anchored into the live DOM, and painted green/yellow/red with an auditable tally behind each one.
 
-**Architecture:** Two public endpoints on ugly-news. `factClaims` segments an article into claim spans in one model call. `factQuick` retrieves evidence from the 90-day corpus and returns a weighted stance tally per claim. The extension's **background worker** does all fetching (an MV3 service worker with `host_permissions` bypasses CORS; a content script would not). The content script anchors claims with W3C `TextQuoteSelector` and paints them with the CSS Custom Highlight API — no DOM mutation.
+**Architecture:** Two **authenticated, user-billed** endpoints on ugly-news. `factClaims` segments an article into claim spans in one model call. `factQuick` retrieves evidence from the 90-day corpus and returns a weighted stance tally per claim. The extension's **background worker** does all fetching (an MV3 service worker with `host_permissions` bypasses CORS; a content script would not). The content script anchors claims with W3C `TextQuoteSelector` and paints them with the CSS Custom Highlight API — no DOM mutation.
 
-**Tech Stack:** TypeScript, `genText` via the ugly.bot proxy, D1 + FTS5 + Vectorize, `CSS.highlights`, vitest, Playwright.
+**Tech Stack:** TypeScript, user-billed text via the ugly.bot proxy, D1 + FTS5 + Vectorize, `CSS.highlights`, vitest, Playwright.
 
-**Sequencing:** Phase A (Tasks 1–4) ends with **claims visibly highlighted** in a neutral "pending" tint. Phase B (Tasks 5–6) colours them by verdict. Stop after Phase A if the anchoring proves harder than expected — that is the risky half, and it is worth seeing working before spending on tallies.
+**Sequencing:** Phase A (Tasks 0–4) ends with **claims visibly highlighted** in a neutral "pending" tint. Phase B (Tasks 5–6) colours them by verdict. Stop after Phase A if the anchoring proves harder than expected — that is the risky half, and it is worth seeing working before spending on tallies.
 
 ## Global Constraints
 
@@ -16,16 +16,180 @@
 - **TypeScript strictness:** `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`. Prefer `T | null` over optional props.
 - **eslint `parserOptions.project: true`** — every new `.ts` must be under `tsconfig.json`'s `include` (`extension` and `shared` already are). `tests/**` and `scripts/**` are eslint-ignored.
 - **No `any`.** `noExplicitAny` is enforced.
-- **`genText` is OWNER-billed** (`userId: 'uglyBot'` in `server/news/ai.ts`) — every call spends the project's AI budget, not the user's. Rate limits are a cost control, not a formality.
+- **AI is USER-billed.** Do NOT use `genText` from `server/news/ai.ts` — that is
+  owner-billed (`userId: 'uglyBot'`) and exists for the crons, which have no
+  user. The fact endpoints use a separate user-billed path (Task 0).
+- **`getUserToken()` is REQUEST-SCOPED.** It reads an `AsyncLocalStorage` that
+  `App.js` populates per dispatch. Call it inside the handler; a value read
+  after the handler returns is `null`. No fire-and-forget AI here.
+- **The AI proxy base URL for ugly-news is `https://ugly.bot/v1/ai`.**
+  `ugly-search` defaults to `https://api.ugly.bot/v1/ai`, which **does not
+  resolve** — copying that constant is a known way to lose an hour. See the
+  comment in `server/news/ai.ts`.
 - **Endpoints must be wired in BOTH `server/index.ts` and `server/workers.ts`**, and must not import Node-only barrels from `ugly-app/server` (the `recordPerf` trap — use `setPerfSink` in `server/news/perf.ts`).
 - **No live AI in tests** — fixture the model response.
 - **Model for structured extraction is `deepseek_v4_flash`**, matching `cluster-jobs.ts`. `gpt_4o` is reserved for generative prose.
 - **Bias/Factuality enums** are exactly `far-left | left | lean-left | center | lean-right | right | far-right` and `very-low | low | mixed | high | very-high`.
 - **CORS:** `ugly.press` sets no `access-control-*` headers and 404s `OPTIONS`. Verified. Fetching therefore MUST happen in the background worker, never the content script.
+- **Auth reaches the server by cookie.** `getRequestToken()` accepts either a
+  session cookie or an `Authorization: Bearer` header. An extension service
+  worker's `fetch` sends cookies for a host in `host_permissions`, so a user
+  signed in to ugly.press is authenticated with no token plumbing — but the
+  fetch MUST pass `credentials: 'include'`.
 
 ---
 
 ## Phase A — claims visible
+
+### Task 0: User-billed text generation
+
+**Files:**
+- Create: `server/news/fact-ai.ts`
+- Test: `tests/unit/news/fact-ai.test.ts`
+
+**Interfaces:**
+- Produces: `function userBilledText(messages, opts): Promise<string | null>` and
+  `class NotSignedInError extends Error`.
+
+The existing `genText` is owner-billed and must stay that way for the crons.
+This is a parallel path that bills the caller.
+
+- [ ] **Step 1: Write the failing test**
+
+```ts
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const getUserToken = vi.fn();
+vi.mock('ugly-app/server', () => ({ getUserToken }));
+
+const fetchMock = vi.fn();
+vi.stubGlobal('fetch', fetchMock);
+
+const { userBilledText, NotSignedInError } = await import(
+  '../../../server/news/fact-ai'
+);
+
+describe('userBilledText', () => {
+  beforeEach(() => {
+    getUserToken.mockReset();
+    fetchMock.mockReset();
+  });
+
+  it('throws NotSignedInError when there is no user token', async () => {
+    getUserToken.mockReturnValue(null);
+    await expect(
+      userBilledText([{ role: 'user', content: 'hi' }], { model: 'm' }),
+    ).rejects.toBeInstanceOf(NotSignedInError);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('calls the user-billed endpoint with the user bearer', async () => {
+    getUserToken.mockReturnValue('user-tok');
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ text: 'out' }),
+    });
+    const out = await userBilledText([{ role: 'user', content: 'hi' }], {
+      model: 'm',
+    });
+    expect(out).toBe('out');
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(String(url)).toBe('https://ugly.bot/v1/ai/user-billed/text');
+    expect((init as RequestInit).headers).toMatchObject({
+      Authorization: 'Bearer user-tok',
+    });
+  });
+
+  it('never falls back to the owner token', async () => {
+    getUserToken.mockReturnValue(null);
+    process.env['AI_PROXY_TOKEN'] = 'owner-tok';
+    await expect(
+      userBilledText([{ role: 'user', content: 'hi' }], { model: 'm' }),
+    ).rejects.toBeInstanceOf(NotSignedInError);
+  });
+
+  it('returns null on a non-ok response rather than throwing', async () => {
+    getUserToken.mockReturnValue('user-tok');
+    fetchMock.mockResolvedValue({ ok: false, status: 402, text: async () => 'no credit' });
+    expect(
+      await userBilledText([{ role: 'user', content: 'hi' }], { model: 'm' }),
+    ).toBeNull();
+  });
+});
+```
+
+- [ ] **Step 2: Run to verify failure**
+
+Run: `pnpm exec vitest run tests/unit/news/fact-ai.test.ts` → FAIL, module not found.
+
+- [ ] **Step 3: Implement `server/news/fact-ai.ts`**
+
+```ts
+import { getUserToken } from 'ugly-app/server';
+
+export interface ChatMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+/** Raised when there is no user token — the caller must prompt for sign-in. */
+export class NotSignedInError extends Error {
+  constructor() {
+    super('not signed in');
+    this.name = 'NotSignedInError';
+  }
+}
+
+// NOT api.ugly.bot — that host does not resolve. See server/news/ai.ts.
+const BASE = process.env['AI_PROXY_URL'] ?? 'https://ugly.bot/v1/ai';
+
+/**
+ * Text generation billed to the CALLING USER, never the project owner.
+ *
+ * There is deliberately no owner-token fallback: a silent fallback would move
+ * spend onto the project the moment auth broke, which is exactly the bug you
+ * would not notice.
+ */
+export async function userBilledText(
+  messages: ChatMessage[],
+  opts: { model: string; temperature?: number; maxTokens?: number },
+): Promise<string | null> {
+  // Request-scoped — must be read inside the handler.
+  const token = getUserToken();
+  if (token === null || token === '') throw new NotSignedInError();
+
+  const res = await fetch(`${BASE}/user-billed/text`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: opts.model,
+      messages,
+      options: {
+        ...(opts.temperature === undefined ? {} : { temperature: opts.temperature }),
+        ...(opts.maxTokens === undefined ? {} : { maxTokens: opts.maxTokens }),
+      },
+    }),
+  });
+  if (!res.ok) {
+    console.warn(`[fact] user-billed text ${String(res.status)}`);
+    return null;
+  }
+  const body = (await res.json()) as { text?: unknown };
+  return typeof body.text === 'string' ? body.text : null;
+}
+```
+
+- [ ] **Step 4: Run to verify pass, then commit**
+
+```bash
+git add server/news/fact-ai.ts tests/unit/news/fact-ai.test.ts
+git commit -m "feat(fact): user-billed text generation, no owner fallback"
+```
+
+---
 
 ### Task 1: Claim segmentation — pure prompt and parse
 
@@ -152,7 +316,7 @@ Create `shared/news/fact-claims.ts`:
 
 ```ts
 // Claim segmentation: prompt construction and response parsing.
-// Pure so it unit-tests without a model call; the genText call lives in
+// Pure so it unit-tests without a model call; the model call lives in
 // server/news/fact.ts.
 
 export const claimClasses = [
@@ -272,7 +436,7 @@ git commit -m "feat(fact): pure claim-segmentation prompt and parser"
 - Test: `tests/unit/news/fact-endpoint.test.ts`
 
 **Interfaces:**
-- Consumes: `buildClaimPrompt`, `parseClaims`, `CLAIM_SYSTEM_PROMPT` from `shared/news/fact-claims`; `genText` from `server/news/ai`.
+- Consumes: `buildClaimPrompt`, `parseClaims`, `CLAIM_SYSTEM_PROMPT` from `shared/news/fact-claims`; `userBilledText`, `NotSignedInError` from `server/news/fact-ai` (Task 0).
 - Produces: `factClaims(userId, input) => { claims: RawClaim[] }`
 
 - [ ] **Step 1: Write the failing test with a mocked model**
@@ -282,8 +446,12 @@ Create `tests/unit/news/fact-endpoint.test.ts`:
 ```ts
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const genText = vi.fn();
-vi.mock('../../../server/news/ai', () => ({ genText }));
+const userBilledText = vi.fn();
+class NotSignedInError extends Error {}
+vi.mock('../../../server/news/fact-ai', () => ({
+  userBilledText,
+  NotSignedInError,
+}));
 
 const { factClaims } = await import('../../../server/news/fact');
 
@@ -293,32 +461,40 @@ const TEXT =
 
 describe('factClaims', () => {
   beforeEach(() => {
-    genText.mockReset();
+    userBilledText.mockReset();
   });
 
   it('returns parsed claims from the model', async () => {
-    genText.mockResolvedValue(
+    userBilledText.mockResolvedValue(
       JSON.stringify({
         claims: [
           { text: 'The Senate passed the bill 51-49 late Thursday', class: 'attribution', checkable: true },
         ],
       }),
     );
-    const out = await factClaims(null, { url: 'https://x.test/a', title: 'T', text: TEXT });
+    const out = await factClaims('u1', { url: 'https://x.test/a', title: 'T', text: TEXT });
     expect(out.claims).toHaveLength(1);
-    expect(genText).toHaveBeenCalledOnce();
+    expect(out.signedOut).toBe(false);
+    expect(userBilledText).toHaveBeenCalledOnce();
   });
 
   it('returns an empty list when the model returns null', async () => {
-    genText.mockResolvedValue(null);
-    const out = await factClaims(null, { url: 'https://x.test/a', title: 'T', text: TEXT });
+    userBilledText.mockResolvedValue(null);
+    const out = await factClaims('u1', { url: 'https://x.test/a', title: 'T', text: TEXT });
     expect(out.claims).toEqual([]);
   });
 
   it('does not call the model for text below the article floor', async () => {
-    const out = await factClaims(null, { url: 'https://x.test/a', title: 'T', text: 'too short' });
+    const out = await factClaims('u1', { url: 'https://x.test/a', title: 'T', text: 'too short' });
     expect(out.claims).toEqual([]);
-    expect(genText).not.toHaveBeenCalled();
+    expect(userBilledText).not.toHaveBeenCalled();
+  });
+
+  it('reports signedOut instead of throwing when there is no user token', async () => {
+    userBilledText.mockRejectedValue(new NotSignedInError());
+    const out = await factClaims('u1', { url: 'https://x.test/a', title: 'T', text: TEXT });
+    expect(out.signedOut).toBe(true);
+    expect(out.claims).toEqual([]);
   });
 });
 ```
@@ -339,29 +515,37 @@ import {
   parseClaims,
   type RawClaim,
 } from '../../shared/news/fact-claims';
-import { genText } from './ai';
+import { NotSignedInError, userBilledText } from './fact-ai';
 
 /** Below this there is nothing worth a model call. Mirrors the gate's floor. */
 const MIN_TEXT_CHARS = 400;
 
 export async function factClaims(
-  _userId: string | null,
+  _userId: string,
   input: { url: string; title: string; text: string },
-): Promise<{ claims: RawClaim[] }> {
-  if (input.text.length < MIN_TEXT_CHARS) return { claims: [] };
-
-  const raw = await genText(
-    [
-      { role: 'system', content: CLAIM_SYSTEM_PROMPT },
-      { role: 'user', content: buildClaimPrompt(input.title, input.text) },
-    ],
-    { model: 'deepseek_v4_flash', temperature: 0, maxTokens: 1500 },
-  );
-  if (raw === null) {
-    console.warn('[fact] factClaims: genText returned null');
-    return { claims: [] };
+): Promise<{ claims: RawClaim[]; signedOut: boolean }> {
+  if (input.text.length < MIN_TEXT_CHARS) {
+    return { claims: [], signedOut: false };
   }
-  return { claims: parseClaims(raw, input.text) };
+
+  let raw: string | null;
+  try {
+    raw = await userBilledText(
+      [
+        { role: 'system', content: CLAIM_SYSTEM_PROMPT },
+        { role: 'user', content: buildClaimPrompt(input.title, input.text) },
+      ],
+      { model: 'deepseek_v4_flash', temperature: 0, maxTokens: 1500 },
+    );
+  } catch (e) {
+    // Surfaced to the extension as a sign-in prompt rather than an error —
+    // authReq() already guarantees a session, so this means the session has no
+    // usable AI token.
+    if (e instanceof NotSignedInError) return { claims: [], signedOut: true };
+    throw e;
+  }
+  if (raw === null) return { claims: [], signedOut: false };
+  return { claims: parseClaims(raw, input.text), signedOut: false };
 }
 ```
 
@@ -370,7 +554,7 @@ export async function factClaims(
 In `shared/news/requests.ts`, inside `newsRequestDefs`, add:
 
 ```ts
-  factClaims: req({
+  factClaims: authReq({
     input: z.object({
       url: z.string().max(4000),
       title: z.string().max(500),
@@ -384,8 +568,10 @@ In `shared/news/requests.ts`, inside `newsRequestDefs`, add:
           checkable: z.boolean(),
         }),
       ),
+      signedOut: z.boolean(),
     }),
-    // AI-bearing and OWNER-billed — this limit is a cost control.
+    // AI-bearing and user-billed — this limit is abuse control, and it also
+    // stops a runaway content script emptying one user's credit.
     rateLimit: { max: 20, window: 60 },
   }),
 ```
@@ -802,6 +988,8 @@ export interface FetchClaimsMessage {
 export interface ClaimsResult {
   claims: { text: string; class: ClaimClass; checkable: boolean }[];
   error: string | null;
+  /** True when ugly.press has no usable session — prompt sign-in, do not retry. */
+  signedOut: boolean;
 }
 ```
 
@@ -819,18 +1007,32 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
     try {
       const res = await fetch(`${API_BASE}/factClaims`, {
         method: 'POST',
+        // REQUIRED: this is what carries the ugly.press session cookie, which
+        // is both the auth and the AI billing identity. Without it every call
+        // is a 401.
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           input: { url: msg.url ?? '', title: msg.title ?? '', text: msg.text ?? '' },
         }),
       });
-      if (!res.ok) {
-        sendResponse({ claims: [], error: `HTTP ${String(res.status)}` });
+      if (res.status === 401) {
+        sendResponse({ claims: [], error: null, signedOut: true });
         return;
       }
-      const body = (await res.json()) as { result?: { claims?: unknown } };
+      if (!res.ok) {
+        sendResponse({ claims: [], error: `HTTP ${String(res.status)}`, signedOut: false });
+        return;
+      }
+      const body = (await res.json()) as {
+        result?: { claims?: unknown; signedOut?: unknown };
+      };
       const claims = Array.isArray(body.result?.claims) ? body.result.claims : [];
-      sendResponse({ claims, error: null });
+      sendResponse({
+        claims,
+        error: null,
+        signedOut: body.result?.signedOut === true,
+      });
     } catch (e) {
       sendResponse({ claims: [], error: String(e) });
     }
@@ -858,6 +1060,12 @@ async function checkClaims(): Promise<void> {
     title: document.title,
     text: map.text,
   });
+  if (result.signedOut) {
+    // Not an error: the user simply has no ugly.press session, and the AI is
+    // billed to them. Surface it so the popup can offer sign-in.
+    document.documentElement.dataset.uglyFactSignedOut = 'true';
+    return;
+  }
   if (result.error !== null || result.claims.length === 0) return;
 
   const entries: { id: string; range: Range; band: Band }[] = [];
@@ -938,6 +1146,21 @@ Expected: no errors.
 git add extension/src tests/e2e/extension-gate.spec.ts
 git commit -m "feat(extension): anchor and paint claims with CSS.highlights"
 ```
+
+- [ ] **Step 9: Surface the signed-out state in the popup**
+
+In `extension/src/popup/index.ts`, when the background reports `signedOut`,
+render a sign-in prompt instead of a silent empty state:
+
+```ts
+root.innerHTML =
+  `<div class="why">Claim checking is billed to your ugly.press account.
+   <a href="https://ugly.press" target="_blank" rel="noreferrer">Sign in</a>
+   and reload the page.</div>`;
+```
+
+The gate and the source card keep working while signed out — they are local
+and cost nothing. Only claim checking needs an account.
 
 **Phase A is done here — claims are visible.** Stop and look at real articles before continuing.
 
@@ -1083,11 +1306,11 @@ Expected: PASS.
 Retrieval + stance extraction + tally:
 1. `getDocs('file', { public: true }, { near: <embedded claim>, limit: 12 })` over the corpus.
 2. Map each hit's `feedId` through `feedIdToSourceId` / `sourceById` to a rating; unrated hits get weight 0 and are reported separately.
-3. One `genText` call per claim, `deepseek_v4_flash`, asking **only** for each source's stance — never whether the claim is true. Fixture this in tests.
+3. One `userBilledText` call per claim (NOT `genText` — billing must stay on the user), `deepseek_v4_flash`, asking **only** for each source's stance, never whether the claim is true. Fixture this in tests.
 4. Collapse near-duplicate sources into one weighted vote via centroid distance; that is the `independence` value.
 5. Return `{ verdicts: [{ id, score, band, forcedYellowReason, tier, counted, sources[] }] }`.
 
-Declare it in `shared/news/requests.ts` with `rateLimit: { max: 10, window: 60 }` — it is the most expensive endpoint here — and wire it in both server entries.
+Declare it with `authReq` in `shared/news/requests.ts`, returning `signedOut` alongside the verdicts exactly as `factClaims` does, with `rateLimit: { max: 10, window: 60 }` — it is the most expensive endpoint here — and wire it in both server entries.
 
 - [ ] **Step 6: Verify**
 
@@ -1152,10 +1375,17 @@ git commit -m "feat(extension): verdict colouring and in-page claim popover"
 - `factSpread` — the bias bar, blindspot and other-side coverage.
 - Suppressions, custom mode, export.
 - The `getClientRects` overlay fallback for browsers without `CSS.highlights`.
-- Auth: both endpoints are public `req()`. `genText` is owner-billed, which is why the rate limits are low and why per-user billing is a question to settle before this is exposed widely.
+- A sign-in flow of our own. The extension links out to ugly.press; the cookie
+  set there is what authenticates the next call. No token is copied into the
+  extension and the extension never brokers credentials.
 
 ## Known risks
 
-1. **Owner-billed AI.** Every engaged article costs the project. The rate limits cap the blast radius; a real deployment wants per-user attribution.
+1. **The user must be signed in to ugly.press** for any claim checking, because
+   the AI is billed to them. The gate and source card still work signed out, so
+   the extension degrades to Phase-1 behaviour rather than breaking. Worth
+   confirming early that an extension worker's `fetch` really does carry the
+   ugly.press cookie — if it does not, the fallback is reading the token via the
+   `cookies` permission, which is a bigger permission ask.
 2. **Prod-only iteration.** Local dev wants Docker, so the practical loop is deploy-to-prod. Keep `factClaims` cheap and idempotent.
 3. **The stub-vs-worker routing question in Task 4 Step 6.** Page-level `page.route` may not intercept a service-worker fetch; `context.route` is the fallback. Resolve it the first time the test runs rather than guessing.
