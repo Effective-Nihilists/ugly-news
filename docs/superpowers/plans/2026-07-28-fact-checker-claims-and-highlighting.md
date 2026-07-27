@@ -71,7 +71,7 @@ This is a parallel path that bills the caller.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const getUserToken = vi.fn();
-vi.mock('ugly-app/server', () => ({ getUserToken }));
+vi.mock('ugly-app/server/adapter/workers', () => ({ getUserToken }));
 
 const fetchMock = vi.fn();
 vi.stubGlobal('fetch', fetchMock);
@@ -152,7 +152,11 @@ Run: `pnpm exec vitest run tests/unit/news/fact-ai.test.ts` → FAIL, module not
 - [ ] **Step 3: Implement `server/news/fact-ai.ts`**
 
 ```ts
-import { getUserToken } from 'ugly-app/server';
+// MUST be the workers adapter subpath, not the 'ugly-app/server' barrel: that
+// barrel pulls agent-base/http/https/net and breaks `build:workers` with ~200
+// "Could not resolve" errors. Every worker-bundled file in this repo uses this
+// path — see server/news/ai.ts, queue.ts, domainBias.ts.
+import { getUserToken } from 'ugly-app/server/adapter/workers';
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
