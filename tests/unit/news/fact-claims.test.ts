@@ -154,3 +154,24 @@ describe('parseClaims', () => {
     expect(parseClaims(out, ARTICLE)).toHaveLength(1);
   });
 });
+
+describe('whitespace tolerance', () => {
+  const WRAPPED =
+    'Lead in here. The Senate passed the bill\n        51-49 late Thursday. Trailing content.';
+
+  it('keeps a claim the model normalised the whitespace of', () => {
+    const out = JSON.stringify({
+      claims: [
+        { text: 'The Senate passed the bill 51-49 late Thursday', class: 'attribution', checkable: true },
+      ],
+    });
+    expect(parseClaims(out, WRAPPED)).toHaveLength(1);
+  });
+
+  it('still drops a genuinely hallucinated span', () => {
+    const out = JSON.stringify({
+      claims: [{ text: 'The House rejected the bill outright', class: 'attribution', checkable: true }],
+    });
+    expect(parseClaims(out, WRAPPED)).toEqual([]);
+  });
+});

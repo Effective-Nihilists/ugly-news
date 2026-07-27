@@ -1,4 +1,4 @@
-import type { PageReport } from './messages';
+import type { FactStatus, PageReport } from './messages';
 
 export const BADGE_ENGAGED = '#e8590c';
 export const BADGE_DORMANT = '#9b917f';
@@ -35,4 +35,23 @@ export function badgeFor(report: PageReport): BadgeState {
     color: BADGE_ENGAGED,
     title: `${r.name} — ${r.bias} ${sign}${String(r.biasScore)}, ${r.factuality} factuality`,
   };
+}
+
+/**
+ * Both actionable states use the ATTENTION colour, not the dormant grey.
+ * Dormant means "nothing to do here"; these are the opposite — there is
+ * exactly one thing to do, and the popup blocks until it is done.
+ */
+export function badgeForStatus(status: FactStatus): BadgeState | null {
+  if (status === 'signed-out') {
+    return { text: '!', color: BADGE_ENGAGED, title: 'Sign in to check claims' };
+  }
+  if (status === 'no-credit') {
+    return {
+      text: '!',
+      color: BADGE_ENGAGED,
+      title: 'Out of credit — add funds to check claims',
+    };
+  }
+  return null;
 }

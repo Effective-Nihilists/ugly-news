@@ -209,3 +209,150 @@ test('resolves a rated publisher from the bundled registry', async () => {
   expect(report.rating?.name).toBe('BBC News');
   expect(report.verdict.engage).toBe(true);
 });
+
+// ─── Phase A: claims ────────────────────────────────────────────────────────
+//
+// The API is stubbed at the CONTEXT level, not the page level: the fetch runs
+// in the extension's service worker, which page.route() does not intercept.
+
+async function stubClaims(body: unknown): Promise<void> {
+  await context.route('https://ugly.press/api/factClaims', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ result: body }),
+    });
+  });
+}
+
+async function unstub(): Promise<void> {
+  await context.unroute('https://ugly.press/api/factClaims');
+}
+
+test('paints anchored claims on an engaged article', async () => {
+  await stubClaims({
+    claims: [
+      {
+        text: 'the Senate passed the National Transit Renewal Act 51-49 late Thursday',
+        class: 'attribution',
+        checkable: true,
+      },
+    ],
+    status: 'ok',
+  });
+  const page = await context.newPage();
+  await page.goto(`${origin}/article.html`);
+  const count = await page.waitForFunction(
+    () => document.documentElement.dataset['uglyFactClaims'] ?? null,
+    undefined,
+    { timeout: 15_000 },
+  );
+  expect(await count.jsonValue()).toBe('1');
+  expect(
+    await page.evaluate(() => CSS.highlights.has('ugly-fact-pending')),
+  ).toBe(true);
+  await page.close();
+  await unstub();
+});
+
+test('drops a claim whose text is not on the page rather than misplacing it', async () => {
+  await stubClaims({
+    claims: [
+      { text: 'a sentence that is nowhere in this article', class: 'attribution', checkable: true },
+    ],
+    status: 'ok',
+  });
+  const page = await context.newPage();
+  await page.goto(`${origin}/article.html`);
+  const count = await page.waitForFunction(
+    () => document.documentElement.dataset['uglyFactClaims'] ?? null,
+    undefined,
+    { timeout: 15_000 },
+  );
+  // The run completes with ZERO painted claims — the hallucinated span is
+  // dropped rather than anchored somewhere plausible-looking.
+  expect(await count.jsonValue()).toBe('0');
+  expect(
+    await page.evaluate(() => CSS.highlights.has('ugly-fact-pending')),
+  ).toBe(false);
+  await page.close();
+  await unstub();
+});
+
+test('does not paint a claim marked not checkable', async () => {
+  await stubClaims({
+    claims: [
+      {
+        text: 'the Senate passed the National Transit Renewal Act 51-49 late Thursday',
+        class: 'predictive',
+        checkable: false,
+      },
+    ],
+    status: 'ok',
+  });
+  const page = await context.newPage();
+  await page.goto(`${origin}/article.html`);
+  const count = await page.waitForFunction(
+    () => document.documentElement.dataset['uglyFactClaims'] ?? null,
+    undefined,
+    { timeout: 15_000 },
+  );
+  expect(await count.jsonValue()).toBe('0');
+  await page.close();
+  await unstub();
+});
+
+// ─── Blocking states ────────────────────────────────────────────────────────
+
+async function popupForStatus(status: string): Promise<string> {
+  await stubClaims({ claims: [], status });
+  const page = await context.newPage();
+  await page.goto(`${origin}/article.html`);
+  await page.waitForFunction(
+    () => document.documentElement.dataset['uglyFactStatus'] ?? null,
+    undefined,
+    { timeout: 15_000 },
+  );
+
+  const [worker] = context.serviceWorkers();
+  if (worker === undefined) throw new Error('no extension service worker');
+  const extensionId = new URL(worker.url()).host;
+
+  const popup = await context.newPage();
+  await popup.goto(`chrome-extension://${extensionId}/popup.html`);
+  await page.bringToFront();
+  await popup.reload();
+  await popup.waitForFunction(
+    () => (document.getElementById('root')?.textContent ?? '') !== '',
+    undefined,
+    { timeout: 10_000 },
+  );
+  const html = (await popup.innerHTML('#root')) || '';
+  await popup.close();
+  await page.close();
+  await unstub();
+  return html;
+}
+
+test('signed-out BLOCKS the popup and offers login', async () => {
+  const html = await popupForStatus('signed-out');
+  expect(html).toContain('Sign in');
+  expect(html).toContain('https://ugly.press/');
+  // It must BLOCK, not append a warning to the normal view.
+  expect(html).not.toContain('Tier 0 · page shape');
+});
+
+test('no-credit BLOCKS the popup and offers billing', async () => {
+  const html = await popupForStatus('no-credit');
+  expect(html).toContain('Out of credit');
+  expect(html).toContain('https://ugly.bot/account/billing');
+  expect(html).not.toContain('Tier 0 · page shape');
+});
+
+test('the two blocking states send the user to DIFFERENT places', async () => {
+  const signedOut = await popupForStatus('signed-out');
+  const noCredit = await popupForStatus('no-credit');
+  expect(signedOut).toContain('ugly.press');
+  expect(signedOut).not.toContain('account/billing');
+  expect(noCredit).toContain('account/billing');
+});

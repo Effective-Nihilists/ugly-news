@@ -16,17 +16,49 @@ export interface TextQuoteSelector {
 /** Enough context to disambiguate repeats without bloating what we store. */
 const CONTEXT = 32;
 
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Match a quote across ANY whitespace run.
+ *
+ * HTML source is line-wrapped, so the DOM text of a sentence routinely reads
+ * "the National\n        Transit". A model told to copy exactly will still
+ * usually hand back "the National Transit". Requiring a literal match would
+ * therefore drop most real claims — silently, which is the worst way to fail.
+ */
+function flexPattern(exact: string): RegExp {
+  const parts = exact.trim().split(/\s+/).map(escapeRegex);
+  return new RegExp(parts.join('\\s+'), 'g');
+}
+
+/** All occurrences of `exact`, tolerant of differing whitespace runs. */
+export function findFlexible(
+  text: string,
+  exact: string,
+): { start: number; end: number }[] {
+  const out: { start: number; end: number }[] = [];
+  const re = flexPattern(exact);
+  for (let m = re.exec(text); m !== null; m = re.exec(text)) {
+    out.push({ start: m.index, end: m.index + m[0].length });
+    // Zero-length matches cannot happen here, but guard the loop anyway.
+    if (m[0].length === 0) re.lastIndex++;
+  }
+  return out;
+}
+
 export function buildSelector(
   text: string,
   exact: string,
   from = 0,
 ): TextQuoteSelector | null {
-  const start = text.indexOf(exact, from);
-  if (start === -1) return null;
+  const hit = findFlexible(text, exact).find((h) => h.start >= from);
+  if (hit === undefined) return null;
   return {
     exact,
-    prefix: text.slice(Math.max(0, start - CONTEXT), start),
-    suffix: text.slice(start + exact.length, start + exact.length + CONTEXT),
+    prefix: text.slice(Math.max(0, hit.start - CONTEXT), hit.start),
+    suffix: text.slice(hit.end, hit.end + CONTEXT),
   };
 }
 
@@ -39,30 +71,16 @@ export function resolveSelector(
   text: string,
   sel: TextQuoteSelector,
 ): { start: number; end: number } | null {
-  const hits: number[] = [];
-  for (
-    let i = text.indexOf(sel.exact);
-    i !== -1;
-    i = text.indexOf(sel.exact, i + 1)
-  ) {
-    hits.push(i);
-  }
-  if (hits.length === 0) return null;
-
+  const hits = findFlexible(text, sel.exact);
   const first = hits[0];
   if (first === undefined) return null;
-  if (hits.length === 1) {
-    return { start: first, end: first + sel.exact.length };
-  }
+  if (hits.length === 1) return first;
 
   let best = first;
   let bestScore = -1;
   for (const at of hits) {
-    const before = text.slice(Math.max(0, at - CONTEXT), at);
-    const after = text.slice(
-      at + sel.exact.length,
-      at + sel.exact.length + CONTEXT,
-    );
+    const before = text.slice(Math.max(0, at.start - CONTEXT), at.start);
+    const after = text.slice(at.end, at.end + CONTEXT);
     const score =
       commonSuffix(before, sel.prefix) + commonPrefix(after, sel.suffix);
     if (score > bestScore) {
@@ -70,7 +88,7 @@ export function resolveSelector(
       best = at;
     }
   }
-  return { start: best, end: best + sel.exact.length };
+  return best;
 }
 
 function commonPrefix(a: string, b: string): number {

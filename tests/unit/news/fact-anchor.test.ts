@@ -82,3 +82,40 @@ describe('resolveSelector', () => {
     expect(text.slice(hit!.start, hit!.end)).toBe(QUOTE);
   });
 });
+
+describe('whitespace tolerance', () => {
+  // HTML source is line-wrapped, so the DOM text of a sentence routinely has a
+  // newline plus indentation where the prose has a single space. A model told
+  // to copy exactly still normalises it. This is the case that silently drops
+  // most real claims if matching is literal.
+  const WRAPPED =
+    'Washington — after midnight, the Senate passed the National\n        Transit Renewal Act 51-49 late Thursday, sending it on.';
+  const NORMALISED = 'the Senate passed the National Transit Renewal Act 51-49 late Thursday';
+
+  it('builds a selector despite differing whitespace runs', () => {
+    expect(buildSelector(WRAPPED, NORMALISED)).not.toBeNull();
+  });
+
+  it('resolves to the span as it actually appears in the text', () => {
+    const sel = buildSelector(WRAPPED, NORMALISED);
+    const hit = resolveSelector(WRAPPED, sel!);
+    expect(hit).not.toBeNull();
+    const matched = WRAPPED.slice(hit!.start, hit!.end);
+    expect(matched).toContain('National');
+    expect(matched).toContain('Transit');
+    // The matched span is LONGER than the normalised quote, because it spans
+    // the real newline + indentation.
+    expect(matched.length).toBeGreaterThan(NORMALISED.length);
+  });
+
+  it('escapes regex metacharacters in the quote', () => {
+    const text = 'Costs rose (a lot) by 40% [sic] last year.';
+    const sel = buildSelector(text, 'rose (a lot) by 40% [sic]');
+    expect(sel).not.toBeNull();
+    expect(resolveSelector(text, sel!)).not.toBeNull();
+  });
+
+  it('still returns null for a quote that is genuinely absent', () => {
+    expect(buildSelector(WRAPPED, 'nowhere near this article')).toBeNull();
+  });
+});

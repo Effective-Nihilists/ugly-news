@@ -124,3 +124,36 @@ body {
 .row.skip .v {
   color: var(--faint);
 }
+
+/* Blocking states: signed-out and out-of-credit replace the whole popup with
+   one action, rather than appending a warning to the normal view. */
+.block {
+  text-align: center;
+  padding: 8px 4px 4px;
+}
+.block-h {
+  font-weight: 800;
+  font-size: 15px;
+  margin-bottom: 8px;
+}
+.block-p {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--dim);
+  margin-bottom: 14px;
+}
+.act {
+  width: 100%;
+  min-height: 44px;
+  border: none;
+  border-radius: 11px;
+  background: var(--orange);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.act:hover {
+  filter: brightness(1.06);
+}

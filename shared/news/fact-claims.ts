@@ -2,6 +2,8 @@
 // Pure so it unit-tests without a model call; the model call lives in
 // server/news/fact.ts.
 
+import { findFlexible } from './fact-anchor';
+
 export const claimClasses = [
   'quantitative',
   'attribution',
@@ -86,7 +88,10 @@ export function parseClaims(
     const rec = item as Record<string, unknown>;
     const text = typeof rec.text === 'string' ? rec.text.trim() : '';
     if (text.length < MIN_CLAIM_CHARS) continue;
-    if (!articleText.includes(text)) continue;
+    // Whitespace-tolerant: HTML source is line-wrapped, so the article text has
+    // newlines mid-sentence that the model will have normalised to spaces. A
+    // literal includes() would drop most real claims.
+    if (findFlexible(articleText, text).length === 0) continue;
     if (seen.has(text)) continue;
     seen.add(text);
     out.push({
