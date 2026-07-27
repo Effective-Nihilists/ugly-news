@@ -1224,10 +1224,16 @@ export function badgeForStatus(status: FactStatus): BadgeState | null {
     return { text: '!', color: BADGE_ENGAGED, title: 'Sign in to check claims' };
   }
   if (status === 'no-credit') {
-    return { text: '!', color: BADGE_DORMANT, title: 'Out of credit — add funds to check claims' };
+    return { text: '!', color: BADGE_ENGAGED, title: 'Out of credit — add funds to check claims' };
   }
   return null;
 }
+```
+
+Both use the attention colour, not the dormant grey: dormant means "nothing to
+do here", and these are the opposite — there is exactly one thing to do.
+
+```ts
 ```
 
 Add unit tests asserting the two states produce **different** titles and that
@@ -1242,36 +1248,71 @@ if ((message as { type?: string }).type === OPEN_URL) {
 }
 ```
 
-In `extension/src/popup/index.ts`, render the matching remedy:
+In `extension/src/popup/index.ts`, **either state BLOCKS the popup.** Render the
+remedy and nothing else — no source card, no gate ladder. Return before the
+normal render path:
 
 ```ts
-function remedy(status: FactStatus): string {
+function blockingScreen(status: Exclude<FactStatus, 'ok'>): string {
   if (status === 'signed-out') {
-    return `<div class="why">Claim checking is billed to your account.</div>
-      <button class="act" data-url="${LOGIN_URL}">Sign in to ugly.press</button>`;
+    return `<div class="block">
+      <div class="block-h">Sign in to continue</div>
+      <div class="block-p">Claim checking is billed to your account, so the
+        checker needs you signed in.</div>
+      <button class="act" data-url="${LOGIN_URL}">Sign in to ugly.press</button>
+    </div>`;
   }
-  return `<div class="why">Your ugly.bot balance is empty, so claims could not
-      be checked. The publisher rating above still works.</div>
-      <button class="act" data-url="${BILLING_URL}">Add funds</button>`;
+  return `<div class="block">
+    <div class="block-h">Out of credit</div>
+    <div class="block-p">Your ugly.bot balance is empty, so the checker cannot
+      run.</div>
+    <button class="act" data-url="${BILLING_URL}">Add funds</button>
+  </div>`;
+}
+
+// …inside render(), BEFORE the source card is built:
+if (status !== 'ok') {
+  root.innerHTML = blockingScreen(status);
+  wireButtons(root);
+  return;
 }
 ```
 
 Wire the buttons to `chrome.runtime.sendMessage({ type: OPEN_URL, url })`.
 
+The blocking screen is a **single clear action**, not an error with a hint
+buried in it. A user who cannot act on what the popup says has been told
+nothing useful.
+
 **Do not build a login form.** Landing on `https://ugly.press/` hands off to the
 framework's own `LoginPopup`; reimplementing OAuth in an extension would be both
 redundant and a credential-handling surface we do not want.
 
-**The gate and source card keep working in both states** — they are local and
-cost nothing. Only claim checking needs an account with credit, so the extension
-degrades to its Phase-1 behaviour rather than going blank.
+Add the styles to `extension/src/popup/popup.css`:
 
-- [ ] **Step 10: E2E both remedies**
+```css
+.block { text-align: center; padding: 8px 4px 4px; }
+.block-h { font-weight: 800; font-size: 15px; margin-bottom: 8px; }
+.block-p { font-size: 12px; line-height: 1.6; color: var(--dim); margin-bottom: 14px; }
+.act {
+  width: 100%; min-height: 44px; border: none; border-radius: 11px;
+  background: var(--orange); color: #fff; font: inherit; font-size: 13px;
+  font-weight: 700; cursor: pointer;
+}
+.act:hover { filter: brightness(1.06); }
+```
+
+- [ ] **Step 10: E2E both blocking states**
 
 Stub `factClaims` to return `{claims:[],status:'signed-out'}` and then
-`'no-credit'`, and assert the popup shows the right button target for each —
-`ugly.press` for one, `ugly.bot/account/billing` for the other. This is the
-regression test for the two states being collapsed.
+`'no-credit'`. For each, assert:
+
+1. the popup shows the right button target — `ugly.press` for one,
+   `ugly.bot/account/billing` for the other. This is the regression test against
+   the two states being collapsed back together;
+2. the popup does **not** contain the source card or the gate ladder — i.e. it
+   really blocks rather than appending a warning to the normal view. Assert on
+   the absence of `Tier 0 · page shape`.
 
 **Phase A is done here — claims are visible.** Stop and look at real articles before continuing.
 
@@ -1495,9 +1536,11 @@ git commit -m "feat(extension): verdict colouring and in-page claim popover"
 
 ## Known risks
 
-1. **The user must be signed in to ugly.press** for any claim checking, because
-   the AI is billed to them. The gate and source card still work signed out, so
-   the extension degrades to Phase-1 behaviour rather than breaking.
+1. **The user must be signed in with credit** for any claim checking, because
+   the AI is billed to them. Both failure states **block the popup** with a
+   single fix button rather than degrading — so a signed-out or empty-balance
+   user sees the remedy, not a half-working panel that hides why nothing
+   happened.
 
    **VERIFIED** — an extension service worker's `fetch` does carry the origin's
    cookies. Measured against a local origin that sets a session cookie:
