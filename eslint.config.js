@@ -17,6 +17,7 @@ export default [
       'vite.config.ts',
       'vitest.config.ts',
       'playwright.config.ts',
+      'playwright.extension.config.ts',
       'tests/**',
       'scripts/**',
     ],

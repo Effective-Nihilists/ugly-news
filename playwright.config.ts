@@ -29,6 +29,8 @@ function getBaseURL(): string {
 
 export default defineConfig({
   testDir: './tests/e2e',
+  // The extension suite has its own config (no webServer, chromium-only).
+  testIgnore: /extension-.*\.spec\.ts/,
   fullyParallel: true,
   forbidOnly: !!process.env['CI'],
   retries: process.env['CI'] ? 2 : 0,
