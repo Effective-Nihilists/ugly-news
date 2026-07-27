@@ -39,8 +39,8 @@ importers:
         specifier: ^0.183.2
         version: 0.183.2
       ugly-app:
-        specifier: 0.1.902
-        version: 0.1.902(@types/react@19.2.17)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(three@0.183.2)(typescript@5.9.3)(vega-lite@6.4.3(vega@6.2.0))(vega@6.2.0)(y-protocols@1.0.7(yjs@13.6.31))(yjs@13.6.31)
+        specifier: 0.1.922
+        version: 0.1.922(@types/react@19.2.17)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(three@0.183.2)(typescript@5.9.3)(vega-lite@6.4.3(vega@6.2.0))(vega@6.2.0)(y-protocols@1.0.7(yjs@13.6.31))(yjs@13.6.31)
       yjs:
         specifier: ^13.6.30
         version: 13.6.31
@@ -4078,8 +4078,8 @@ packages:
     engines: {node: '>=0.8.0'}
     hasBin: true
 
-  ugly-app@0.1.902:
-    resolution: {integrity: sha512-il2iWRNLkh0GaC2ni4rih+VU8SKP3bqkYUmuTv84TilzDi4Opf82r3U4zOXdloITIR07pN8Bv6JcGIktxvwKqg==}
+  ugly-app@0.1.922:
+    resolution: {integrity: sha512-hax50SgtMNYiDvNJ2qt9V7qQw890gSx93oKVp/he4sz1KuUz3ZLGS5h/eYmxmQ9cqnwgbHkQwjF8wPZ3L0AbEQ==}
     hasBin: true
     peerDependencies:
       '@types/react': '>=18.0.0'
@@ -5221,9 +5221,9 @@ snapshots:
       eslint: 8.57.1
       eslint-visitor-keys: 3.4.3
 
-  '@eslint-community/eslint-utils@4.9.1(eslint@8.57.1)':
+  '@eslint-community/eslint-utils@4.10.1(eslint@9.39.4)':
     dependencies:
-      eslint: 8.57.1
+      eslint: 9.39.4
       eslint-visitor-keys: 3.4.3
 
   '@eslint-community/eslint-utils@4.9.1(eslint@9.39.4)':
@@ -5913,7 +5913,7 @@ snapshots:
       '@typescript-eslint/visitor-keys': 8.61.0
       debug: 4.4.3
       minimatch: 10.2.5
-      semver: 7.8.4
+      semver: 7.8.5
       tinyglobby: 0.2.17
       ts-api-utils: 2.5.0(typescript@5.9.3)
       typescript: 5.9.3
@@ -5922,7 +5922,7 @@ snapshots:
 
   '@typescript-eslint/utils@8.61.0(eslint@8.57.1)(typescript@5.9.3)':
     dependencies:
-      '@eslint-community/eslint-utils': 4.9.1(eslint@8.57.1)
+      '@eslint-community/eslint-utils': 4.10.1(eslint@8.57.1)
       '@typescript-eslint/scope-manager': 8.61.0
       '@typescript-eslint/types': 8.61.0
       '@typescript-eslint/typescript-estree': 8.61.0(typescript@5.9.3)
@@ -5933,7 +5933,7 @@ snapshots:
 
   '@typescript-eslint/utils@8.61.0(eslint@9.39.4)(typescript@5.9.3)':
     dependencies:
-      '@eslint-community/eslint-utils': 4.9.1(eslint@9.39.4)
+      '@eslint-community/eslint-utils': 4.10.1(eslint@9.39.4)
       '@typescript-eslint/scope-manager': 8.61.0
       '@typescript-eslint/types': 8.61.0
       '@typescript-eslint/typescript-estree': 8.61.0(typescript@5.9.3)
@@ -7931,7 +7931,7 @@ snapshots:
 
   make-dir@4.0.0:
     dependencies:
-      semver: 7.8.4
+      semver: 7.8.5
 
   markdown-it-ins@4.0.0: {}
 
@@ -9312,7 +9312,7 @@ snapshots:
   uglify-js@3.19.3:
     optional: true
 
-  ugly-app@0.1.902(@types/react@19.2.17)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(three@0.183.2)(typescript@5.9.3)(vega-lite@6.4.3(vega@6.2.0))(vega@6.2.0)(y-protocols@1.0.7(yjs@13.6.31))(yjs@13.6.31):
+  ugly-app@0.1.922(@types/react@19.2.17)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(three@0.183.2)(typescript@5.9.3)(vega-lite@6.4.3(vega@6.2.0))(vega@6.2.0)(y-protocols@1.0.7(yjs@13.6.31))(yjs@13.6.31):
     dependencies:
       '@aws-sdk/client-s3': 3.1095.0
       '@aws-sdk/s3-request-presigner': 3.1095.0
@@ -9683,14 +9683,14 @@ snapshots:
       d3-array: 3.2.4
       vega-dataflow: 6.1.2
       vega-statistics: 2.0.0
-      vega-time: 3.1.0
+      vega-time: 3.2.1
       vega-util: 2.1.2
 
   vega-typings@2.1.0:
     dependencies:
       '@types/geojson': 7946.0.16
       vega-event-selector: 4.0.0
-      vega-expression: 6.1.0
+      vega-expression: 6.2.1
       vega-util: 2.1.2
 
   vega-util@2.1.2: {}
@@ -9698,7 +9698,7 @@ snapshots:
   vega-view-transforms@5.1.0:
     dependencies:
       vega-dataflow: 6.1.2
-      vega-scenegraph: 5.1.0
+      vega-scenegraph: 5.2.1
       vega-util: 2.1.2
 
   vega-view@6.1.2:

@@ -223,3 +223,80 @@ describe('AI proxy burst pacing', () => {
     expect(serverBlip[3]! - serverBlip[2]!).toBeLessThan(8000);
   });
 });
+
+describe('empty-completion diagnostics', () => {
+  beforeEach(() => {
+    process.env.AI_PROXY_TOKEN = 'test-token';
+    vi.resetModules();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('reports the body shape when a 200 carries no text — thinking-only vs filtered', async () => {
+    // Prod logged 1,111 identical "200 OK but no text content" rows in a day
+    // with nothing to distinguish a reasoning model that spent its whole budget
+    // on `thinking` from a filtered/empty completion. The message must now
+    // carry that difference (telemetry keeps only the message string).
+    const warnings: string[] = [];
+    vi.spyOn(console, 'warn').mockImplementation((...args: unknown[]) => {
+      warnings.push(args.map(String).join(' '));
+    });
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              message: {
+                content: [{ type: 'thinking', thinking: 'x'.repeat(310) }],
+              },
+              finish_reason: 'length',
+            }),
+            { status: 200 },
+          ),
+      ),
+    );
+    const { genText } = await import('../../../server/news/ai');
+    expect(
+      await genText([{ role: 'user', content: 'story' }], {
+        model: 'deepseek_v4_flash',
+      }),
+    ).toBeNull();
+
+    const row = warnings.find((w) => w.includes('no text content'))!;
+    expect(row).toContain('reason=length');
+    expect(row).toContain('types=thinking');
+    expect(row).toContain('thinkingChars=310');
+  });
+
+  it('distinguishes an empty string completion from a thinking-only one', async () => {
+    const warnings: string[] = [];
+    vi.spyOn(console, 'warn').mockImplementation((...args: unknown[]) => {
+      warnings.push(args.map(String).join(' '));
+    });
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ message: { content: '   ' } }), {
+            status: 200,
+          }),
+      ),
+    );
+    const { genText } = await import('../../../server/news/ai');
+    expect(
+      await genText([{ role: 'user', content: 'story' }], {
+        model: 'deepseek_v4_flash',
+      }),
+    ).toBeNull();
+
+    const row = warnings.find((w) => w.includes('no text content'))!;
+    expect(row).toContain('content=string(3)');
+    expect(row).not.toContain('types=');
+  });
+});

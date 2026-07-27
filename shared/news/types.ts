@@ -436,8 +436,12 @@ export const newsFeeds: NewsFeed[] = [
   },
   {
     id: 'dailycaller',
+    // Moved off WordPress: /feed/ (and /feed, /rss) have 404'd since at least
+    // 2026-07-07, which is what "[NEWS] RSS feed download failed [dailycaller]"
+    // was — every sweep, for weeks. This is the feed their homepage advertises
+    // via <link rel="alternate" type="application/rss+xml">; the key is public.
     name: 'The Daily Caller',
-    url: 'https://dailycaller.com/feed/',
+    url: 'https://api.dailycaller.com/?feed=full&key=abad8678eeda58de4efcc7e9a704d008',
     category: 'politics',
   },
   {

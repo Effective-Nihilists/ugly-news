@@ -173,6 +173,49 @@ function extractContent(data: unknown): string {
   return '';
 }
 
+/**
+ * One-line description of a 200 response that yielded no usable text, for the
+ * telemetry message. Reports the top-level keys, the stop/finish reason, the
+ * shape of `content`, and — when it is a parts array — which part types came
+ * back and how much `thinking` there was. That distinguishes the three causes
+ * we cannot currently tell apart: a filtered/empty completion, a response that
+ * spent its whole token budget on `thinking`, and a body shape `extractContent`
+ * no longer recognises. Never throws and never logs message text.
+ */
+function describeEmptyBody(data: unknown): string {
+  try {
+    const d = data as Record<string, unknown>;
+    const keys = Object.keys(d ?? {})
+      .slice(0, 8)
+      .join(',');
+    const body = d as {
+      message?: { content?: unknown };
+      content?: unknown;
+      finish_reason?: string;
+      stop_reason?: string;
+    };
+    const content = body?.message?.content ?? body?.content;
+    const reason = body?.finish_reason ?? body?.stop_reason ?? 'none';
+    let shape: string;
+    if (typeof content === 'string') {
+      shape = `string(${content.length})`;
+    } else if (Array.isArray(content)) {
+      const parts = content as ContentPart[];
+      const types = [...new Set(parts.map((p) => p?.type ?? '?'))].join('|');
+      const thinking = parts.reduce(
+        (n, p) => n + (typeof p?.thinking === 'string' ? p.thinking.length : 0),
+        0,
+      );
+      shape = `parts[${parts.length}] types=${types} thinkingChars=${thinking}`;
+    } else {
+      shape = content === undefined ? 'missing' : typeof content;
+    }
+    return `keys=${keys} reason=${reason} content=${shape}`;
+  } catch {
+    return 'undescribable';
+  }
+}
+
 /** Owner-billed text generation via the ugly.bot AI proxy. */
 export async function genText(
   messages: ChatMessage[],
@@ -205,14 +248,22 @@ export async function genText(
     return null;
   }
   try {
-    const content = extractContent(await res.json());
+    const data: unknown = await res.json();
+    const content = extractContent(data);
     if (!content) {
       // A 200 with no usable text (content filter, all-thinking response, or an
       // unrecognised body shape) used to return null with NO log at all — the
       // one failure branch here that left no trace, so callers reported
       // "genText returned null" with nothing upstream to explain it.
+      //
+      // Naming the model still wasn't enough: 1,111 of these landed in one day
+      // (2026-07-26) and every row looked identical, so there was no way to tell
+      // a content filter from an all-`thinking` response from a body shape we
+      // stopped recognising. Describe the BODY here — interpolated into the
+      // message, because telemetry keeps only the message string and drops any
+      // object argument.
       console.warn(
-        `[news/ai] genText: ${res.status} OK but no text content (model=${opts.model})`,
+        `[news/ai] genText: ${res.status} OK but no text content (model=${opts.model}) shape=${describeEmptyBody(data)}`,
       );
       return null;
     }
