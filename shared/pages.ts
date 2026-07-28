@@ -24,6 +24,8 @@ export const pages = definePages({
   'auth-demo': definePage<{}>({ auth: false }),
   'user/:userId': definePage<{ userId: string }>(),
   'search': definePage<{ q?: string }>({ auth: false }),
+  // Public: someone must be able to read the install steps before signing in.
+  'extension': definePage<{}>({ auth: false }),
   'test': definePage<{}>({ auth: false }),
   'test/ai': definePage<{}>({ auth: true }),
   'test/ui': definePage<{}>({ auth: false }),

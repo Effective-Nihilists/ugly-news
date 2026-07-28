@@ -3,6 +3,8 @@
 // service worker is declared "type": "module" in the manifest, so it is esm.
 import { build } from 'esbuild';
 import { copyFile, mkdir, rm } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -58,6 +60,21 @@ for (const size of [16, 32, 48, 128]) {
     join(root, 'extension', 'icons', `icon-${size}.png`),
     join(out, 'icons', `icon-${size}.png`),
   );
+}
+
+// Ship the loadable bundle as a static asset so the site can hand it to a
+// reader directly. Built from `out` every time, so the download can never be a
+// stale copy of code that has since changed.
+const zipPath = join(root, 'client', 'public', 'ugly-fact-checker.zip');
+await rm(zipPath, { force: true });
+try {
+  await promisify(execFile)('zip', ['-r', '-q', zipPath, '.'], { cwd: out });
+  console.log('extension zipped →', zipPath);
+} catch (err) {
+  // Loud, not silent: a missing zip means the website's download button 404s,
+  // and that is not something to discover from a user report.
+  console.error('[build-extension] could not create the zip:', err.message);
+  process.exitCode = 1;
 }
 
 console.log('extension built →', out);

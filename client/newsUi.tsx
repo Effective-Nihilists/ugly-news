@@ -701,7 +701,8 @@ export function UglyTakeBadge(): React.ReactElement {
 }
 
 // ─── Shared inner-page press header ──────────────────────────────────────────
-type PressTab = 'home' | 'blindspot' | 'satire' | 'podcast' | 'archive';
+type PressTab =
+  'home' | 'blindspot' | 'satire' | 'podcast' | 'archive' | 'extension';
 
 /** Slim "The Ugly Press" header for the story/blindspot/satire/reader pages, so
  *  every inner page carries the masthead + "Left. Right. Ugly." + nav. */
@@ -751,6 +752,14 @@ export function PressHeader({
         href: '/archive',
         go: () => {
           router.push('archive', {});
+        },
+      },
+      {
+        key: 'extension',
+        label: 'Fact Checker',
+        href: '/extension',
+        go: () => {
+          router.push('extension', {});
         },
       },
     ];
