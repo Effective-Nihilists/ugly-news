@@ -1,4 +1,5 @@
 import { badgeFor, badgeForStatus } from '../shared/badge';
+import { isAuthRejection } from '../shared/http';
 import { installConsoleCapture } from '../shared/console-capture';
 import { ConsoleRing, type LogEntry } from '../shared/console-ring';
 import { createErrorBatcher } from '../shared/error-batcher';
@@ -178,15 +179,14 @@ chrome.runtime.onMessage.addListener(
             },
           }),
         });
-        // authReq() 401s before the handler runs — this is the no-session case.
-        if (res.status === 401) {
-          fail('signed-out', null);
-          return;
-        }
         if (!res.ok) {
           // The body is where the real answer lives — an unregistered route
           // says so in plain words, and discarding it cost an afternoon.
           const detail = await res.text().catch(() => '');
+          if (isAuthRejection(res.status, detail)) {
+            fail('signed-out', null);
+            return;
+          }
           const trimmed = detail.slice(0, 200).trim();
           fail(
             'ok',
@@ -249,17 +249,16 @@ chrome.runtime.onMessage.addListener(
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ input: { claims } }),
         });
-        if (res.status === 401) {
-          fail('signed-out', null);
-          return;
-        }
         if (!res.ok) {
-          const detail = (await res.text().catch(() => ''))
-            .slice(0, 200)
-            .trim();
+          const detail = await res.text().catch(() => '');
+          if (isAuthRejection(res.status, detail)) {
+            fail('signed-out', null);
+            return;
+          }
+          const trimmed = detail.slice(0, 200).trim();
           fail(
             'ok',
-            `HTTP ${String(res.status)}${detail === '' ? '' : ` ${detail}`}`,
+            `HTTP ${String(res.status)}${trimmed === '' ? '' : ` ${trimmed}`}`,
           );
           return;
         }

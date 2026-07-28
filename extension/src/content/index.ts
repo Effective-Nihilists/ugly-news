@@ -84,6 +84,12 @@ function report(): PageReport {
  * made an unregistered prod route look like an article with nothing to check.
  */
 function reportClaims(outcome: ClaimsOutcome): void {
+  // A FAILURE goes to console.error so it reaches error telemetry. Only
+  // colourClaims did this at first, which is why the prod log showed the
+  // verdict failure and stayed silent about whether claims had failed too.
+  if (outcome.error !== null) {
+    console.error(`[ugly-fact] claims failed: ${outcome.error}`);
+  }
   console.log('[ugly-fact] claims outcome', outcome);
   document.documentElement.dataset.uglyFactClaims = String(outcome.painted);
   document.documentElement.dataset.uglyFactOutcome = JSON.stringify(outcome);

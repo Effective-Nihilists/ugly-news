@@ -2,14 +2,13 @@
 // barrel: that barrel pulls agent-base/http/https/net and breaks
 // `build:workers` with ~200 "Could not resolve" errors.
 import { createTextGen } from 'ugly-app/server/adapter/workers';
-import { z } from 'ugly-app/shared';
 import {
   buildClaimPrompt,
-  claimClasses,
   CLAIM_SYSTEM_PROMPT,
   filterClaims,
   type RawClaim,
 } from '../../shared/news/fact-claims';
+import { extractJson } from '../../shared/news/fact-json';
 import {
   buildStancePrompt,
   parseStances,
@@ -50,24 +49,6 @@ const MIN_TEXT_CHARS = 400;
  * without first fixing the framework schema breaks claim extraction outright.
  */
 const CLAIM_MODEL = 'llama_4_scout';
-
-/**
- * Structured output, enforced by the proxy.
- *
- * Worth a schema rather than free text plus a parser: this model has been
- * observed in prod returning only `thinking` content and no text at all, which
- * used to surface as "no claims on this article" — a wrong answer wearing the
- * costume of a right one.
- */
-const claimsSchema = z.object({
-  claims: z.array(
-    z.object({
-      text: z.string(),
-      class: z.enum(claimClasses),
-      checkable: z.boolean(),
-    }),
-  ),
-});
 
 /** How many corpus articles to weigh per claim. Trimmed to keep one claim's
  *  round trip comfortably inside the proxy's 60s edge timeout. */
@@ -137,14 +118,25 @@ export async function factClaims(
   });
 
   try {
-    const out = await gen.generateJson(claimsSchema, [
+    // `generate`, NOT `generateJson`: the proxy does not enforce the schema for
+    // this model, so generateJson only adds a strict JSON.parse that throws on
+    // the trailing prose the model habitually appends. Tolerant parsing here.
+    const raw = await gen.generate([
       { role: 'system', content: CLAIM_SYSTEM_PROMPT },
       { role: 'user', content: buildClaimPrompt(input.title, input.text) },
     ]);
-    // The schema guarantees shape, not honesty — a span still has to be in the
-    // article to be anchorable.
+    const parsed = extractJson(raw);
+    const list = (parsed as { claims?: unknown } | null)?.claims;
+    if (!Array.isArray(list)) {
+      return {
+        claims: [],
+        status: 'ok',
+        error: 'model returned no claims array',
+      };
+    }
+    // Shape is not honesty — a span still has to be in the article to anchor.
     return {
-      claims: filterClaims(out.claims, input.text),
+      claims: filterClaims(list, input.text),
       status: 'ok',
       error: null,
     };
@@ -182,10 +174,6 @@ export interface Verdict {
   counted: number;
   sources: QuickSource[];
 }
-
-const stancesSchema = z.object({
-  stances: z.array(z.object({ index: z.number(), stance: z.string() })),
-});
 
 /** Resolve a retrieved article to a RATED publisher, or nothing. */
 function ratingFor(feedId: string | null | undefined): {
@@ -257,11 +245,14 @@ async function quickOne(
 
   let stances: Stance[];
   try {
-    const out = await gen.generateJson(stancesSchema, [
+    const raw = await gen.generate([
       { role: 'system', content: STANCE_SYSTEM_PROMPT },
       { role: 'user', content: buildStancePrompt(claim.text, excerpts) },
     ]);
-    stances = parseStances(out.stances, excerpts.length);
+    const parsed = extractJson(raw);
+    const list = (parsed as { stances?: unknown } | null)?.stances;
+    // An unreadable answer is all-silent, never agreement.
+    stances = parseStances(Array.isArray(list) ? list : [], excerpts.length);
   } catch (e) {
     // Rethrown so the caller can map 401/402 to their remedies; a stance call
     // that fails must not silently become "nobody covered this".

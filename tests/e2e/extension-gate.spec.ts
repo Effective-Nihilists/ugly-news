@@ -138,6 +138,19 @@ test('sets the action title to the publisher when engaged but unrated', async ()
  * tab and the page underneath stays active.
  */
 async function popupTextFor(file: string): Promise<string> {
+  // Stub the claim call. Without it the request reaches real ugly.press with no
+  // session, correctly resolves to 'signed-out', and the popup BLOCKS with a
+  // sign-in screen instead of the ladder — a race this test used to win only
+  // because the router's 400 was being mis-read as a generic failure.
+  await context.route('https://ugly.press/api/factClaims', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        result: { claims: [], status: 'ok', error: null },
+      }),
+    });
+  });
   const page = await context.newPage();
   await page.goto(`${origin}/${file}`);
   await page.waitForFunction(
@@ -165,6 +178,7 @@ async function popupTextFor(file: string): Promise<string> {
   const text = (await popup.textContent('#root')) ?? '';
   await popup.close();
   await page.close();
+  await context.unroute('https://ugly.press/api/factClaims');
   if (errors.length > 0) throw new Error(`popup errored: ${errors.join('; ')}`);
   return text.replace(/\s+/g, ' ');
 }
