@@ -360,3 +360,139 @@ test('the two blocking states send the user to DIFFERENT places', async () => {
   expect(signedOut).not.toContain('account/billing');
   expect(noCredit).toContain('account/billing');
 });
+
+// ─── Phase B: verdict colouring and the in-page popover ─────────────────────
+
+const CLAIM_TEXT =
+  'the Senate passed the National Transit Renewal Act 51-49 late Thursday';
+
+async function stubQuick(body: unknown): Promise<void> {
+  await context.route('https://ugly.press/api/factQuick', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ result: body }),
+    });
+  });
+}
+
+async function unstubQuick(): Promise<void> {
+  await context.unroute('https://ugly.press/api/factQuick');
+}
+
+/** Paint one claim and colour it with the given verdict. */
+async function articleWithVerdict(verdict: Record<string, unknown>) {
+  await stubClaims({
+    claims: [{ text: CLAIM_TEXT, class: 'attribution', checkable: true }],
+    status: 'ok',
+    error: null,
+  });
+  await stubQuick({ verdicts: [verdict], status: 'ok', error: null });
+  const page = await context.newPage();
+  await page.goto(`${origin}/article.html`);
+  await page.waitForFunction(
+    () => document.documentElement.dataset['uglyFactVerdicts'] ?? null,
+    undefined,
+    { timeout: 15_000 },
+  );
+  return page;
+}
+
+const RED_VERDICT = {
+  id: 'c0',
+  score: -1,
+  band: 'red',
+  forcedYellowReason: null,
+  counted: 2,
+  sources: [
+    {
+      name: 'Variety',
+      bias: 'center',
+      factuality: 'high',
+      stance: 'refutes',
+      independence: 1,
+    },
+    {
+      name: 'The Hill',
+      bias: 'center',
+      factuality: 'very-high',
+      stance: 'refutes',
+      independence: 0.5,
+    },
+  ],
+};
+
+test('resolves a pending tint to the verdict colour', async () => {
+  const page = await articleWithVerdict(RED_VERDICT);
+  const bands = await page.evaluate(() => ({
+    red: CSS.highlights.has('ugly-fact-red'),
+    pending: CSS.highlights.has('ugly-fact-pending'),
+  }));
+  // The pending registry must be EMPTIED, not merely joined — a claim left in
+  // two bands would paint both tints over the same text.
+  expect(bands.red).toBe(true);
+  expect(bands.pending).toBe(false);
+  await page.close();
+  await unstub();
+  await unstubQuick();
+});
+
+test('an unverified verdict greys out rather than colouring', async () => {
+  // Nobody covered it. That is not a pass and not a fail.
+  const page = await articleWithVerdict({
+    ...RED_VERDICT,
+    band: 'unverified',
+    score: 0,
+    counted: 0,
+    sources: [],
+  });
+  expect(await page.evaluate(() => CSS.highlights.has('ugly-fact-grey'))).toBe(
+    true,
+  );
+  expect(await page.evaluate(() => CSS.highlights.has('ugly-fact-red'))).toBe(
+    false,
+  );
+  await page.close();
+  await unstub();
+  await unstubQuick();
+});
+
+test('clicking a highlight opens the popover with the tally', async () => {
+  const page = await articleWithVerdict(RED_VERDICT);
+  // Highlights are not hit-testable, so click the TEXT and let the caret path
+  // resolve it — which is exactly what a reader does.
+  const box = await page.evaluate((word) => {
+    // Aim INSIDE the claim, not at the start of the containing text node —
+    // the caret must land within the stored range for claimAtPoint to match.
+    const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let n = walk.nextNode(); n !== null; n = walk.nextNode()) {
+      const t = n.textContent ?? '';
+      const i = t.indexOf(word);
+      if (i < 0) continue;
+      const r = document.createRange();
+      r.setStart(n, i);
+      r.setEnd(n, i + word.length);
+      const rect = r.getBoundingClientRect();
+      if (rect.width === 0) continue;
+      return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+    }
+    return null;
+  }, 'Renewal');
+  expect(box).not.toBeNull();
+
+  await page.mouse.click(box!.x, box!.y);
+  const host = page.locator('#ugly-fact-popover-host');
+  await expect(host).toHaveCount(1);
+
+  // The shadow root is CLOSED, so the card is unreachable from page script —
+  // that is the point. Assert the host exists and that the page cannot pierce.
+  const pierced = await page.evaluate(
+    () =>
+      (document.getElementById('ugly-fact-popover-host') as HTMLElement | null)
+        ?.shadowRoot,
+  );
+  expect(pierced).toBeNull();
+  await page.close();
+  await unstub();
+  await unstubQuick();
+});

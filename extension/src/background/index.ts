@@ -16,6 +16,7 @@ import {
 import {
   CLAIMS_DONE,
   FETCH_CLAIMS,
+  FETCH_QUICK,
   GET_REPORT,
   OPEN_URL,
   PAGE_REPORT,
@@ -25,7 +26,10 @@ import {
   type ClaimsResult,
   type FactStatus,
   type FetchClaimsMessage,
+  type FetchQuickMessage,
   type OpenUrlMessage,
+  type QuickResult,
+  type QuickVerdict,
   type PageReport,
   type PageReportMessage,
   type SetStatusMessage,
@@ -206,6 +210,73 @@ chrome.runtime.onMessage.addListener(
         const error =
           typeof body.result?.error === 'string' ? body.result.error : null;
         const out: ClaimsResult = { claims, error, status };
+        sendResponse(out);
+      } catch (e) {
+        fail('ok', String(e));
+      } finally {
+        clearTimeout(timer);
+      }
+    })();
+    return true;
+  },
+);
+
+/**
+ * Tier 2 + 3: turn the painted claims into coloured verdicts.
+ *
+ * Same worker-side path and the same reasons as factClaims — CORS exemption and
+ * the session cookie that is both the auth and the billing identity.
+ */
+chrome.runtime.onMessage.addListener(
+  (message: unknown, _sender, sendResponse) => {
+    const msg = message as Partial<FetchQuickMessage>;
+    if (msg.type !== FETCH_QUICK || msg.claims === undefined) return undefined;
+    const claims = msg.claims;
+    void (async () => {
+      const fail = (status: FactStatus, error: string | null): void => {
+        const out: QuickResult = { verdicts: [], error, status };
+        sendResponse(out);
+      };
+      const abort = new AbortController();
+      const timer = setTimeout(() => {
+        abort.abort();
+      }, 75_000);
+      try {
+        const res = await fetch(`${API_BASE}/factQuick`, {
+          method: 'POST',
+          signal: abort.signal,
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ input: { claims } }),
+        });
+        if (res.status === 401) {
+          fail('signed-out', null);
+          return;
+        }
+        if (!res.ok) {
+          const detail = (await res.text().catch(() => ''))
+            .slice(0, 200)
+            .trim();
+          fail(
+            'ok',
+            `HTTP ${String(res.status)}${detail === '' ? '' : ` ${detail}`}`,
+          );
+          return;
+        }
+        const body = (await res.json()) as {
+          result?: { verdicts?: unknown; status?: unknown; error?: unknown };
+        };
+        const verdicts = Array.isArray(body.result?.verdicts)
+          ? (body.result.verdicts as QuickVerdict[])
+          : [];
+        const status =
+          body.result?.status === 'signed-out' ||
+          body.result?.status === 'no-credit'
+            ? body.result.status
+            : 'ok';
+        const error =
+          typeof body.result?.error === 'string' ? body.result.error : null;
+        const out: QuickResult = { verdicts, error, status };
         sendResponse(out);
       } catch (e) {
         fail('ok', String(e));

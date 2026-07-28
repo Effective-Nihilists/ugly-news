@@ -10,6 +10,7 @@ import { ConsoleRing } from '../shared/console-ring';
 import {
   CLAIMS_DONE,
   FETCH_CLAIMS,
+  FETCH_QUICK,
   GET_LOGS,
   PAGE_REPORT,
   REPORT_ERROR,
@@ -19,11 +20,21 @@ import {
   type ClaimsOutcome,
   type ClaimsResult,
   type FetchClaimsMessage,
+  type FetchQuickMessage,
+  type QuickResult,
+  type QuickVerdict,
   type PageReport,
   type PageReportMessage,
   type SetStatusMessage,
 } from '../shared/messages';
-import { highlightsSupported, paintClaims, type Band } from './highlight';
+import {
+  claimAtPoint,
+  highlightsSupported,
+  paintClaims,
+  setBand,
+  type Band,
+} from './highlight';
+import { closePopover, openPopover } from './popover';
 import { readPageSignals } from './probe';
 import { buildTextMap } from './text-map';
 
@@ -120,7 +131,7 @@ async function checkClaims(): Promise<void> {
     return;
   }
 
-  const entries: { id: string; range: Range; band: Band }[] = [];
+  const entries: { id: string; range: Range; band: Band; text: string }[] = [];
   let cursor = 0;
   for (const [i, claim] of result.claims.entries()) {
     if (!claim.checkable) continue;
@@ -148,7 +159,12 @@ async function checkClaims(): Promise<void> {
       console.log('[ugly-fact] unanchored (no DOM range)', claim.text);
       continue;
     }
-    entries.push({ id: `c${String(i)}`, range, band: 'pending' });
+    entries.push({
+      id: `c${String(i)}`,
+      range,
+      band: 'pending',
+      text: claim.text,
+    });
   }
 
   paintClaims(entries);
@@ -156,7 +172,75 @@ async function checkClaims(): Promise<void> {
   // anchor — so the ratio measures anchoring, not the model's classification.
   const checkable = result.claims.filter((c) => c.checkable).length;
   reportClaims({ returned: checkable, painted: entries.length, error: null });
+
+  await colourClaims(entries.map((e) => ({ id: e.id, text: e.text })));
 }
+
+/** What the popover shows for each painted claim, once verdicts arrive. */
+const verdicts = new Map<string, QuickVerdict & { text: string }>();
+
+/** `unverified` is a distinct STATE, not a missing verdict — hence grey. */
+function bandFor(v: QuickVerdict): Band {
+  return v.band === 'unverified' ? 'grey' : v.band;
+}
+
+/** Tier 2 + 3: resolve every pending tint to a colour. */
+async function colourClaims(
+  claims: { id: string; text: string }[],
+): Promise<void> {
+  if (claims.length === 0) return;
+  const message: FetchQuickMessage = { type: FETCH_QUICK, claims };
+  const result: QuickResult = await chrome.runtime.sendMessage(message);
+
+  if (result.status !== 'ok') {
+    document.documentElement.dataset.uglyFactStatus = result.status;
+    const status: SetStatusMessage = {
+      type: SET_STATUS,
+      status: result.status,
+    };
+    void chrome.runtime.sendMessage(status).catch(() => undefined);
+    return;
+  }
+  if (result.error !== null) {
+    console.error(`[ugly-fact] verdicts failed: ${result.error}`);
+    return;
+  }
+
+  const byId = new Map(claims.map((c) => [c.id, c.text]));
+  for (const v of result.verdicts) {
+    const text = byId.get(v.id);
+    if (text === undefined) continue;
+    verdicts.set(v.id, { ...v, text });
+    setBand(v.id, bandFor(v));
+  }
+  console.log(`[ugly-fact] coloured ${String(result.verdicts.length)} claims`);
+  document.documentElement.dataset.uglyFactVerdicts = String(
+    result.verdicts.length,
+  );
+}
+
+// Highlights are not hit-testable, so a click resolves through the caret
+// position against the stored ranges rather than through an event target.
+document.addEventListener('click', (e) => {
+  const id = claimAtPoint(e.clientX, e.clientY);
+  if (id === null) {
+    closePopover();
+    return;
+  }
+  const v = verdicts.get(id);
+  if (v === undefined) return;
+  openPopover(
+    {
+      text: v.text,
+      band: bandFor(v),
+      forcedYellowReason: v.forcedYellowReason,
+      counted: v.counted,
+      sources: v.sources,
+    },
+    e.clientX,
+    e.clientY,
+  );
+});
 
 function run(): void {
   const r = report();

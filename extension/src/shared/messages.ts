@@ -64,6 +64,36 @@ export interface ClaimsDoneMessage {
   outcome: ClaimsOutcome;
 }
 
+export const FETCH_QUICK = 'ugly-fact:fetch-quick' as const;
+
+export interface FetchQuickMessage {
+  type: typeof FETCH_QUICK;
+  claims: { id: string; text: string }[];
+}
+
+export interface QuickSource {
+  name: string;
+  bias: string;
+  factuality: string;
+  stance: 'supports' | 'refutes' | 'mixed' | 'silent';
+  independence: number;
+}
+
+export interface QuickVerdict {
+  id: string;
+  score: number;
+  band: 'green' | 'yellow' | 'red' | 'unverified';
+  forcedYellowReason: 'variance' | 'single-bucket' | null;
+  counted: number;
+  sources: QuickSource[];
+}
+
+export interface QuickResult {
+  verdicts: QuickVerdict[];
+  error: string | null;
+  status: FactStatus;
+}
+
 export const SET_STATUS = 'ugly-fact:set-status' as const;
 
 export interface SetStatusMessage {
