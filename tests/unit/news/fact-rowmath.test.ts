@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   rowMath,
+  safeHref,
   type PopoverSource,
 } from '../../../extension/src/content/popover';
 
@@ -15,6 +16,7 @@ const s = (
   factuality,
   stance,
   independence,
+  uri: null,
 });
 
 describe('rowMath', () => {
@@ -64,5 +66,26 @@ describe('rowMath', () => {
 
   it('returns zero for no rows at all', () => {
     expect(rowMath([]).score).toBe(0);
+  });
+});
+
+describe('safeHref', () => {
+  it('allows http and https', () => {
+    expect(safeHref('https://example.com/a')).toBe('https://example.com/a');
+    expect(safeHref('http://example.com/a')).toBe('http://example.com/a');
+  });
+
+  it('REFUSES javascript: and data:', () => {
+    // These URLs come from indexed third-party content. An href that can run
+    // script would make the verdict card an injection surface on every page
+    // the extension touches.
+    expect(safeHref('javascript:alert(1)')).toBeNull();
+    expect(safeHref('data:text/html,<script>alert(1)</script>')).toBeNull();
+  });
+
+  it('returns null for null or unparseable input', () => {
+    expect(safeHref(null)).toBeNull();
+    expect(safeHref('not a url')).toBeNull();
+    expect(safeHref('')).toBeNull();
   });
 });

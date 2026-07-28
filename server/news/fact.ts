@@ -8,7 +8,7 @@ import {
   filterClaims,
   type RawClaim,
 } from '../../shared/news/fact-claims';
-import { extractJson } from '../../shared/news/fact-json';
+import { extractJson, extractObjects } from '../../shared/news/fact-json';
 import {
   buildStancePrompt,
   parseStances,
@@ -114,7 +114,9 @@ export async function factClaims(
   const gen = createTextGen(userId, {
     model: CLAIM_MODEL,
     temperature: 0,
-    maxTokens: 1500,
+    // A dense article's claim list is the thing that runs out of room first,
+    // and a truncated array used to cost the whole page.
+    maxTokens: 4000,
   });
 
   try {
@@ -126,13 +128,28 @@ export async function factClaims(
       { role: 'user', content: buildClaimPrompt(input.title, input.text) },
     ]);
     const parsed = extractJson(raw);
-    const list = (parsed as { claims?: unknown } | null)?.claims;
-    if (!Array.isArray(list)) {
-      return {
-        claims: [],
-        status: 'ok',
-        error: 'model returned no claims array',
-      };
+    let list: unknown[] | undefined = Array.isArray(
+      (parsed as { claims?: unknown } | null)?.claims,
+    )
+      ? (parsed as { claims: unknown[] }).claims
+      : undefined;
+    if (list === undefined) {
+      // Truncated reply: salvage the entries that DID complete rather than
+      // losing a long article's whole set to one severed final claim.
+      const salvaged = extractObjects(raw).filter(
+        (o) => typeof (o as { text?: unknown }).text === 'string',
+      );
+      if (salvaged.length === 0) {
+        return {
+          claims: [],
+          status: 'ok',
+          error: 'model returned no claims array',
+        };
+      }
+      console.warn(
+        `[fact] salvaged ${String(salvaged.length)} truncated claims`,
+      );
+      list = salvaged;
     }
     // Shape is not honesty — a span still has to be in the article to anchor.
     return {
@@ -164,6 +181,8 @@ export interface QuickSource {
   factuality: Factuality;
   stance: Stance;
   independence: number;
+  /** The outlet's own article, so a reader can go and check for themselves. */
+  uri: string | null;
 }
 
 export interface Verdict {
@@ -267,6 +286,7 @@ async function quickOne(
     rated.map((x) => vecs[x.file._id] ?? null),
   );
 
+  const uris = rated.map((x) => x.file.sourceUri ?? null);
   const entries: StanceEntry[] = rated.map((x, i) => ({
     sourceId: x.rating.sourceId,
     name: x.rating.name,
@@ -285,13 +305,15 @@ async function quickOne(
     counted: t.counted,
     // Only the sources that actually voted are worth showing.
     sources: entries
-      .filter((x) => x.stance !== 'silent')
-      .map((x) => ({
+      .map((x, i) => ({ x, uri: uris[i] ?? null }))
+      .filter(({ x }) => x.stance !== 'silent')
+      .map(({ x, uri }) => ({
         name: x.name,
         bias: x.bias,
         factuality: x.factuality,
         stance: x.stance,
         independence: x.independence,
+        uri,
       })),
   };
 }

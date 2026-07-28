@@ -161,6 +161,19 @@ body {
   opacity: 0.55;
   cursor: default;
 }
+/* Secondary action — present, but never competing with a blocking remedy. */
+.act.ghost {
+  margin-top: 12px;
+  min-height: 32px;
+  font-size: 11.5px;
+  background: transparent;
+  color: var(--orange);
+  border: 1px solid var(--line);
+}
+.act.ghost:hover {
+  background: var(--sunk);
+  filter: none;
+}
 
 /* Report a problem — the two cases the checker actually gets wrong. */
 .fb-sel,

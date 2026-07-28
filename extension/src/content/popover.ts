@@ -14,6 +14,24 @@ export interface PopoverSource {
   factuality: string;
   stance: Stance;
   independence: number;
+  uri: string | null;
+}
+
+/**
+ * Only http(s) becomes a link.
+ *
+ * These URLs come from indexed third-party content, so a `javascript:` or
+ * `data:` value must never reach an href — that would turn a fact-check card
+ * into an injection surface on every page the extension runs on.
+ */
+export function safeHref(uri: string | null): string | null {
+  if (uri === null) return null;
+  try {
+    const u = new URL(uri);
+    return u.protocol === 'http:' || u.protocol === 'https:' ? u.href : null;
+  } catch {
+    return null;
+  }
 }
 
 export interface PopoverData {
@@ -111,12 +129,21 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}
 .sum{margin-top:9px;padding-top:8px;border-top:1px solid rgba(120,105,80,.28);
  font-size:10.5px;font-variant-numeric:tabular-nums;opacity:.85}
 .none{font-size:11px;opacity:.7}
+a.src{color:inherit;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+a.src:hover{opacity:.75}
 `;
 
 function esc(s: string): string {
   return s.replace(/[&<>"]/g, (c) =>
     c === '&' ? '&amp;' : c === '<' ? '&lt;' : c === '>' ? '&gt;' : '&quot;',
   );
+}
+
+/** The outlet name, linked to its own article when we have a usable one. */
+function nameCell(s: PopoverSource): string {
+  const href = safeHref(s.uri);
+  if (href === null) return esc(s.name);
+  return `<a class="src" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(s.name)}</a>`;
 }
 
 function ensureRoot(): ShadowRoot {
@@ -130,6 +157,18 @@ function ensureRoot(): ShadowRoot {
   root.append(style);
   document.body.append(host);
   return root;
+}
+
+/**
+ * Did this click land inside the popover?
+ *
+ * The shadow root is closed, so from outside the event target is the HOST
+ * element. Without this the page-level handler resolves the click to "no
+ * claim", closes the card, and removing the anchor mid-dispatch cancels the
+ * navigation the reader just asked for.
+ */
+export function isPopoverEvent(e: Event): boolean {
+  return host !== null && e.target === host;
 }
 
 export function closePopover(): void {
@@ -150,7 +189,7 @@ export function openPopover(data: PopoverData, x: number, y: number): void {
          <th class="n">w·s</th></tr></thead><tbody>${math.rows
            .map(
              (r) =>
-               `<tr><td>${esc(r.source.name)}<br><span style="opacity:.55">${esc(r.source.bias)} · ${esc(r.source.factuality)}</span></td>
+               `<tr><td>${nameCell(r.source)}<br><span style="opacity:.55">${esc(r.source.bias)} · ${esc(r.source.factuality)}</span></td>
                 <td>${esc(r.source.stance)}</td>
                 <td class="n">${r.weight.toFixed(2)}</td>
                 <td class="n">${r.contribution >= 0 ? '+' : ''}${r.contribution.toFixed(2)}</td></tr>`,

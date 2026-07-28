@@ -196,8 +196,10 @@ async function render(): Promise<void> {
     `<div class="why">${escapeHtml(report.verdict.reason)}</div>` +
     `<div class="lab">The gate</div>` +
     ladder(report, reply?.outcome ?? null, reply?.runningMs ?? null) +
+    `<button class="act ghost" data-url="${LOGIN_URL}">Open Ugly Press</button>` +
     feedbackForm();
   wireFeedback(root);
+  wireButtons(root);
 
   // While the call is in flight the popup would otherwise show a frozen
   // "Running 4s" until reopened, which is the very ambiguity this removes.

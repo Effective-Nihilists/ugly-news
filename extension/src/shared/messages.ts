@@ -77,6 +77,7 @@ export interface QuickSource {
   factuality: string;
   stance: 'supports' | 'refutes' | 'mixed' | 'silent';
   independence: number;
+  uri: string | null;
 }
 
 export interface QuickVerdict {

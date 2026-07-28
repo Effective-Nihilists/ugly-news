@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extractJson } from '../../../shared/news/fact-json';
+import { extractJson, extractObjects } from '../../../shared/news/fact-json';
 
 describe('extractJson', () => {
   it('parses clean json', () => {
@@ -50,5 +50,35 @@ describe('extractJson', () => {
 
   it('returns null for an unterminated object rather than throwing', () => {
     expect(extractJson('{"a":1')).toBeNull();
+  });
+});
+
+describe('extractObjects — the truncated-reply salvage path', () => {
+  it('recovers complete entries from an array cut off mid-object', () => {
+    // maxTokens ran out. The outer object never closes, so extractJson gives
+    // nothing — but three good claims are sitting right there.
+    const raw =
+      '{"claims":[{"text":"one","checkable":true},{"text":"two","checkable":true},{"text":"thr';
+    expect(extractJson(raw)).toBeNull();
+    const objs = extractObjects(raw) as { text?: string }[];
+    expect(objs.map((o) => o.text)).toEqual(['one', 'two']);
+  });
+
+  it('returns the entries of a complete reply too', () => {
+    const raw = '{"claims":[{"text":"one"},{"text":"two"}]}';
+    const objs = extractObjects(raw) as { text?: string }[];
+    // The outer object is first and swallows the rest, which is fine — this is
+    // only ever a fallback, and the outer object carries the claims anyway.
+    expect(objs.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('is not confused by braces inside strings', () => {
+    const raw = '{"claims":[{"text":"the set {a} was cited"},{"text":"b';
+    const objs = extractObjects(raw) as { text?: string }[];
+    expect(objs[0]?.text).toBe('the set {a} was cited');
+  });
+
+  it('returns nothing for text with no objects', () => {
+    expect(extractObjects('I cannot help with that.')).toEqual([]);
   });
 });

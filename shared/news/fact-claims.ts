@@ -21,8 +21,9 @@ export interface RawClaim {
 /** One model call per article, so the ARTICLE is capped, not the claim count. */
 const MAX_TEXT_CHARS = 24_000;
 
-/** More than this on one page is noise no reader will work through. */
-export const MAX_CLAIMS = 25;
+/** More than this on one page is noise no reader will work through. Raised
+ *  once the cap, rather than the model, started being the binding limit. */
+export const MAX_CLAIMS = 40;
 
 /** Shorter spans anchor ambiguously — "the bill" occurs everywhere. */
 const MIN_CLAIM_CHARS = 12;
@@ -36,7 +37,12 @@ export const CLAIM_SYSTEM_PROMPT = [
   '- class is one of: quantitative, attribution, causal, predictive.',
   '- checkable=false for opinion, hypotheticals, rhetorical questions and',
   '  forward-looking predictions. Those are never rated.',
-  '- Prefer whole clauses that assert something checkable. Skip filler.',
+  '- Be EXHAUSTIVE. Extract EVERY factual assertion, not a selection of the',
+  '  most interesting ones. A typical news article contains 10-25 of them.',
+  '- Include statistics, dates, quantities, named actions, attributed',
+  '  statements, and cause-and-effect claims — each as its own entry.',
+  '- Do not merge two assertions into one entry, and do not skip an assertion',
+  '  because it seems minor or because a similar one appears earlier.',
 ].join('\n');
 
 export function buildClaimPrompt(title: string, text: string): string {

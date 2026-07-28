@@ -181,6 +181,7 @@ export const newsRequestDefs = {
               factuality: FactualitySchema,
               stance: z.enum(['supports', 'refutes', 'mixed', 'silent']),
               independence: z.number(),
+              uri: z.string().nullable(),
             }),
           ),
         }),

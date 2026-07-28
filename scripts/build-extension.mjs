@@ -50,4 +50,14 @@ await copyFile(
 await copyFile(join(src, 'popup', 'popup.html'), join(out, 'popup.html'));
 await copyFile(join(src, 'popup', 'popup.css'), join(out, 'popup.css'));
 
+// The action icon is the ugly-news app icon, resized. Chrome refuses to load an
+// extension whose manifest names an icon file that is not in the bundle.
+await mkdir(join(out, 'icons'), { recursive: true });
+for (const size of [16, 32, 48, 128]) {
+  await copyFile(
+    join(root, 'extension', 'icons', `icon-${size}.png`),
+    join(out, 'icons', `icon-${size}.png`),
+  );
+}
+
 console.log('extension built →', out);
