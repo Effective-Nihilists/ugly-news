@@ -1,8 +1,18 @@
 import React from 'react';
+import { buildId } from '../../shared/Build';
 import { C, FONT_IMPORT, PressHeader, btn } from '../newsUi';
 
-/** The bundle the build produces, served straight from the site's assets. */
-const ZIP = '/ugly-fact-checker.zip';
+/**
+ * The bundle the extension build produces, addressed under the BUILD PREFIX.
+ *
+ * `/ugly-fact-checker.zip` at the root answers 200 with the SPA HTML shell:
+ * `.zip` is not in the framework's static-asset extension allowlist, so the
+ * path falls through to the router. Verified against prod — the root path
+ * returns 1.6KB of HTML, the prefixed path returns the real 27KB archive. A
+ * "successful" download of an HTML file is exactly the kind of failure that
+ * reaches a user before it reaches a log.
+ */
+const ZIP = `/${buildId}/ugly-fact-checker.zip`;
 
 /**
  * Install instructions for the fact-checker extension (route `extension`).
