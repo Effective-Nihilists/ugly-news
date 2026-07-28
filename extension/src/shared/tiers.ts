@@ -13,12 +13,27 @@ export interface TierRow {
  * and it must not render the same as an article that genuinely asserts nothing.
  * Collapsing these is what let an unregistered route look like a quiet page.
  */
+/**
+ * Longer than any real call. The AI proxy's own edge timeout is 60s, so past
+ * this the request is not slow, it is gone — and saying so is the difference
+ * between a diagnosable state and a spinner that never resolves.
+ */
+export const STALLED_MS = 60_000;
+
 export function claimSummary(
   engage: boolean,
   outcome: ClaimsOutcome | null,
+  runningMs?: number,
 ): TierRow {
   if (!engage) return { cls: 'skip', value: 'Skipped' };
-  if (outcome === null) return { cls: 'skip', value: 'Running' };
+  if (outcome === null) {
+    if (runningMs === undefined) return { cls: 'skip', value: 'Running' };
+    const secs = Math.round(runningMs / 1000);
+    if (runningMs >= STALLED_MS) {
+      return { cls: 'stop', value: `Stalled — ${String(secs)}s, no reply` };
+    }
+    return { cls: 'skip', value: `Running ${String(secs)}s` };
+  }
   if (outcome.error !== null) {
     return { cls: 'stop', value: `Failed · ${outcome.error}` };
   }

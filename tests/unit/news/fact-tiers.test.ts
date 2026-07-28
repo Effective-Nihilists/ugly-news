@@ -18,6 +18,28 @@ describe('claimSummary', () => {
     expect(claimSummary(true, null).value).toBe('Running');
   });
 
+  it('shows how long it has been running, so a wedge is visible', () => {
+    // "Running" alone cannot distinguish a live model call from a request that
+    // died without ever reporting — which is exactly the stuck state.
+    expect(claimSummary(true, null, 4200).value).toBe('Running 4s');
+  });
+
+  it('calls it stalled once it has run longer than any real call takes', () => {
+    const row = claimSummary(true, null, 90_000);
+    expect(row.cls).toBe('stop');
+    expect(row.value).toContain('Stalled');
+    expect(row.value).toContain('90s');
+  });
+
+  it('ignores elapsed time once an outcome has arrived', () => {
+    const row = claimSummary(
+      true,
+      { returned: 3, painted: 3, error: null },
+      90_000,
+    );
+    expect(row).toEqual({ cls: 'pass', value: '3 claims' });
+  });
+
   it('surfaces a transport error verbatim rather than hiding it', () => {
     const row = claimSummary(true, {
       returned: 0,

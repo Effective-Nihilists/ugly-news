@@ -13,7 +13,7 @@ import {
   type SendFeedbackMessage,
   type SendFeedbackResult,
 } from '../shared/messages';
-import { claimSummary } from '../shared/tiers';
+import { claimSummary, STALLED_MS } from '../shared/tiers';
 
 // Keyed by the full Bias union so adding a bias value is a compile error here,
 // not a silently grey chip. Anchored on newsUi's left/center/right constants.
@@ -78,9 +78,13 @@ function sourceCard(report: PageReport): string {
     </div></div>`;
 }
 
-function ladder(report: PageReport, outcome: ClaimsOutcome | null): string {
+function ladder(
+  report: PageReport,
+  outcome: ClaimsOutcome | null,
+  runningMs: number | null,
+): string {
   const engaged = report.verdict.engage;
-  const claims = claimSummary(engaged, outcome);
+  const claims = claimSummary(engaged, outcome, runningMs ?? undefined);
   const rows: [string, string, string][] = [
     [
       'Tier 0 · page shape',
@@ -170,6 +174,7 @@ async function render(): Promise<void> {
     report: PageReport | null;
     status: FactStatus;
     outcome: ClaimsOutcome | null;
+    runningMs: number | null;
   } | null = await chrome.runtime.sendMessage({ type: GET_REPORT });
 
   // Blocking states win over everything, including a missing report.
@@ -190,9 +195,25 @@ async function render(): Promise<void> {
     `<div class="lab">${report.verdict.engage ? 'Status' : 'Dormant'}</div>` +
     `<div class="why">${escapeHtml(report.verdict.reason)}</div>` +
     `<div class="lab">The gate</div>` +
-    ladder(report, reply?.outcome ?? null) +
+    ladder(report, reply?.outcome ?? null, reply?.runningMs ?? null) +
     feedbackForm();
   wireFeedback(root);
+
+  // While the call is in flight the popup would otherwise show a frozen
+  // "Running 4s" until reopened, which is the very ambiguity this removes.
+  // Stops as soon as an outcome lands, and never re-renders over a filled-in
+  // report form.
+  if (
+    report.verdict.engage &&
+    (reply?.outcome ?? null) === null &&
+    (reply?.runningMs ?? 0) < STALLED_MS
+  ) {
+    setTimeout(() => {
+      const note = root.querySelector<HTMLTextAreaElement>('#fb-note');
+      if (note !== null && note.value !== '') return;
+      void render();
+    }, 1000);
+  }
 }
 
 void render();

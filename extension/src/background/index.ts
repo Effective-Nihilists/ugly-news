@@ -38,6 +38,9 @@ const API_BASE = 'https://ugly.press/api';
 const reports = new Map<number, PageReport>();
 const statuses = new Map<number, FactStatus>();
 const outcomes = new Map<number, ClaimsOutcome>();
+// When the claims call started, so the popup can say "Running 4s" rather than
+// a bare "Running" that cannot be told apart from a wedged request.
+const startedAt = new Map<number, number>();
 
 // The worker's own console history — this is where the endpoint's replies are
 // logged, so it holds the answer to most "why did nothing happen" questions.
@@ -76,6 +79,7 @@ chrome.runtime.onMessage.addListener((message: unknown, sender) => {
   reports.set(tabId, msg.report);
   statuses.delete(tabId); // a fresh navigation clears any prior block
   outcomes.delete(tabId); // ...and any prior claim result
+  startedAt.delete(tabId);
   applyBadge(tabId);
 });
 
@@ -99,6 +103,8 @@ chrome.runtime.onMessage.addListener((message: unknown, sender) => {
 chrome.tabs.onRemoved.addListener((tabId) => {
   reports.delete(tabId);
   statuses.delete(tabId);
+  outcomes.delete(tabId);
+  startedAt.delete(tabId);
 });
 
 // The popup asks for the active tab's report and status.
@@ -115,10 +121,12 @@ chrome.runtime.onMessage.addListener(
         sendResponse(null);
         return;
       }
+      const began = startedAt.get(id);
       sendResponse({
         report: reports.get(id) ?? null,
         status: statuses.get(id) ?? 'ok',
         outcome: outcomes.get(id) ?? null,
+        runningMs: began === undefined ? null : Date.now() - began,
       });
     })();
     return true; // keep the channel open for the async reply
@@ -137,14 +145,23 @@ chrome.runtime.onMessage.addListener(
   (message: unknown, _sender, sendResponse) => {
     const msg = message as Partial<FetchClaimsMessage>;
     if (msg.type !== FETCH_CLAIMS) return undefined;
+    const tabId = _sender.tab?.id;
+    if (tabId !== undefined) startedAt.set(tabId, Date.now());
     void (async () => {
       const fail = (status: FactStatus, error: string | null): void => {
         const out: ClaimsResult = { claims: [], error, status };
         sendResponse(out);
       };
+      // A request that never settles leaves the popup on "Running" forever.
+      // The AI proxy's own edge timeout is 60s, so nothing real survives this.
+      const abort = new AbortController();
+      const timer = setTimeout(() => {
+        abort.abort();
+      }, 75_000);
       try {
         const res = await fetch(`${API_BASE}/factClaims`, {
           method: 'POST',
+          signal: abort.signal,
           // REQUIRED: carries the ugly.press session cookie. Without it every
           // call is a 401.
           credentials: 'include',
@@ -188,6 +205,8 @@ chrome.runtime.onMessage.addListener(
         sendResponse(out);
       } catch (e) {
         fail('ok', String(e));
+      } finally {
+        clearTimeout(timer);
       }
     })();
     return true;

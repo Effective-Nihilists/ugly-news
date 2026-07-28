@@ -175,7 +175,14 @@ function run(): void {
   // extension's own world.
   document.documentElement.dataset.uglyFact = JSON.stringify(r);
 
-  if (r.verdict.engage) void checkClaims();
+  // A rejection here used to vanish, leaving the popup on "Running" forever —
+  // indistinguishable from a live call. Every failure now reports itself.
+  if (r.verdict.engage) {
+    void checkClaims().catch((e: unknown) => {
+      console.error('[ugly-fact] claims pass threw', e);
+      reportClaims({ returned: 0, painted: 0, error: String(e) });
+    });
+  }
 }
 
 if (typeof requestIdleCallback === 'function') {
