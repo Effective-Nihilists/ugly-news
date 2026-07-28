@@ -18,12 +18,22 @@ export interface StanceExcerpt {
 }
 
 /** Enough to judge a stance, short enough to fit many sources in one call. */
-const EXCERPT_CHARS = 700;
+const EXCERPT_CHARS = 500;
 
+/**
+ * The JSON instruction is LOAD-BEARING, not belt-and-braces.
+ *
+ * `generateJson` sends the schema to the proxy, but for this model the proxy
+ * treats it as advisory — verified live, where a schema'd request came back as
+ * prose and `JSON.parse` threw "Unexpected token 'H', \"Here are t\"...". The
+ * format has to be demanded in the prompt, exactly as the claim prompt does.
+ */
 export const STANCE_SYSTEM_PROMPT = [
   'You compare a CLAIM against excerpts from other news outlets.',
   'For each numbered excerpt, decide what THAT EXCERPT does with the claim.',
-  'Answer with one of:',
+  'Return ONLY JSON, with no prose before or after:',
+  '{"stances":[{"index":number,"stance":string}]}',
+  'stance is one of:',
   '- "supports"  the excerpt asserts the same thing',
   '- "refutes"   the excerpt asserts something incompatible with it',
   '- "mixed"     the excerpt partly agrees and partly disagrees',

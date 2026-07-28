@@ -69,10 +69,11 @@ const claimsSchema = z.object({
   ),
 });
 
-/** How many corpus articles to weigh per claim. */
-const RETRIEVE = 12;
+/** How many corpus articles to weigh per claim. Trimmed to keep one claim's
+ *  round trip comfortably inside the proxy's 60s edge timeout. */
+const RETRIEVE = 8;
 /** Cost ceiling: one model call per claim, so the page is capped, not the call. */
-const MAX_QUICK_CLAIMS = 8;
+const MAX_QUICK_CLAIMS = 6;
 /**
  * Above this cosine similarity two articles are the same reporting — usually
  * the same wire copy under different mastheads. Counting both as independent
@@ -318,23 +319,34 @@ export async function factQuick(
     maxTokens: 800,
   });
 
-  const verdicts: Verdict[] = [];
-  for (const claim of claims) {
-    try {
-      verdicts.push(await quickOne(db, gen, claim));
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      // Credit exhausted mid-page is a STATE, and it stops the run — carrying
-      // on would bill nothing and paint a half-checked article as complete.
-      if (/\b401\b|Unauthenticated/i.test(msg)) {
-        return { verdicts, status: 'signed-out', error: null };
-      }
-      if (/\b402\b|insufficient balance/i.test(msg)) {
-        return { verdicts, status: 'no-credit', error: null };
-      }
-      console.error(`[fact] quick failed for ${claim.id}: ${msg}`);
-      return { verdicts, status: 'ok', error: msg.slice(0, 300) };
+  // CONCURRENT, and that is a hard requirement rather than an optimisation:
+  // claims ran sequentially at first and two of them alone hit the proxy's 60s
+  // edge timeout, which the caller sees as a dead connection with no body.
+  // Claims are independent, so the wall clock is one claim, not the sum.
+  const settled = await Promise.allSettled(
+    claims.map((c) => quickOne(db, gen, c)),
+  );
+
+  const verdicts = settled
+    .filter(
+      (r): r is PromiseFulfilledResult<Verdict> => r.status === 'fulfilled',
+    )
+    .map((r) => r.value);
+
+  const failure = settled.find((r) => r.status === 'rejected');
+  if (failure !== undefined) {
+    const reason: unknown = failure.reason;
+    const msg = reason instanceof Error ? reason.message : String(reason);
+    // Both remedies are reported as states, with whatever DID succeed kept —
+    // a half-checked page is honest as long as it does not claim to be whole.
+    if (/\b401\b|Unauthenticated/i.test(msg)) {
+      return { verdicts, status: 'signed-out', error: null };
     }
+    if (/\b402\b|insufficient balance/i.test(msg)) {
+      return { verdicts, status: 'no-credit', error: null };
+    }
+    console.error(`[fact] quick failed: ${msg}`);
+    return { verdicts, status: 'ok', error: msg.slice(0, 300) };
   }
   return { verdicts, status: 'ok', error: null };
 }

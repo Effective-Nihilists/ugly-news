@@ -32,6 +32,13 @@ describe('STANCE_SYSTEM_PROMPT', () => {
   it('defines silent as "does not address", so topical drift is not agreement', () => {
     expect(STANCE_SYSTEM_PROMPT).toMatch(/does not address this specific/i);
   });
+
+  it('DEMANDS json, because the proxy does not enforce the schema', () => {
+    // Verified live: a schema'd request to this model came back as prose and
+    // JSON.parse threw. The schema field is advisory; the prompt is not.
+    expect(STANCE_SYSTEM_PROMPT).toMatch(/only json/i);
+    expect(STANCE_SYSTEM_PROMPT).toContain('"stances"');
+  });
 });
 
 describe('buildStancePrompt', () => {

@@ -1,7 +1,7 @@
 {
   "name": "ugly-news",
   "packageManager": "pnpm@10.34.5",
-  "version": "0.1.50",
+  "version": "0.1.52",
   "type": "module",
   "scripts": {
     "preinstall": "npx only-allow pnpm",
