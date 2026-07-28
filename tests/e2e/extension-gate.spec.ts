@@ -1,4 +1,10 @@
-import { chromium, expect, test, type BrowserContext } from '@playwright/test';
+import {
+  chromium,
+  expect,
+  test,
+  type BrowserContext,
+  type Page,
+} from '@playwright/test';
 import { createReadStream } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { createServer, type Server } from 'node:http';
@@ -475,6 +481,28 @@ test('clicking a highlight opens the popover with the tally', async () => {
   const page = await articleWithVerdict(RED_VERDICT);
   // Highlights are not hit-testable, so click the TEXT and let the caret path
   // resolve it — which is exactly what a reader does.
+  const box = await claimPoint(page);
+  expect(box).not.toBeNull();
+
+  await page.mouse.click(box.x, box.y);
+  const host = page.locator('#ugly-fact-popover-host');
+  await expect(host).toHaveCount(1);
+
+  // The shadow root is CLOSED, so the card is unreachable from page script —
+  // that is the point. Assert the host exists and that the page cannot pierce.
+  const pierced = await page.evaluate(
+    () =>
+      (document.getElementById('ugly-fact-popover-host') as HTMLElement | null)
+        ?.shadowRoot,
+  );
+  expect(pierced).toBeNull();
+  await page.close();
+  await unstub();
+  await unstubQuick();
+});
+
+/** Centre of a word INSIDE the claim — the caret must land within the range. */
+async function claimPoint(page: Page): Promise<{ x: number; y: number }> {
   const box = await page.evaluate((word) => {
     // Aim INSIDE the claim, not at the start of the containing text node —
     // the caret must land within the stored range for claimAtPoint to match.
@@ -492,20 +520,39 @@ test('clicking a highlight opens the popover with the tally', async () => {
     }
     return null;
   }, 'Renewal');
-  expect(box).not.toBeNull();
+  if (box === null) throw new Error('claim text not found on the page');
+  return box;
+}
 
-  await page.mouse.click(box!.x, box!.y);
-  const host = page.locator('#ugly-fact-popover-host');
-  await expect(host).toHaveCount(1);
+test('HOVERING a highlight opens the card', async () => {
+  const page = await articleWithVerdict(RED_VERDICT);
+  const box = await claimPoint(page);
+  await page.mouse.move(box.x, box.y);
+  await expect(page.locator('#ugly-fact-popover-host')).toHaveCount(1);
+  await page.close();
+  await unstub();
+  await unstubQuick();
+});
 
-  // The shadow root is CLOSED, so the card is unreachable from page script —
-  // that is the point. Assert the host exists and that the page cannot pierce.
-  const pierced = await page.evaluate(
-    () =>
-      (document.getElementById('ugly-fact-popover-host') as HTMLElement | null)
-        ?.shadowRoot,
+test('a claim with NO verdict still opens, rather than doing nothing', async () => {
+  // The state a failed verdict call leaves behind. Silence here made a whole
+  // page feel inert, which is the most confusing thing this feature can do.
+  await stubClaims({
+    claims: [{ text: CLAIM_TEXT, class: 'attribution', checkable: true }],
+    status: 'ok',
+    error: null,
+  });
+  await stubQuick({ verdicts: [], status: 'ok', error: 'boom' });
+  const page = await context.newPage();
+  await page.goto(`${origin}/article.html`);
+  await page.waitForFunction(
+    () => document.documentElement.dataset['uglyFactClaims'] ?? null,
+    undefined,
+    { timeout: 15_000 },
   );
-  expect(pierced).toBeNull();
+  const box = await claimPoint(page);
+  await page.mouse.click(box.x, box.y);
+  await expect(page.locator('#ugly-fact-popover-host')).toHaveCount(1);
   await page.close();
   await unstub();
   await unstubQuick();

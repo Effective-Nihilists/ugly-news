@@ -162,9 +162,12 @@ export const newsRequestDefs = {
    */
   factQuick: authReq({
     input: z.object({
+      // MUST stay >= MAX_CLAIMS in fact-claims. When extraction was raised to
+      // 40 and this stayed at 25, a dense page 400'd the WHOLE verdict call and
+      // every claim sat pending forever.
       claims: z
         .array(z.object({ id: z.string(), text: z.string().max(2000) }))
-        .max(25),
+        .max(40),
     }),
     output: z.object({
       verdicts: z.array(

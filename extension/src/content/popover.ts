@@ -183,8 +183,12 @@ export function openPopover(data: PopoverData, x: number, y: number): void {
   const math = rowMath(data.sources);
   const body =
     math.rows.length === 0
-      ? `<div class="none">No rated outlet in the corpus addressed this claim.
-         Silence is not agreement, so it stays unverified.</div>`
+      ? `<div class="none">${
+          data.band === 'pending'
+            ? 'Checking this claim against other outlets…'
+            : `No rated outlet in the corpus addressed this claim.
+               Silence is not agreement, so it stays unverified.`
+        }</div>`
       : `<table><thead><tr><th>Source</th><th>Stance</th><th class="n">w</th>
          <th class="n">w·s</th></tr></thead><tbody>${math.rows
            .map(

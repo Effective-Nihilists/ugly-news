@@ -53,8 +53,12 @@ const CLAIM_MODEL = 'llama_4_scout';
 /** How many corpus articles to weigh per claim. Trimmed to keep one claim's
  *  round trip comfortably inside the proxy's 60s edge timeout. */
 const RETRIEVE = 8;
-/** Cost ceiling: one model call per claim, so the page is capped, not the call. */
-const MAX_QUICK_CLAIMS = 6;
+/**
+ * Per-REQUEST ceiling, not a per-page one: the client chunks a long article
+ * into several calls so every claim gets a verdict. Sized so one chunk's
+ * concurrent fan-out stays well inside the proxy's 60s edge timeout.
+ */
+const MAX_QUICK_CLAIMS = 10;
 /**
  * Above this cosine similarity two articles are the same reporting — usually
  * the same wire copy under different mastheads. Counting both as independent

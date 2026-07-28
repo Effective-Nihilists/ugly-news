@@ -187,6 +187,7 @@ async function checkClaims(): Promise<void> {
       continue;
     }
     entries.push({ id: w.id, range, band: 'pending', text: w.text });
+    claimText.set(w.id, w.text);
   }
 
   paintClaims(entries);
@@ -206,38 +207,97 @@ function bandFor(v: QuickVerdict): Band {
   return v.band === 'unverified' ? 'grey' : v.band;
 }
 
+/**
+ * The server caps ONE request so its fan-out stays inside the proxy timeout.
+ * Chunking here is what makes that a per-request limit instead of a silent
+ * per-page one that leaves later claims grey forever.
+ */
+const QUICK_CHUNK = 10;
+
 /** Tier 2 + 3: resolve every pending tint to a colour. */
 async function colourClaims(
   claims: { id: string; text: string }[],
 ): Promise<void> {
   if (claims.length === 0) return;
-  const message: FetchQuickMessage = { type: FETCH_QUICK, claims };
-  const result: QuickResult = await chrome.runtime.sendMessage(message);
-
-  if (result.status !== 'ok') {
-    document.documentElement.dataset.uglyFactStatus = result.status;
-    const status: SetStatusMessage = {
-      type: SET_STATUS,
-      status: result.status,
-    };
-    void chrome.runtime.sendMessage(status).catch(() => undefined);
-    return;
-  }
-  if (result.error !== null) {
-    console.error(`[ugly-fact] verdicts failed: ${result.error}`);
-    return;
-  }
-
   const byId = new Map(claims.map((c) => [c.id, c.text]));
-  for (const v of result.verdicts) {
-    const text = byId.get(v.id);
-    if (text === undefined) continue;
-    verdicts.set(v.id, { ...v, text });
-    setBand(v.id, bandFor(v));
+  let coloured = 0;
+
+  for (let i = 0; i < claims.length; i += QUICK_CHUNK) {
+    const chunk = claims.slice(i, i + QUICK_CHUNK);
+    const message: FetchQuickMessage = { type: FETCH_QUICK, claims: chunk };
+    const result: QuickResult = await chrome.runtime.sendMessage(message);
+
+    if (result.status !== 'ok') {
+      document.documentElement.dataset.uglyFactStatus = result.status;
+      const status: SetStatusMessage = {
+        type: SET_STATUS,
+        status: result.status,
+      };
+      void chrome.runtime.sendMessage(status).catch(() => undefined);
+      return;
+    }
+    if (result.error !== null) {
+      // Report and STOP: the next chunk would almost certainly fail the same
+      // way, and burning the user's credit to prove it is not worth it.
+      console.error(`[ugly-fact] verdicts failed: ${result.error}`);
+      break;
+    }
+
+    // Applied per chunk, so a long article colours progressively instead of
+    // sitting entirely grey until the last request lands.
+    for (const v of result.verdicts) {
+      const text = byId.get(v.id);
+      if (text === undefined) continue;
+      verdicts.set(v.id, { ...v, text });
+      setBand(v.id, bandFor(v));
+      coloured++;
+    }
+    document.documentElement.dataset.uglyFactVerdicts = String(coloured);
   }
-  console.log(`[ugly-fact] coloured ${String(result.verdicts.length)} claims`);
-  document.documentElement.dataset.uglyFactVerdicts = String(
-    result.verdicts.length,
+
+  console.log(
+    `[ugly-fact] coloured ${String(coloured)} of ${String(claims.length)} claims`,
+  );
+}
+
+/** Text of every painted claim, so an unchecked one can still say so. */
+const claimText = new Map<string, string>();
+
+/**
+ * Open the card for a claim at a point.
+ *
+ * A claim with NO verdict yet still opens, saying it is being checked. It used
+ * to return silently, which is why a page whose verdict call had failed felt
+ * completely inert — the single most confusing state this feature can be in.
+ */
+function showClaim(id: string, x: number, y: number): void {
+  const v = verdicts.get(id);
+  if (v === undefined) {
+    const text = claimText.get(id);
+    if (text === undefined) return;
+    openPopover(
+      {
+        text,
+        band: 'pending',
+        forcedYellowReason: null,
+        counted: 0,
+        sources: [],
+      },
+      x,
+      y,
+    );
+    return;
+  }
+  openPopover(
+    {
+      text: v.text,
+      band: bandFor(v),
+      forcedYellowReason: v.forcedYellowReason,
+      counted: v.counted,
+      sources: v.sources,
+    },
+    x,
+    y,
   );
 }
 
@@ -252,19 +312,44 @@ document.addEventListener('click', (e) => {
     closePopover();
     return;
   }
-  const v = verdicts.get(id);
-  if (v === undefined) return;
-  openPopover(
-    {
-      text: v.text,
-      band: bandFor(v),
-      forcedYellowReason: v.forcedYellowReason,
-      counted: v.counted,
-      sources: v.sources,
-    },
-    e.clientX,
-    e.clientY,
-  );
+  showClaim(id, e.clientX, e.clientY);
+});
+
+/**
+ * Hover opens the card too, which is what readers reach for first.
+ *
+ * Throttled, and only re-resolved when the pointer has actually moved a few
+ * pixels: caretPositionFromPoint forces layout, and running it on every
+ * mousemove would tax the host page for nothing.
+ */
+let hoverAt = 0;
+let lastX = -1;
+let lastY = -1;
+let openFor: string | null = null;
+
+document.addEventListener('mousemove', (e) => {
+  if (isPopoverEvent(e)) return;
+  const now = Date.now();
+  if (now - hoverAt < 120) return;
+  if (Math.abs(e.clientX - lastX) < 4 && Math.abs(e.clientY - lastY) < 4)
+    return;
+  hoverAt = now;
+  lastX = e.clientX;
+  lastY = e.clientY;
+
+  const id = claimAtPoint(e.clientX, e.clientY);
+  if (id === null) {
+    // Leaving the text closes the card, but a click-opened card is left alone
+    // so a reader can travel to it with the mouse.
+    if (openFor !== null) {
+      closePopover();
+      openFor = null;
+    }
+    return;
+  }
+  if (id === openFor) return;
+  openFor = id;
+  showClaim(id, e.clientX, e.clientY);
 });
 
 function run(): void {

@@ -16,8 +16,13 @@ export type Band = 'pending' | 'green' | 'yellow' | 'red' | 'grey';
 const BANDS: Band[] = ['pending', 'green', 'yellow', 'red', 'grey'];
 const STYLE_ID = 'ugly-fact-highlight-style';
 
+// `pending` and `grey` MUST look different. They were near-identical greys, so
+// "still checking" and "checked, nobody covered it" were indistinguishable —
+// and when the verdict call failed outright, a whole page of pending claims
+// read as a confident "unverified". Pending is now a faint DOTTED underline
+// with no fill; grey is a solid one.
 const STYLE_TEXT = `
-::highlight(ugly-fact-pending){background-color:rgba(140,146,158,.16);text-decoration:underline 2px rgb(185,190,200);text-underline-offset:3px}
+::highlight(ugly-fact-pending){text-decoration:underline dotted 2px rgb(150,150,160);text-underline-offset:3px}
 ::highlight(ugly-fact-green){background-color:rgba(47,158,68,.16);text-decoration:underline 2px rgb(47,158,68);text-underline-offset:3px}
 ::highlight(ugly-fact-yellow){background-color:rgba(214,150,20,.22);text-decoration:underline 2px rgb(214,150,20);text-underline-offset:3px}
 ::highlight(ugly-fact-red){background-color:rgba(224,49,49,.15);text-decoration:underline 2px rgb(224,49,49);text-underline-offset:3px}
