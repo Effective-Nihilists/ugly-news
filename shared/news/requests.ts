@@ -145,6 +145,9 @@ export const newsRequestDefs = {
         }),
       ),
       status: z.enum(['ok', 'signed-out', 'no-credit']),
+      // A model that returned nothing must reach the popup as a failure, not
+      // as an article with no claims in it.
+      error: z.string().nullable(),
     }),
     // AI-bearing and user-billed — this limit is abuse control, and it also
     // stops a runaway content script emptying one user's credit.

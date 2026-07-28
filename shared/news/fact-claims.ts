@@ -81,7 +81,20 @@ export function parseClaims(
   if (typeof parsed !== 'object' || parsed === null) return [];
   const rawList = (parsed as { claims?: unknown }).claims;
   if (!Array.isArray(rawList)) return [];
+  return filterClaims(rawList, articleText);
+}
 
+/**
+ * The validation half, shared by both paths into the model.
+ *
+ * Structured output guarantees the SHAPE but says nothing about whether a span
+ * is really in the article — the model can still invent one, and that is the
+ * failure that matters here.
+ */
+export function filterClaims(
+  rawList: readonly unknown[],
+  articleText: string,
+): RawClaim[] {
   const seen = new Set<string>();
   const out: RawClaim[] = [];
   for (const item of rawList) {

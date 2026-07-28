@@ -191,7 +191,7 @@ chrome.runtime.onMessage.addListener(
           return;
         }
         const body = (await res.json()) as {
-          result?: { claims?: unknown; status?: unknown };
+          result?: { claims?: unknown; status?: unknown; error?: unknown };
         };
         const claims = Array.isArray(body.result?.claims)
           ? (body.result.claims as ClaimsResult['claims'])
@@ -201,7 +201,11 @@ chrome.runtime.onMessage.addListener(
           body.result?.status === 'no-credit'
             ? body.result.status
             : 'ok';
-        const out: ClaimsResult = { claims, error: null, status };
+        // A server-side model failure travels all the way to the ladder rather
+        // than arriving as an empty claim list.
+        const error =
+          typeof body.result?.error === 'string' ? body.result.error : null;
+        const out: ClaimsResult = { claims, error, status };
         sendResponse(out);
       } catch (e) {
         fail('ok', String(e));
