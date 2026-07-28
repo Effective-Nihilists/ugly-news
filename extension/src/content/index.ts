@@ -1,4 +1,7 @@
-import { buildSelector, resolveSelector } from '../../../shared/news/fact-anchor';
+import {
+  buildSelector,
+  resolveSelector,
+} from '../../../shared/news/fact-anchor';
 import { classifyPage } from '../../../shared/news/fact-gate';
 import { lookupRating } from '../../../shared/news/fact-registry';
 import { BUNDLED_REGISTRY } from '../generated/registry';
@@ -68,7 +71,10 @@ async function checkClaims(): Promise<void> {
     // Neither state is a failure the user can do nothing about — record it so
     // the badge and the popup can offer the right remedy.
     document.documentElement.dataset.uglyFactStatus = result.status;
-    const status: SetStatusMessage = { type: SET_STATUS, status: result.status };
+    const status: SetStatusMessage = {
+      type: SET_STATUS,
+      status: result.status,
+    };
     void chrome.runtime.sendMessage(status).catch(() => undefined);
     return;
   }

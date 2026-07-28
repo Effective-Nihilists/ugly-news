@@ -36,7 +36,8 @@ export async function factClaims(
   } catch (e) {
     // Neither of these is an error the user can do nothing about, so they are
     // reported as states with a remedy rather than thrown.
-    if (e instanceof NotSignedInError) return { claims: [], status: 'signed-out' };
+    if (e instanceof NotSignedInError)
+      return { claims: [], status: 'signed-out' };
     if (e instanceof NoCreditError) return { claims: [], status: 'no-credit' };
     throw e;
   }

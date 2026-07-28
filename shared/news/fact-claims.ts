@@ -55,7 +55,8 @@ function stripFences(s: string): string {
 }
 
 function toClass(v: unknown): ClaimClass {
-  return typeof v === 'string' && (claimClasses as readonly string[]).includes(v)
+  return typeof v === 'string' &&
+    (claimClasses as readonly string[]).includes(v)
     ? (v as ClaimClass)
     : 'attribution';
 }

@@ -5,8 +5,7 @@ import {
 } from '../../../shared/news/fact-anchor';
 
 const QUOTE = 'The Senate passed the bill 51-49 late Thursday';
-const TEXT =
-  `Alpha beta gamma. ${QUOTE}. ` + `Delta epsilon. ${QUOTE} again.`;
+const TEXT = `Alpha beta gamma. ${QUOTE}. ` + `Delta epsilon. ${QUOTE} again.`;
 
 describe('buildSelector', () => {
   it('captures prefix and suffix context', () => {
@@ -50,7 +49,10 @@ describe('resolveSelector', () => {
 
   it('resolves when surrounding context changed but the quote did not', () => {
     const sel = buildSelector(TEXT, QUOTE);
-    const mutated = TEXT.replace('Alpha beta gamma.', 'Totally different lead-in.');
+    const mutated = TEXT.replace(
+      'Alpha beta gamma.',
+      'Totally different lead-in.',
+    );
     const hit = resolveSelector(mutated, sel!);
     expect(mutated.slice(hit!.start, hit!.end)).toBe(sel!.exact);
   });
@@ -90,7 +92,8 @@ describe('whitespace tolerance', () => {
   // most real claims if matching is literal.
   const WRAPPED =
     'Washington — after midnight, the Senate passed the National\n        Transit Renewal Act 51-49 late Thursday, sending it on.';
-  const NORMALISED = 'the Senate passed the National Transit Renewal Act 51-49 late Thursday';
+  const NORMALISED =
+    'the Senate passed the National Transit Renewal Act 51-49 late Thursday';
 
   it('builds a selector despite differing whitespace runs', () => {
     expect(buildSelector(WRAPPED, NORMALISED)).not.toBeNull();

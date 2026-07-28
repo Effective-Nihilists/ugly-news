@@ -56,7 +56,7 @@ export async function userBilledText(
   const res = await fetch(`${base}/user-billed/text`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${token}`,
+      'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({

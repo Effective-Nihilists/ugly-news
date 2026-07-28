@@ -258,7 +258,11 @@ test('paints anchored claims on an engaged article', async () => {
 test('drops a claim whose text is not on the page rather than misplacing it', async () => {
   await stubClaims({
     claims: [
-      { text: 'a sentence that is nowhere in this article', class: 'attribution', checkable: true },
+      {
+        text: 'a sentence that is nowhere in this article',
+        class: 'attribution',
+        checkable: true,
+      },
     ],
     status: 'ok',
   });

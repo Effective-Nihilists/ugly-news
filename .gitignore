@@ -19,3 +19,4 @@ coverage/
 
 # MV3 extension build output
 extension/dist/
+test-results-extension/

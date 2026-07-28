@@ -6,9 +6,8 @@ vi.mock('ugly-app/server/adapter/workers', () => ({ getUserToken }));
 const fetchMock = vi.fn();
 vi.stubGlobal('fetch', fetchMock);
 
-const { userBilledText, NotSignedInError, NoCreditError } = await import(
-  '../../../server/news/fact-ai'
-);
+const { userBilledText, NotSignedInError, NoCreditError } =
+  await import('../../../server/news/fact-ai');
 
 const MSG = [{ role: 'user' as const, content: 'hi' }];
 
@@ -36,7 +35,10 @@ describe('userBilledText', () => {
 
   it('calls the user-billed endpoint with the user bearer', async () => {
     getUserToken.mockReturnValue('user-tok');
-    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ text: 'out' }) });
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ text: 'out' }),
+    });
     const out = await userBilledText(MSG, { model: 'm' });
     expect(out).toBe('out');
     const call = fetchMock.mock.calls[0];
@@ -70,7 +72,11 @@ describe('userBilledText', () => {
 
   it('raises NotSignedInError on 401 even when a token was present', async () => {
     getUserToken.mockReturnValue('stale-tok');
-    fetchMock.mockResolvedValue({ ok: false, status: 401, text: async () => '' });
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 401,
+      text: async () => '',
+    });
     await expect(userBilledText(MSG, { model: 'm' })).rejects.toBeInstanceOf(
       NotSignedInError,
     );
@@ -78,7 +84,11 @@ describe('userBilledText', () => {
 
   it('returns null on any other non-ok response rather than throwing', async () => {
     getUserToken.mockReturnValue('user-tok');
-    fetchMock.mockResolvedValue({ ok: false, status: 503, text: async () => 'down' });
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 503,
+      text: async () => 'down',
+    });
     expect(await userBilledText(MSG, { model: 'm' })).toBeNull();
   });
 
@@ -90,7 +100,10 @@ describe('userBilledText', () => {
 
   it('passes temperature and maxTokens through when given', async () => {
     getUserToken.mockReturnValue('user-tok');
-    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ text: 'x' }) });
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ text: 'x' }),
+    });
     await userBilledText(MSG, { model: 'm', temperature: 0, maxTokens: 99 });
     const body = JSON.parse(
       String((fetchMock.mock.calls[0]?.[1] as RequestInit | undefined)?.body),
@@ -100,7 +113,10 @@ describe('userBilledText', () => {
 
   it('omits options that were not supplied', async () => {
     getUserToken.mockReturnValue('user-tok');
-    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ text: 'x' }) });
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ text: 'x' }),
+    });
     await userBilledText(MSG, { model: 'm' });
     const body = JSON.parse(
       String((fetchMock.mock.calls[0]?.[1] as RequestInit | undefined)?.body),

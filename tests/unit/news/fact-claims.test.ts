@@ -115,7 +115,10 @@ describe('parseClaims', () => {
   it('defaults checkable to true when the model omits it', () => {
     const out = JSON.stringify({
       claims: [
-        { text: 'The Senate passed the bill 51-49 late Thursday', class: 'attribution' },
+        {
+          text: 'The Senate passed the bill 51-49 late Thursday',
+          class: 'attribution',
+        },
       ],
     });
     expect(parseClaims(out, ARTICLE)[0]?.checkable).toBe(true);
@@ -133,9 +136,9 @@ describe('parseClaims', () => {
       class: 'attribution',
       checkable: true,
     }));
-    expect(
-      parseClaims(JSON.stringify({ claims }), article).length,
-    ).toBe(MAX_CLAIMS);
+    expect(parseClaims(JSON.stringify({ claims }), article).length).toBe(
+      MAX_CLAIMS,
+    );
   });
 
   it('ignores non-object entries in the claims array', () => {
@@ -162,7 +165,11 @@ describe('whitespace tolerance', () => {
   it('keeps a claim the model normalised the whitespace of', () => {
     const out = JSON.stringify({
       claims: [
-        { text: 'The Senate passed the bill 51-49 late Thursday', class: 'attribution', checkable: true },
+        {
+          text: 'The Senate passed the bill 51-49 late Thursday',
+          class: 'attribution',
+          checkable: true,
+        },
       ],
     });
     expect(parseClaims(out, WRAPPED)).toHaveLength(1);
@@ -170,7 +177,13 @@ describe('whitespace tolerance', () => {
 
   it('still drops a genuinely hallucinated span', () => {
     const out = JSON.stringify({
-      claims: [{ text: 'The House rejected the bill outright', class: 'attribution', checkable: true }],
+      claims: [
+        {
+          text: 'The House rejected the bill outright',
+          class: 'attribution',
+          checkable: true,
+        },
+      ],
     });
     expect(parseClaims(out, WRAPPED)).toEqual([]);
   });

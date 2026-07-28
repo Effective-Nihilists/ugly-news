@@ -15,11 +15,11 @@ import { claimSummary } from '../shared/tiers';
 // not a silently grey chip. Anchored on newsUi's left/center/right constants.
 const BIAS_COLOR: Record<Bias, string> = {
   'far-left': '#1d2a4d',
-  left: '#2a3b6b',
+  'left': '#2a3b6b',
   'lean-left': '#4a5a8a',
-  center: '#9a9082',
+  'center': '#9a9082',
   'lean-right': '#c05a4a',
-  right: '#d6261d',
+  'right': '#d6261d',
   'far-right': '#9e1a12',
 };
 

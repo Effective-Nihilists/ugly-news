@@ -44,7 +44,11 @@ export function badgeFor(report: PageReport): BadgeState {
  */
 export function badgeForStatus(status: FactStatus): BadgeState | null {
   if (status === 'signed-out') {
-    return { text: '!', color: BADGE_ENGAGED, title: 'Sign in to check claims' };
+    return {
+      text: '!',
+      color: BADGE_ENGAGED,
+      title: 'Sign in to check claims',
+    };
   }
   if (status === 'no-credit') {
     return {

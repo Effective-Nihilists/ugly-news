@@ -8,7 +8,10 @@ import { claimSummary } from '../../../extension/src/shared/tiers';
 // row.
 describe('claimSummary', () => {
   it('reports skipped when the gate never engaged', () => {
-    expect(claimSummary(false, null)).toEqual({ cls: 'skip', value: 'Skipped' });
+    expect(claimSummary(false, null)).toEqual({
+      cls: 'skip',
+      value: 'Skipped',
+    });
   });
 
   it('reports running while the call is still in flight', () => {
@@ -51,8 +54,8 @@ describe('claimSummary', () => {
   });
 
   it('uses the singular for exactly one claim', () => {
-    expect(claimSummary(true, { returned: 1, painted: 1, error: null }).value).toBe(
-      '1 claim',
-    );
+    expect(
+      claimSummary(true, { returned: 1, painted: 1, error: null }).value,
+    ).toBe('1 claim');
   });
 });

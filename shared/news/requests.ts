@@ -135,7 +135,12 @@ export const newsRequestDefs = {
       claims: z.array(
         z.object({
           text: z.string(),
-          class: z.enum(['quantitative', 'attribution', 'causal', 'predictive']),
+          class: z.enum([
+            'quantitative',
+            'attribution',
+            'causal',
+            'predictive',
+          ]),
           checkable: z.boolean(),
         }),
       ),
