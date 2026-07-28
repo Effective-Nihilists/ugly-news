@@ -1,10 +1,13 @@
 import { badgeFor, badgeForStatus } from '../shared/badge';
 import {
+  CLAIMS_DONE,
   FETCH_CLAIMS,
   GET_REPORT,
   OPEN_URL,
   PAGE_REPORT,
   SET_STATUS,
+  type ClaimsDoneMessage,
+  type ClaimsOutcome,
   type ClaimsResult,
   type FactStatus,
   type FetchClaimsMessage,
@@ -20,6 +23,7 @@ const API_BASE = 'https://ugly.press/api';
 // Deliberately in-memory: this is per-session UI state.
 const reports = new Map<number, PageReport>();
 const statuses = new Map<number, FactStatus>();
+const outcomes = new Map<number, ClaimsOutcome>();
 
 function applyBadge(tabId: number): void {
   const status = statuses.get(tabId) ?? 'ok';
@@ -39,7 +43,16 @@ chrome.runtime.onMessage.addListener((message: unknown, sender) => {
   if (tabId === undefined) return;
   reports.set(tabId, msg.report);
   statuses.delete(tabId); // a fresh navigation clears any prior block
+  outcomes.delete(tabId); // ...and any prior claim result
   applyBadge(tabId);
+});
+
+chrome.runtime.onMessage.addListener((message: unknown, sender) => {
+  const msg = message as Partial<ClaimsDoneMessage>;
+  if (msg.type !== CLAIMS_DONE || msg.outcome === undefined) return;
+  const tabId = sender.tab?.id;
+  if (tabId === undefined) return;
+  outcomes.set(tabId, msg.outcome);
 });
 
 chrome.runtime.onMessage.addListener((message: unknown, sender) => {
@@ -73,6 +86,7 @@ chrome.runtime.onMessage.addListener(
       sendResponse({
         report: reports.get(id) ?? null,
         status: statuses.get(id) ?? 'ok',
+        outcome: outcomes.get(id) ?? null,
       });
     })();
     return true; // keep the channel open for the async reply
@@ -117,7 +131,14 @@ chrome.runtime.onMessage.addListener(
           return;
         }
         if (!res.ok) {
-          fail('ok', `HTTP ${String(res.status)}`);
+          // The body is where the real answer lives — an unregistered route
+          // says so in plain words, and discarding it cost an afternoon.
+          const detail = await res.text().catch(() => '');
+          const trimmed = detail.slice(0, 200).trim();
+          fail(
+            'ok',
+            `HTTP ${String(res.status)}${trimmed === '' ? '' : ` ${trimmed}`}`,
+          );
           return;
         }
         const body = (await res.json()) as {

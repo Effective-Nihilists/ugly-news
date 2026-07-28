@@ -43,6 +43,25 @@ export interface ClaimsResult {
   status: FactStatus;
 }
 
+/**
+ * What the claims pass actually achieved, reported for EVERY outcome including
+ * the boring ones. `returned` is what the model gave us; `painted` is what
+ * survived anchoring. Keeping them apart is what makes an anchoring regression
+ * distinguishable from a quiet article.
+ */
+export interface ClaimsOutcome {
+  returned: number;
+  painted: number;
+  error: string | null;
+}
+
+export const CLAIMS_DONE = 'ugly-fact:claims-done' as const;
+
+export interface ClaimsDoneMessage {
+  type: typeof CLAIMS_DONE;
+  outcome: ClaimsOutcome;
+}
+
 export const SET_STATUS = 'ugly-fact:set-status' as const;
 
 export interface SetStatusMessage {

@@ -4,10 +4,12 @@ import {
   GET_REPORT,
   LOGIN_URL,
   OPEN_URL,
+  type ClaimsOutcome,
   type FactStatus,
   type OpenUrlMessage,
   type PageReport,
 } from '../shared/messages';
+import { claimSummary } from '../shared/tiers';
 
 // Keyed by the full Bias union so adding a bias value is a compile error here,
 // not a silently grey chip. Anchored on newsUi's left/center/right constants.
@@ -72,8 +74,9 @@ function sourceCard(report: PageReport): string {
     </div></div>`;
 }
 
-function ladder(report: PageReport): string {
+function ladder(report: PageReport, outcome: ClaimsOutcome | null): string {
   const engaged = report.verdict.engage;
+  const claims = claimSummary(engaged, outcome);
   const rows: [string, string, string][] = [
     [
       'Tier 0 · page shape',
@@ -86,7 +89,7 @@ function ladder(report: PageReport): string {
       engaged ? (report.rating === null ? 'Unrated' : 'Rated') : 'Skipped',
     ],
     ['Tier 2 · corpus', 'skip', 'Not in this build'],
-    ['Tier 3 · claims', engaged ? 'pass' : 'skip', engaged ? 'Checked' : 'Skipped'],
+    ['Tier 3 · claims', claims.cls, claims.value],
   ];
   return rows
     .map(
@@ -112,8 +115,11 @@ async function render(): Promise<void> {
   const root = document.getElementById('root');
   if (root === null) return;
 
-  const reply: { report: PageReport | null; status: FactStatus } | null =
-    await chrome.runtime.sendMessage({ type: GET_REPORT });
+  const reply: {
+    report: PageReport | null;
+    status: FactStatus;
+    outcome: ClaimsOutcome | null;
+  } | null = await chrome.runtime.sendMessage({ type: GET_REPORT });
 
   // Blocking states win over everything, including a missing report.
   if (reply !== null && reply.status !== 'ok') {
@@ -133,7 +139,7 @@ async function render(): Promise<void> {
     `<div class="lab">${report.verdict.engage ? 'Status' : 'Dormant'}</div>` +
     `<div class="why">${escapeHtml(report.verdict.reason)}</div>` +
     `<div class="lab">The gate</div>` +
-    ladder(report);
+    ladder(report, reply?.outcome ?? null);
 }
 
 void render();

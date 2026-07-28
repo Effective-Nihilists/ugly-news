@@ -3,9 +3,12 @@ import { classifyPage } from '../../../shared/news/fact-gate';
 import { lookupRating } from '../../../shared/news/fact-registry';
 import { BUNDLED_REGISTRY } from '../generated/registry';
 import {
+  CLAIMS_DONE,
   FETCH_CLAIMS,
   PAGE_REPORT,
   SET_STATUS,
+  type ClaimsDoneMessage,
+  type ClaimsOutcome,
   type ClaimsResult,
   type FetchClaimsMessage,
   type PageReport,
@@ -30,13 +33,27 @@ function report(): PageReport {
   };
 }
 
+/**
+ * Report what the claims pass achieved, for every outcome. Silence here is what
+ * made an unregistered prod route look like an article with nothing to check.
+ */
+function reportClaims(outcome: ClaimsOutcome): void {
+  document.documentElement.dataset.uglyFactClaims = String(outcome.painted);
+  document.documentElement.dataset.uglyFactOutcome = JSON.stringify(outcome);
+  const msg: ClaimsDoneMessage = { type: CLAIMS_DONE, outcome };
+  void chrome.runtime.sendMessage(msg).catch(() => undefined);
+}
+
 /** Tier 3: one model call for the whole article, then anchor and paint. */
 async function checkClaims(): Promise<void> {
   const root = document.querySelector('article') ?? document.body;
   if (!(root instanceof HTMLElement)) return;
   // The getClientRects overlay fallback is a later task; without highlight
   // support we simply do not paint rather than degrading to something worse.
-  if (!highlightsSupported()) return;
+  if (!highlightsSupported()) {
+    reportClaims({ returned: 0, painted: 0, error: 'no CSS Highlight API' });
+    return;
+  }
 
   const map = buildTextMap(root);
   const message: FetchClaimsMessage = {
@@ -55,7 +72,14 @@ async function checkClaims(): Promise<void> {
     void chrome.runtime.sendMessage(status).catch(() => undefined);
     return;
   }
-  if (result.error !== null || result.claims.length === 0) return;
+  if (result.error !== null) {
+    reportClaims({ returned: 0, painted: 0, error: result.error });
+    return;
+  }
+  if (result.claims.length === 0) {
+    reportClaims({ returned: 0, painted: 0, error: null });
+    return;
+  }
 
   const entries: { id: string; range: Range; band: Band }[] = [];
   let cursor = 0;
@@ -77,7 +101,10 @@ async function checkClaims(): Promise<void> {
   }
 
   paintClaims(entries);
-  document.documentElement.dataset.uglyFactClaims = String(entries.length);
+  // `returned` counts only checkable claims — the ones we ever intended to
+  // anchor — so the ratio measures anchoring, not the model's classification.
+  const checkable = result.claims.filter((c) => c.checkable).length;
+  reportClaims({ returned: checkable, painted: entries.length, error: null });
 }
 
 function run(): void {
