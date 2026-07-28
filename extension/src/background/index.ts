@@ -1,4 +1,18 @@
 import { badgeFor, badgeForStatus } from '../shared/badge';
+import { installConsoleCapture } from '../shared/console-capture';
+import { ConsoleRing, type LogEntry } from '../shared/console-ring';
+import { createErrorBatcher } from '../shared/error-batcher';
+import { buildFeedbackReport, MAX_SHIPPED_LOGS } from '../shared/feedback';
+import { sendErrors, sendFeedback } from './telemetry';
+import {
+  GET_LOGS,
+  REPORT_ERROR,
+  SEND_FEEDBACK,
+  type GetLogsMessage,
+  type ReportErrorMessage,
+  type SendFeedbackMessage,
+  type SendFeedbackResult,
+} from '../shared/messages';
 import {
   CLAIMS_DONE,
   FETCH_CLAIMS,
@@ -24,6 +38,24 @@ const API_BASE = 'https://ugly.press/api';
 const reports = new Map<number, PageReport>();
 const statuses = new Map<number, FactStatus>();
 const outcomes = new Map<number, ClaimsOutcome>();
+
+// The worker's own console history — this is where the endpoint's replies are
+// logged, so it holds the answer to most "why did nothing happen" questions.
+const ring = new ConsoleRing();
+
+const errors = createErrorBatcher({
+  send: (entries) => sendErrors(entries, ring.snapshot(MAX_SHIPPED_LOGS)),
+  delayMs: 3000,
+  maxBatch: 20,
+});
+
+installConsoleCapture({
+  target: console,
+  ring,
+  onError: (e) => {
+    errors.add({ ...e, source: 'extension-background' });
+  },
+});
 
 function applyBadge(tabId: number): void {
   const status = statuses.get(tabId) ?? 'ok';
@@ -167,3 +199,65 @@ chrome.runtime.onMessage.addListener((message: unknown) => {
   if (msg.type !== OPEN_URL || msg.url === undefined) return;
   void chrome.tabs.create({ url: msg.url });
 });
+
+// Content scripts and the popup cannot reach ugly.press directly, so their
+// console.error arrives here to be batched with the worker's own.
+chrome.runtime.onMessage.addListener((message: unknown, sender) => {
+  const msg = message as Partial<ReportErrorMessage>;
+  if (msg.type !== REPORT_ERROR || msg.entry === undefined) return;
+  errors.add({
+    ...msg.entry,
+    ...(sender.tab?.url === undefined ? {} : { url: sender.tab.url }),
+  });
+});
+
+/** The content script's history, which is where the gate and anchoring log. */
+async function contentLogs(tabId: number): Promise<LogEntry[]> {
+  try {
+    const msg: GetLogsMessage = { type: GET_LOGS };
+    const reply: unknown = await chrome.tabs.sendMessage(tabId, msg);
+    return Array.isArray(reply) ? (reply as LogEntry[]) : [];
+  } catch {
+    // No content script on this tab (or it died) — a report without page logs
+    // still beats no report.
+    return [];
+  }
+}
+
+chrome.runtime.onMessage.addListener(
+  (message: unknown, _sender, sendResponse) => {
+    const msg = message as Partial<SendFeedbackMessage>;
+    if (msg.type !== SEND_FEEDBACK || msg.kind === undefined) return undefined;
+    // Bound before the closure — narrowing does not survive into the IIFE.
+    const kind = msg.kind;
+    void (async () => {
+      const [tab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
+      const id = tab?.id;
+      const logs = id === undefined ? [] : await contentLogs(id);
+      // Both histories, in time order — the worker logged the HTTP reply, the
+      // content script logged the gate and the anchoring.
+      const merged = [...logs, ...ring.snapshot()].sort(
+        (a, b) => a.timestamp - b.timestamp,
+      );
+      const report = buildFeedbackReport({
+        kind,
+        description: msg.description ?? '',
+        url: tab?.url ?? '',
+        title: tab?.title ?? '',
+        report: id === undefined ? null : (reports.get(id) ?? null),
+        outcome: id === undefined ? null : (outcomes.get(id) ?? null),
+        logs: merged,
+        userAgent: msg.userAgent ?? '',
+        screenWidth: msg.screenWidth ?? 0,
+        screenHeight: msg.screenHeight ?? 0,
+        version: chrome.runtime.getManifest().version,
+      });
+      const result: SendFeedbackResult = await sendFeedback(report);
+      sendResponse(result);
+    })();
+    return true;
+  },
+);

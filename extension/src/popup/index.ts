@@ -1,13 +1,17 @@
 import type { Bias } from '../../../shared/news/schemas';
+import { FEEDBACK_KINDS, type FeedbackKindId } from '../shared/feedback';
 import {
   BILLING_URL,
   GET_REPORT,
   LOGIN_URL,
   OPEN_URL,
+  SEND_FEEDBACK,
   type ClaimsOutcome,
   type FactStatus,
   type OpenUrlMessage,
   type PageReport,
+  type SendFeedbackMessage,
+  type SendFeedbackResult,
 } from '../shared/messages';
 import { claimSummary } from '../shared/tiers';
 
@@ -99,6 +103,53 @@ function ladder(report: PageReport, outcome: ClaimsOutcome | null): string {
     .join('');
 }
 
+function feedbackForm(): string {
+  const opts = FEEDBACK_KINDS.map(
+    (k) => `<option value="${k.id}">${escapeHtml(k.label)}</option>`,
+  ).join('');
+  return `<div class="lab">Report a problem</div>
+    <select id="fb-kind" class="fb-sel">${opts}</select>
+    <textarea id="fb-note" class="fb-note" rows="2"
+      placeholder="Anything else worth knowing (optional)"></textarea>
+    <button id="fb-send" class="act fb-send">Send report</button>
+    <div id="fb-state" class="fb-state"></div>`;
+}
+
+function wireFeedback(root: HTMLElement): void {
+  const kind = root.querySelector<HTMLSelectElement>('#fb-kind');
+  const note = root.querySelector<HTMLTextAreaElement>('#fb-note');
+  const send = root.querySelector<HTMLButtonElement>('#fb-send');
+  const state = root.querySelector<HTMLDivElement>('#fb-state');
+  if (kind === null || note === null || send === null || state === null) return;
+
+  send.addEventListener('click', () => {
+    send.disabled = true;
+    state.textContent = 'Sending…';
+    const msg: SendFeedbackMessage = {
+      type: SEND_FEEDBACK,
+      kind: kind.value as FeedbackKindId,
+      description: note.value,
+      userAgent: navigator.userAgent,
+      screenWidth: window.screen.width,
+      screenHeight: window.screen.height,
+    };
+    void (async () => {
+      const reply: SendFeedbackResult | null =
+        await chrome.runtime.sendMessage(msg);
+      if (reply?.ok === true) {
+        state.textContent = 'Thanks — report sent with the page log.';
+        state.className = 'fb-state ok';
+        return;
+      }
+      // Never a silent failure: a report the user believes they filed and we
+      // dropped is worse than no report button at all.
+      send.disabled = false;
+      state.className = 'fb-state bad';
+      state.textContent = `Could not send: ${reply?.error ?? 'unknown error'}`;
+    })();
+  });
+}
+
 function wireButtons(root: HTMLElement): void {
   for (const btn of Array.from(root.querySelectorAll('button[data-url]'))) {
     btn.addEventListener('click', () => {
@@ -139,7 +190,9 @@ async function render(): Promise<void> {
     `<div class="lab">${report.verdict.engage ? 'Status' : 'Dormant'}</div>` +
     `<div class="why">${escapeHtml(report.verdict.reason)}</div>` +
     `<div class="lab">The gate</div>` +
-    ladder(report, reply?.outcome ?? null);
+    ladder(report, reply?.outcome ?? null) +
+    feedbackForm();
+  wireFeedback(root);
 }
 
 void render();

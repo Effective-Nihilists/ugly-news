@@ -5,12 +5,17 @@ import {
 import { classifyPage } from '../../../shared/news/fact-gate';
 import { lookupRating } from '../../../shared/news/fact-registry';
 import { BUNDLED_REGISTRY } from '../generated/registry';
+import { installConsoleCapture } from '../shared/console-capture';
+import { ConsoleRing } from '../shared/console-ring';
 import {
   CLAIMS_DONE,
   FETCH_CLAIMS,
+  GET_LOGS,
   PAGE_REPORT,
+  REPORT_ERROR,
   SET_STATUS,
   type ClaimsDoneMessage,
+  type ReportErrorMessage,
   type ClaimsOutcome,
   type ClaimsResult,
   type FetchClaimsMessage,
@@ -21,6 +26,33 @@ import {
 import { highlightsSupported, paintClaims, type Band } from './highlight';
 import { readPageSignals } from './probe';
 import { buildTextMap } from './text-map';
+
+// Captures the extension's OWN logging in this isolated world — the gate
+// verdict, the endpoint's reply, every claim that failed to anchor. The host
+// page's console is deliberately not read: that would need a main-world
+// injection, which is a real privilege increase for no diagnostic gain.
+const ring = new ConsoleRing();
+
+installConsoleCapture({
+  target: console,
+  ring,
+  onError: (entry) => {
+    const msg: ReportErrorMessage = {
+      type: REPORT_ERROR,
+      entry: { ...entry, source: 'extension-content', url: location.href },
+    };
+    void chrome.runtime.sendMessage(msg).catch(() => undefined);
+  },
+});
+
+// The background asks for this only when a report is actually filed.
+chrome.runtime.onMessage.addListener(
+  (message: unknown, _sender, sendResponse) => {
+    if ((message as { type?: string }).type !== GET_LOGS) return undefined;
+    sendResponse(ring.snapshot());
+    return true;
+  },
+);
 
 /**
  * Tier 0 + tier 1: read the DOM we already have, and one map lookup.
@@ -41,6 +73,7 @@ function report(): PageReport {
  * made an unregistered prod route look like an article with nothing to check.
  */
 function reportClaims(outcome: ClaimsOutcome): void {
+  console.log('[ugly-fact] claims outcome', outcome);
   document.documentElement.dataset.uglyFactClaims = String(outcome.painted);
   document.documentElement.dataset.uglyFactOutcome = JSON.stringify(outcome);
   const msg: ClaimsDoneMessage = { type: CLAIMS_DONE, outcome };
@@ -92,9 +125,18 @@ async function checkClaims(): Promise<void> {
   for (const [i, claim] of result.claims.entries()) {
     if (!claim.checkable) continue;
     const sel = buildSelector(map.text, claim.text, cursor);
-    if (sel === null) continue;
+    // Anchoring failures are the quiet killer — a claim that will not resolve
+    // simply vanishes, so each one says why and quotes the text it could not
+    // find. This is what a "it missed claims" report needs to be answerable.
+    if (sel === null) {
+      console.log('[ugly-fact] unanchored (not in page text)', claim.text);
+      continue;
+    }
     const hit = resolveSelector(map.text, sel);
-    if (hit === null) continue;
+    if (hit === null) {
+      console.log('[ugly-fact] unanchored (selector unresolved)', claim.text);
+      continue;
+    }
     // Advance so a repeated sentence anchors to its NEXT occurrence rather
     // than painting the first one twice. Must come from the resolved hit — a
     // literal indexOf misses whenever whitespace differs.
@@ -102,7 +144,10 @@ async function checkClaims(): Promise<void> {
     const range = map.toRange(hit.start, hit.end);
     // A claim that will not anchor is DROPPED — a misplaced highlight is worse
     // than a missing one.
-    if (range === null) continue;
+    if (range === null) {
+      console.log('[ugly-fact] unanchored (no DOM range)', claim.text);
+      continue;
+    }
     entries.push({ id: `c${String(i)}`, range, band: 'pending' });
   }
 
@@ -115,6 +160,14 @@ async function checkClaims(): Promise<void> {
 
 function run(): void {
   const r = report();
+  console.log(
+    '[ugly-fact] gate',
+    r.verdict,
+    'host',
+    r.host,
+    'rated',
+    r.rating !== null,
+  );
   const message: PageReportMessage = { type: PAGE_REPORT, report: r };
   // The worker may be asleep; a failed send is not worth surfacing.
   void chrome.runtime.sendMessage(message).catch(() => undefined);

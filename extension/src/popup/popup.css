@@ -157,3 +157,42 @@ body {
 .act:hover {
   filter: brightness(1.06);
 }
+.act:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* Report a problem — the two cases the checker actually gets wrong. */
+.fb-sel,
+.fb-note {
+  width: 100%;
+  font: inherit;
+  font-size: 11px;
+  color: var(--fg);
+  background: var(--raise);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 7px 8px;
+  margin-bottom: 6px;
+}
+.fb-note {
+  resize: vertical;
+  min-height: 40px;
+}
+.fb-send {
+  min-height: 34px;
+  font-size: 12px;
+}
+.fb-state {
+  font-size: 10px;
+  line-height: 1.5;
+  margin-top: 6px;
+  color: var(--dim);
+  min-height: 12px;
+}
+.fb-state.ok {
+  color: var(--c2);
+}
+.fb-state.bad {
+  color: var(--red);
+}

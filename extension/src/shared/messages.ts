@@ -1,6 +1,8 @@
 import type { ClaimClass } from '../../../shared/news/fact-claims';
 import type { GateVerdict } from '../../../shared/news/fact-gate';
 import type { SourceRating } from '../../../shared/news/fact-registry';
+import type { ErrorEntry } from './error-batcher';
+import type { FeedbackKindId } from './feedback';
 
 export interface PageReport {
   verdict: GateVerdict;
@@ -67,6 +69,41 @@ export const SET_STATUS = 'ugly-fact:set-status' as const;
 export interface SetStatusMessage {
   type: typeof SET_STATUS;
   status: FactStatus;
+}
+
+/**
+ * Telemetry travels content/popup → background, because the background service
+ * worker is the only context exempt from CORS. A content script POSTing to
+ * ugly.press from a third-party article would be blocked outright.
+ */
+export const REPORT_ERROR = 'ugly-fact:report-error' as const;
+
+export interface ReportErrorMessage {
+  type: typeof REPORT_ERROR;
+  entry: ErrorEntry;
+}
+
+/** Background → content, on demand: the page's console history for a report. */
+export const GET_LOGS = 'ugly-fact:get-logs' as const;
+
+export interface GetLogsMessage {
+  type: typeof GET_LOGS;
+}
+
+export const SEND_FEEDBACK = 'ugly-fact:send-feedback' as const;
+
+export interface SendFeedbackMessage {
+  type: typeof SEND_FEEDBACK;
+  kind: FeedbackKindId;
+  description: string;
+  userAgent: string;
+  screenWidth: number;
+  screenHeight: number;
+}
+
+export interface SendFeedbackResult {
+  ok: boolean;
+  error: string | null;
 }
 
 export const OPEN_URL = 'ugly-fact:open-url' as const;
