@@ -154,6 +154,45 @@ export const newsRequestDefs = {
     rateLimit: { max: 20, window: 60 },
   }),
 
+  /**
+   * Tier 2 + 3: weigh each claim against the corpus and return a colour.
+   *
+   * The most expensive endpoint here — one embedding, one ANN query and one
+   * model call PER CLAIM — hence the tighter limit.
+   */
+  factQuick: authReq({
+    input: z.object({
+      claims: z
+        .array(z.object({ id: z.string(), text: z.string().max(2000) }))
+        .max(25),
+    }),
+    output: z.object({
+      verdicts: z.array(
+        z.object({
+          id: z.string(),
+          score: z.number(),
+          band: z.enum(['green', 'yellow', 'red', 'unverified']),
+          forcedYellowReason: z.enum(['variance', 'single-bucket']).nullable(),
+          counted: z.number(),
+          sources: z.array(
+            z.object({
+              name: z.string(),
+              bias: BiasSchema,
+              factuality: FactualitySchema,
+              stance: z.enum(['supports', 'refutes', 'mixed', 'silent']),
+              independence: z.number(),
+            }),
+          ),
+        }),
+      ),
+      status: z.enum(['ok', 'signed-out', 'no-credit']),
+      error: z.string().nullable(),
+    }),
+    // Half the claims limit: this one fans out per claim, so the same number of
+    // page loads costs several times as much.
+    rateLimit: { max: 10, window: 60 },
+  }),
+
   // ─── "Three Ways" clusters (public) ──────────────────────────────────────
   newsTopStories: req({
     input: z.object({
