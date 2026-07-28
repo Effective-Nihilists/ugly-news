@@ -187,9 +187,7 @@ const stancesSchema = z.object({
 });
 
 /** Resolve a retrieved article to a RATED publisher, or nothing. */
-function ratingFor(
-  feedId: string | null | undefined,
-): {
+function ratingFor(feedId: string | null | undefined): {
   sourceId: string;
   name: string;
   bias: Bias;
