@@ -216,6 +216,38 @@ function describeEmptyBody(data: unknown): string {
   }
 }
 
+/**
+ * Models that ALWAYS emit `thinking` blocks, and what that costs us.
+ *
+ * `deepseek_v4_flash` reaches DeepSeek's Anthropic-format gateway
+ * (`api.deepseek.com/anthropic/v1/messages`). Two facts combine badly there:
+ *
+ *   1. `max_tokens` is the TOTAL output budget — thinking blocks count against
+ *      it, exactly as in Anthropic's own API.
+ *   2. Thinking is force-enabled for the model and CANNOT be turned off:
+ *      ugly-bot's providerCatalog pins `ANTHROPIC_EFFORT_THINKING` on every
+ *      DeepSeek entry, and the gateway silently ignores `budget_tokens`, so
+ *      there is no way to bound the thinking half from the request.
+ *
+ * So a small `maxTokens` is spent entirely inside the thinking block and the
+ * model is cut off before it emits a single `text` part. `extractContent` then
+ * correctly finds no text and genText returns null. That is the whole of the
+ * "200 OK but no text content … types=thinking" family — 3,835 events in one
+ * day on v0.1.57 — plus its downstream "[cluster-synth] non-substantive
+ * summary (0c)" (6,241 events). The worst case was silent rather than noisy:
+ * `detectIfAdvertisement` asked for `maxTokens: 10`, which can NEVER fit
+ * thinking + an answer, so it returned null on every call and every article
+ * was classified "not an ad".
+ *
+ * The caller's `maxTokens` means "how much TEXT I want". Add the thinking
+ * allowance on top of it rather than making every call site remember this, and
+ * hold effort at `low` — headroom alone still overflows if the default effort
+ * drifts up. Unused budget is not billed (output tokens are charged as
+ * generated), so a generous reserve is free.
+ */
+const THINKING_MODELS = new Set(['deepseek_v4_flash', 'deepseek_v4_pro']);
+const THINKING_TOKEN_RESERVE = 2048;
+
 /** Owner-billed text generation via the ugly.bot AI proxy. */
 export async function genText(
   messages: ChatMessage[],
@@ -226,6 +258,11 @@ export async function genText(
     console.warn('[news/ai] genText: AI_PROXY_TOKEN not set');
     return null;
   }
+  const thinks = THINKING_MODELS.has(opts.model);
+  const maxTokens =
+    opts.maxTokens !== undefined && thinks
+      ? opts.maxTokens + THINKING_TOKEN_RESERVE
+      : opts.maxTokens;
   const res = await postAi(baseUrl, '/text', token, {
     model: opts.model,
     messages,
@@ -234,7 +271,8 @@ export async function genText(
       ...(opts.temperature !== undefined
         ? { temperature: opts.temperature }
         : {}),
-      ...(opts.maxTokens !== undefined ? { maxTokens: opts.maxTokens } : {}),
+      ...(maxTokens !== undefined ? { maxTokens } : {}),
+      ...(thinks ? { reasoningEffort: 'low' as const } : {}),
     },
   });
   if (!res) {

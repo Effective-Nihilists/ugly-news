@@ -300,3 +300,68 @@ describe('empty-completion diagnostics', () => {
     expect(row).not.toContain('types=');
   });
 });
+
+describe('thinking-model output budget', () => {
+  beforeEach(() => {
+    process.env.AI_PROXY_TOKEN = 'test-token';
+    vi.resetModules();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  /** Capture the JSON body of the single proxy call `run` triggers. */
+  async function bodyOf(
+    run: (genText: typeof import('../../../server/news/ai').genText) => unknown,
+  ): Promise<{
+    model: string;
+    options: { maxTokens?: number; reasoningEffort?: string };
+  }> {
+    const bodies: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, init: RequestInit) => {
+        bodies.push(String(init.body));
+        return new Response(JSON.stringify({ message: { content: 'ok' } }), {
+          status: 200,
+        });
+      }),
+    );
+    const { genText } = await import('../../../server/news/ai');
+    await run(genText);
+    return JSON.parse(bodies[0]!);
+  }
+
+  // `deepseek_v4_flash` reaches DeepSeek's ANTHROPIC-format gateway, where
+  // `max_tokens` is the TOTAL output budget — thinking blocks included — and
+  // thinking is force-enabled for the model (providerCatalog pins
+  // ANTHROPIC_EFFORT_THINKING and DeepSeek ignores budget_tokens). So a small
+  // `maxTokens` is spent entirely inside the thinking block and the response
+  // comes back with a `thinking` part and NO `text` part.
+  it('reserves thinking headroom so a small maxTokens can still emit text', async () => {
+    const body = await bodyOf((genText) =>
+      genText([{ role: 'user', content: 'story' }], {
+        model: 'deepseek_v4_flash',
+        maxTokens: 10,
+      }),
+    );
+    // The caller's 10 tokens must survive as text budget on TOP of thinking.
+    expect(body.options.maxTokens).toBeGreaterThanOrEqual(10 + 1024);
+    // And thinking must be held to the cheapest setting for these auxiliary
+    // calls — headroom alone still overflows when effort drifts up.
+    expect(body.options.reasoningEffort).toBe('low');
+  });
+
+  it('leaves non-reasoning models exactly as the caller asked', async () => {
+    const body = await bodyOf((genText) =>
+      genText([{ role: 'user', content: 'story' }], {
+        model: 'gpt_4o',
+        maxTokens: 4000,
+      }),
+    );
+    expect(body.options.maxTokens).toBe(4000);
+    expect(body.options.reasoningEffort).toBeUndefined();
+  });
+});
