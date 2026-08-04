@@ -36,5 +36,9 @@
   "staticAssets": {
     "hostBundle": true,
     "baseUrl": "https://static.ugly.press"
-  }
+  },
+  "backgroundColor": "#f1ece0",
+  "backgroundColorDark": "#f1ece0",
+  "foregroundColor": "#1a1714",
+  "foregroundColorDark": "#1a1714"
 }
