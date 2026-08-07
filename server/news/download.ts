@@ -108,14 +108,47 @@ function linkOf(item: RSSItem): string | null {
 }
 
 /** Fetch a feed URL and normalize RSS 2.0 / Atom into a flat item list. */
+/**
+ * Statuses worth another go: 429 (we're being rate-limited) and any 5xx —
+ * notably Cloudflare's 522 origin-timeout, which is what `freebeacon` returned
+ * while `time` returned 429. A single attempt dropped the whole feed for that
+ * sweep ("[NEWS] RSS feed download failed [time]: HTTP 429").
+ */
+function isTransientStatus(status: number): boolean {
+  return status === 429 || status >= 500;
+}
+
+/** `Retry-After` in seconds or as an HTTP date; capped so one rude feed cannot
+ *  stall a cron sweep that has every other feed still to fetch. */
+function retryAfterMs(res: Response, fallbackMs: number): number {
+  const raw = res.headers.get('retry-after');
+  if (!raw) return fallbackMs;
+  const secs = Number(raw);
+  const ms = Number.isFinite(secs)
+    ? secs * 1000
+    : new Date(raw).getTime() - Date.now();
+  if (!Number.isFinite(ms) || ms <= 0) return fallbackMs;
+  return Math.min(ms, 5000);
+}
+
+const FEED_FETCH_RETRIES = 2;
+
 async function fetchFeedItems(url: string): Promise<RSSItem[]> {
-  const res = await fetch(url, {
-    headers: {
-      'user-agent':
-        'Mozilla/5.0 (compatible; UglyNews/1.0; +https://ugly.press)',
-    },
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  let res!: Response;
+  for (let attempt = 0; ; attempt++) {
+    res = await fetch(url, {
+      headers: {
+        'user-agent':
+          'Mozilla/5.0 (compatible; UglyNews/1.0; +https://ugly.press)',
+      },
+    });
+    if (res.ok) break;
+    if (attempt >= FEED_FETCH_RETRIES || !isTransientStatus(res.status)) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+    const wait = retryAfterMs(res, 1000 * (attempt + 1));
+    await new Promise((resolve) => setTimeout(resolve, wait));
+  }
   const body = await res.text();
   const parsed = xml.parse(body) as {
     rss?: { channel?: { item?: RSSItem[] } };
