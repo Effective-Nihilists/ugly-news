@@ -63,10 +63,15 @@ export async function newsPodcastGetDefault(
     // in $match is unreliable in the framework's filter layer. Filter to the
     // latest *complete* episode in code, skipping today's still-generating/
     // failed doc.
+    //
+    // Scan deep enough to survive a run of consecutive failures: a 10-doc
+    // window meant ten bad mornings in a row hid a perfectly good episode and
+    // the page fell back to "hasn't been recorded yet" (which is exactly what
+    // happened while the script prompt was broken). 60 ≈ two months of dailies.
     const recent = await db.getQuery<NewsPodcast & { _id: string }>(
       'newsPodcast',
       [{ $match: {} }, { $sort: { date: -1 } }],
-      { limit: 10 },
+      { limit: 60 },
     );
     const latestComplete = recent.find(
       (p) => p.generationStatus === 'complete' && !!p.audioUri,

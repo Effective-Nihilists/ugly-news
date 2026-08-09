@@ -132,12 +132,27 @@ function buildClusterPromptBlock(ctx: PodcastClusterCtx[]): string {
   );
 }
 
-async function generatePodcastScript(
+// Per-segment directions + the output contract. Shared verbatim by BOTH prompt
+// branches: `generatePodcastScript` parses the reply by pulling the first
+// `{...}` blob out of it, so a branch that omits this produces a markdown
+// script, no JSON, and a failed episode.
+const SCRIPT_OUTPUT_CONTRACT = `For EVERY segment include:
+- cameraShot: "normal" | "closeup" (closeups for ~20-30% dramatic moments)
+- cameraEnergy: "fast" | "normal" | "slow"
+- listenerReaction: "laugh" | "shocked" | "agree" | "empathize" | "nod" | "bored"
+- gestureHint: { gesture: "handup"|"index"|"thumbup"|"shrug"|"side"|"ok"|"thumbdown"|"namaste", timing: "start"|"mid"|"end" } (optional, ~30-40% of segments)
+- speakerEmotion: "laughing"|"whispering"|"angry"|"sad"|"surprised"|"fearful"|"disgusted"|"happy"|"neutral" (aim 60-70% non-neutral)
+- nonVerbalCue: "breathe"|"sigh"|"laugh"|"chuckle"|null (sparingly, 3-5 total)
+
+OUTPUT JSON ONLY (no prose, no markdown fences) — a single object of this exact shape:
+{ "title": "catchy episode title", "segments": [ { "speaker": "HOST1", "text": "...", "articleRef": "fileId or null", "cameraShot": "normal", "cameraEnergy": "normal", "listenerReaction": "nod", "gestureHint": { "gesture": "shrug", "timing": "mid" }, "speakerEmotion": "surprised", "nonVerbalCue": null } ] }`;
+
+export function buildPodcastScriptPrompt(
   articles: FileMarkdown[],
   host1: HostConfig,
   host2: HostConfig,
   clusterCtx?: PodcastClusterCtx[],
-): Promise<PodcastScriptOutput> {
+): string {
   const articlesJson = articles.map((a) => ({
     fileId: a._id,
     title: a.title ?? '',
@@ -165,7 +180,7 @@ STRUCTURE — write all three acts in order, as one continuous segment list:
 
 Set "articleRef" to the story's fileId on segments about that story (null otherwise). ~900-1100 words.
 
-For EVERY segment include:`
+${SCRIPT_OUTPUT_CONTRACT}`
       : `You are writing a script for "Ugly News Daily" - a COMEDY podcast that roasts the news, with CAMERA and EMOTION directions per segment.
 
 HOSTS:
@@ -184,16 +199,17 @@ REQUIREMENTS:
 4. Per article: ${host1.name} introduces seriously; ${host2.name} roasts it; natural back-and-forth.
 5. Closing: ${host1.name} signs off; ${host2.name} nihilistic jab; mention "ugly.press" naturally in the outro.
 
-For EVERY segment include:
-- cameraShot: "normal" | "closeup" (closeups for ~20-30% dramatic moments)
-- cameraEnergy: "fast" | "normal" | "slow"
-- listenerReaction: "laugh" | "shocked" | "agree" | "empathize" | "nod" | "bored"
-- gestureHint: { gesture: "handup"|"index"|"thumbup"|"shrug"|"side"|"ok"|"thumbdown"|"namaste", timing: "start"|"mid"|"end" } (optional, ~30-40% of segments)
-- speakerEmotion: "laughing"|"whispering"|"angry"|"sad"|"surprised"|"fearful"|"disgusted"|"happy"|"neutral" (aim 60-70% non-neutral)
-- nonVerbalCue: "breathe"|"sigh"|"laugh"|"chuckle"|null (sparingly, 3-5 total)
+${SCRIPT_OUTPUT_CONTRACT}`;
+  return prompt;
+}
 
-OUTPUT JSON ONLY (no markdown fences):
-{ "title": "catchy episode title", "segments": [ { "speaker": "HOST1", "text": "...", "articleRef": "fileId or null", "cameraShot": "normal", "cameraEnergy": "normal", "listenerReaction": "nod", "gestureHint": { "gesture": "shrug", "timing": "mid" }, "speakerEmotion": "surprised", "nonVerbalCue": null } ] }`;
+async function generatePodcastScript(
+  articles: FileMarkdown[],
+  host1: HostConfig,
+  host2: HostConfig,
+  clusterCtx?: PodcastClusterCtx[],
+): Promise<PodcastScriptOutput> {
+  const prompt = buildPodcastScriptPrompt(articles, host1, host2, clusterCtx);
 
   // The script model (gpt_4o via the ugly.bot AI proxy) intermittently 429s /
   // times out at the 10:00 UTC cron, returning null → "No response from script

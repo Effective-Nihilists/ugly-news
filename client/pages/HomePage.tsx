@@ -72,8 +72,14 @@ const STYLE = `
 .un-row { transition: padding-left 0.18s ease; }
 .un-row:hover { padding-left: 8px; }
 
+/* Keep the hero's right column clear of the absolutely-positioned "Edition
+   Daily" stamp above it. When the column is the taller of the two its text
+   starts at the very top of the hero and runs straight under the stamp. */
+.un-hero-aside { padding-top: 64px; }
+
 @media (max-width: 820px) {
   .un-hero { grid-template-columns: 1fr !important; }
+  .un-hero-aside { padding-top: 0 !important; }
   .un-cols { grid-template-columns: 1fr !important; }
   .un-front-grid { grid-template-columns: 1fr !important; }
   .un-stamp { display: none !important; }
@@ -960,116 +966,130 @@ function Hero({ name }: { name?: string | undefined }): React.ReactElement {
   const lines = ['The news,', 'minus the', 'noise.'];
   return (
     <section
-      className="un-hero"
       style={{
-        position: 'relative',
-        display: 'grid',
-        gridTemplateColumns: '1.55fr 1fr',
-        gap: 'clamp(24px, 4vw, 56px)',
-        padding: 'clamp(28px,5vw,56px) clamp(20px,5vw,64px) 8px',
+        padding: 'clamp(28px,5vw,56px) 0 8px',
         borderBottom: `3px double ${C.ink}`,
       }}
     >
-      <div>
-        <div
-          className="un-rise"
-          style={{
-            fontFamily: 'IBM Plex Mono, monospace',
-            fontSize: 12,
-            letterSpacing: '0.2em',
-            textTransform: 'uppercase',
-            color: C.accent,
-            marginBottom: 10,
-          }}
-        >
-          The front page, rewritten by a machine
-        </div>
-        {lines.map((line, i) => (
+      {/* Same 1180 measure + gutters as TopStoriesRail below, so the hero's
+          columns line up with the front page instead of being flung to the
+          window edges (which left a dead void between them on wide screens). */}
+      <div
+        className="un-hero"
+        style={{
+          position: 'relative',
+          maxWidth: 1180,
+          margin: '0 auto',
+          padding: '0 clamp(20px,5vw,64px)',
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1.15fr) minmax(0, 1fr)',
+          gap: 'clamp(24px, 4vw, 56px)',
+        }}
+      >
+        <div>
           <div
-            key={i}
             className="un-rise"
             style={{
-              fontFamily: 'Anton, sans-serif',
-              fontSize: 'clamp(44px, 9vw, 110px)',
-              lineHeight: 0.86,
-              letterSpacing: '0.005em',
-              color: C.ink,
+              fontFamily: 'IBM Plex Mono, monospace',
+              fontSize: 12,
+              letterSpacing: '0.2em',
               textTransform: 'uppercase',
-              animationDelay: `${0.1 + i * 0.09}s`,
+              color: C.accent,
+              marginBottom: 16,
             }}
           >
-            {line}
-            {i === 2 ? <span style={{ color: C.accent }}>.</span> : null}
+            The front page, rewritten by a machine
           </div>
-        ))}
-      </div>
+          {lines.map((line, i) => (
+            <div
+              key={i}
+              className="un-rise"
+              style={{
+                fontFamily: 'Anton, sans-serif',
+                fontSize: 'clamp(44px, 9vw, 110px)',
+                // Anton's caps nearly touch below ~0.95 — at 0.86 the three
+                // stacked lines read as one solid block.
+                lineHeight: 0.95,
+                letterSpacing: '0.005em',
+                color: C.ink,
+                textTransform: 'uppercase',
+                animationDelay: `${0.1 + i * 0.09}s`,
+              }}
+            >
+              {line}
+              {i === 2 ? <span style={{ color: C.accent }}>.</span> : null}
+            </div>
+          ))}
+        </div>
 
-      <div
-        className="un-fade"
-        style={{
-          animationDelay: '0.45s',
-          alignSelf: 'end',
-          borderLeft: `1px solid ${C.rule}`,
-          paddingLeft: 'clamp(16px,2vw,28px)',
-        }}
-      >
-        <p
-          className="un-drop"
+        <div
+          className="un-fade un-hero-aside"
           style={{
-            fontFamily: 'Spectral, serif',
-            fontSize: 18,
-            lineHeight: 1.5,
-            color: C.ink,
-            margin: '0 0 18px',
+            animationDelay: '0.45s',
+            alignSelf: 'end',
+            borderLeft: `1px solid ${C.rule}`,
+            paddingLeft: 'clamp(16px,2vw,28px)',
           }}
         >
-          {name ? `Morning, ${name}. ` : ''}Ugly Press reads the entire internet
-          so you don’t have to — sixty-plus feeds, scraped and summarized every
-          hour, plus a daily podcast and a personal edition in your inbox.
-        </p>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <a href="#front" className="un-cta" data-id="read-today">
-            Read today →
-          </a>
-          <a
-            href="/podcast"
-            onClick={navClick(() => {
-              router.push('podcast', {});
-            })}
-            className="un-cta ghost"
-            data-id="todays-podcast"
+          <p
+            className="un-drop"
+            style={{
+              fontFamily: 'Spectral, serif',
+              fontSize: 18,
+              lineHeight: 1.55,
+              color: C.ink,
+              margin: '0 0 20px',
+            }}
           >
-            <PlayIcon size={14} /> Today’s podcast
-          </a>
-          <a href="#daily" className="un-cta ghost" data-id="get-the-8-a">
-            Get the 8 a.m.
-          </a>
+            {name ? `Morning, ${name}. ` : ''}Ugly Press reads the entire
+            internet so you don’t have to — sixty-plus feeds, scraped and
+            summarized every hour, plus a daily podcast and a personal edition
+            in your inbox.
+          </p>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <a href="#front" className="un-cta" data-id="read-today">
+              Read today →
+            </a>
+            <a
+              href="/podcast"
+              onClick={navClick(() => {
+                router.push('podcast', {});
+              })}
+              className="un-cta ghost"
+              data-id="todays-podcast"
+            >
+              <PlayIcon size={14} /> Today’s podcast
+            </a>
+            <a href="#daily" className="un-cta ghost" data-id="get-the-8-a">
+              Get the 8 a.m.
+            </a>
+          </div>
         </div>
-      </div>
 
-      <div
-        className="un-stamp"
-        style={{
-          position: 'absolute',
-          top: 'clamp(16px,3vw,30px)',
-          right: 'clamp(20px,5vw,64px)',
-          animation: 'un-stamp 0.7s 0.6s cubic-bezier(0.2,0.8,0.2,1) both',
-          border: `3px solid ${C.accent}`,
-          color: C.accent,
-          fontFamily: 'IBM Plex Mono, monospace',
-          fontWeight: 700,
-          fontSize: 11,
-          letterSpacing: '0.12em',
-          textTransform: 'uppercase',
-          padding: '8px 12px',
-          textAlign: 'center',
-          lineHeight: 1.3,
-          background: 'rgba(214,38,29,0.05)',
-        }}
-      >
-        Edition
-        <br />
-        Daily
+        <div
+          className="un-stamp"
+          style={{
+            position: 'absolute',
+            top: 0,
+            right: 'clamp(20px,5vw,64px)',
+            animation: 'un-stamp 0.7s 0.6s cubic-bezier(0.2,0.8,0.2,1) both',
+            border: `3px solid ${C.accent}`,
+            color: C.accent,
+            fontFamily: 'IBM Plex Mono, monospace',
+            fontWeight: 700,
+            fontSize: 11,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            padding: '8px 12px',
+            textAlign: 'center',
+            lineHeight: 1.3,
+            background: 'rgba(214,38,29,0.05)',
+          }}
+        >
+          Edition
+          <br />
+          Daily
+        </div>
       </div>
     </section>
   );

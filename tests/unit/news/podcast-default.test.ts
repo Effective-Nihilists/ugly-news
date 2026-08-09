@@ -110,4 +110,20 @@ describe('newsPodcastGetDefault', () => {
     const out = await newsPodcastGetDefault(db, { date: '2026-06-17' });
     expect(out.podcast).toBeNull();
   });
+
+  it('looks past a long run of failed episodes instead of giving up', async () => {
+    // The broken script prompt failed every morning for weeks; a shallow scan
+    // window buried the last good episode and the page claimed nothing had
+    // been recorded.
+    const failures = Array.from({ length: 40 }, (_, i) =>
+      pod(`2026-06-${String(40 - i).padStart(2, '0')}`, 'failed'),
+    );
+    const lastGood = pod('2026-04-30', 'complete');
+    const { db, calls } = fakeDb({}, [...failures, lastGood]);
+
+    const out = await newsPodcastGetDefault(db, { date: '2026-06-17' });
+
+    expect(out.podcast?._id).toBe('2026-04-30_default');
+    expect(calls.getQuery[0]?.opts.limit).toBeGreaterThan(failures.length);
+  });
 });
