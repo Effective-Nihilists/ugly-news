@@ -9,7 +9,11 @@ import { assignFileToCluster } from './cluster';
 import type { NewsDb } from './db';
 import { htmlToMarkdown } from './download';
 
-const AI_MODEL = 'deepseek_v4_flash';
+// Classification does not benefit from DeepSeek's mandatory reasoning output.
+// Keep long-form rewriting on DeepSeek, but use the substantially cheaper
+// non-reasoning model for this two-label gate.
+const AD_DETECTION_MODEL = 'gpt_oss_120b';
+const SUMMARY_MODEL = 'deepseek_v4_flash';
 
 const AD_DETECTION_PROMPT = `Analyze this content and determine if it is primarily an ADVERTISEMENT or SPONSORED CONTENT rather than genuine journalism. Respond with ONLY one word: "AD" or "ARTICLE".`;
 
@@ -138,7 +142,7 @@ export async function detectIfAdvertisement(
       { role: 'system', content: AD_DETECTION_PROMPT },
       { role: 'user', content: `Title: ${title}\n\nContent:\n${truncated}` },
     ],
-    { model: AI_MODEL, temperature: 0.1, maxTokens: 10 },
+    { model: AD_DETECTION_MODEL, temperature: 0.1, maxTokens: 10 },
   );
   return (
     (out ?? '').trim().toUpperCase().includes('AD') &&
@@ -180,7 +184,7 @@ export async function generateArticleSummary(
         content: `Title: ${title}\n\nSource article:\n${truncated}`,
       },
     ],
-    { model: AI_MODEL, temperature: 0.4, maxTokens: 1000 },
+    { model: SUMMARY_MODEL, temperature: 0.4, maxTokens: 1000 },
   );
   if (!summary) return null;
   return capSummary(summary);
