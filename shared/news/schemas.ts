@@ -311,11 +311,16 @@ export const NewsPodcastSchema = z.object({
       startTimeMs: z.number(),
       endTimeMs: z.number(),
       articleRef: z.string().optional(),
-      gestureHint: GestureHintSchema.optional(),
+      // Older/generated rows used explicit null for omitted stage directions.
+      gestureHint: z
+        .preprocess((v) => (v === null ? undefined : v), GestureHintSchema.optional())
+        .optional(),
       cameraShot: CameraShotSchema.optional(),
       cameraEnergy: CameraEnergySchema.optional(),
       listenerReaction: ListenerReactionSchema.optional(),
-      speakerEmotion: SpeakerEmotionSchema.optional(),
+      // Script models occasionally invent an emotion outside the supported TTS
+      // set. Read those historical rows safely as neutral.
+      speakerEmotion: SpeakerEmotionSchema.catch('neutral').optional(),
       nonVerbalCue: NonVerbalCueSchema.optional(),
     }),
   ),

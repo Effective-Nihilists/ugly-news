@@ -231,6 +231,28 @@ async function generatePodcastScript(
       if (!script.title || !script.segments || script.segments.length === 0) {
         throw new Error('Invalid script format');
       }
+      const emotions = new Set([
+        'happy',
+        'sad',
+        'angry',
+        'surprised',
+        'fearful',
+        'disgusted',
+        'laughing',
+        'whispering',
+        'neutral',
+      ]);
+      script.segments = script.segments.map((segment) => {
+        const { gestureHint, speakerEmotion, ...rest } = segment;
+        const normalizedEmotion = emotions.has(String(speakerEmotion))
+          ? (speakerEmotion ?? 'neutral')
+          : 'neutral';
+        return {
+          ...rest,
+          ...(gestureHint ? { gestureHint } : {}),
+          speakerEmotion: normalizedEmotion,
+        };
+      });
       return script;
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error);

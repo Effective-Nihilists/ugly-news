@@ -119,6 +119,15 @@ describe('RSS extraction', () => {
       extractImageFromRSSItem({ description: 'no images here' }),
     ).toBeNull();
   });
+
+  it('rejects RSS tracking pixels as article images', () => {
+    expect(
+      extractImageFromRSSItem({
+        description:
+          '<img src="https://media.npr.org/include/images/tracking/npr-rss-pixel.png?story=1">',
+      }),
+    ).toBeNull();
+  });
 });
 
 // ── TTS preprocessing (drives expressive audio + word alignment) ────────────

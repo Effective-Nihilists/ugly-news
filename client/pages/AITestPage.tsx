@@ -54,10 +54,17 @@ export default function AITestPage(): React.ReactElement {
 
     try {
       if (mode === 'text') {
-        const text = await callTextGen({
+        const content = await callTextGen({
           model: textModel,
           messages: [{ role: 'user', content: prompt }],
         });
+        const text =
+          typeof content === 'string'
+            ? content
+            : content
+                .filter((part) => part.type === 'text')
+                .map((part) => part.text)
+                .join('');
         const elapsed = Date.now() - started;
         addLog(`Done in ${fmt(elapsed)} — ${text.length} chars`, 'ok');
         setResult(text);

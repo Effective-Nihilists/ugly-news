@@ -242,6 +242,13 @@ export function htmlToMarkdown(html: string): string {
 }
 
 export function extractImageFromRSSItem(item: RSSItem): string | null {
+  const usable = (url: string | undefined): string | null => {
+    if (!url) return null;
+    // RSS descriptions commonly include analytics pixels as their only img.
+    // They are not article art and often 404 when rendered by the site.
+    if (/tracking|pixel|spacer|transparent|1x1/i.test(url)) return null;
+    return url;
+  };
   if (item['media:content']?.length) {
     for (const media of item['media:content']) {
       const url = media['@_url'];
@@ -249,24 +256,28 @@ export function extractImageFromRSSItem(item: RSSItem): string | null {
         url &&
         (media['@_medium'] === 'image' || media['@_type']?.startsWith('image/'))
       ) {
-        return url;
+        const image = usable(url);
+        if (image) return image;
       }
-      if (url && /\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(url)) return url;
+      if (url && /\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(url)) {
+        const image = usable(url);
+        if (image) return image;
+      }
     }
   }
   if (item['media:thumbnail']?.length) {
     const url = item['media:thumbnail'][0]?.['@_url'];
-    if (url) return url;
+    if (url) return usable(url);
   }
   if (
     item.enclosure?.['@_url'] &&
     item.enclosure['@_type']?.startsWith('image/')
   ) {
-    return item.enclosure['@_url'];
+    return usable(item.enclosure['@_url']);
   }
   if (item.image) {
-    if (typeof item.image === 'string') return item.image;
-    if (item.image.url) return item.image.url;
+    if (typeof item.image === 'string') return usable(item.image);
+    if (item.image.url) return usable(item.image.url);
   }
   // Same unwrapping as the ingest path — an attribute-carrying Atom node here
   // would stringify to "[object Object]" and quietly match no image.
@@ -276,7 +287,7 @@ export function extractImageFromRSSItem(item: RSSItem): string | null {
     textOf(item.description) ??
     '';
   const imgMatch = /<img[^>]+src=["']([^"']+)["']/i.exec(contentHtml);
-  if (imgMatch?.[1]) return imgMatch[1];
+  if (imgMatch?.[1]) return usable(imgMatch[1]);
   return null;
 }
 

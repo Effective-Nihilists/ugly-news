@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-27T16:35:31.475Z",
+  "generatedAt": "2026-08-14T00:15:46.243Z",
   "source": "shared/collections.ts",
   "collections": {
     "authMagicLink": {
@@ -1345,32 +1345,7 @@
                   "required": true
                 },
                 "gestureHint": {
-                  "type": "object",
-                  "fields": {
-                    "gesture": {
-                      "type": "enum",
-                      "values": [
-                        "handup",
-                        "index",
-                        "thumbup",
-                        "shrug",
-                        "side",
-                        "ok",
-                        "thumbdown",
-                        "namaste"
-                      ],
-                      "required": true
-                    },
-                    "timing": {
-                      "type": "enum",
-                      "values": [
-                        "start",
-                        "mid",
-                        "end"
-                      ],
-                      "required": true
-                    }
-                  },
+                  "type": "unknown",
                   "required": false
                 },
                 "listenerReaction": {
@@ -1396,18 +1371,7 @@
                   "required": false
                 },
                 "speakerEmotion": {
-                  "type": "enum",
-                  "values": [
-                    "happy",
-                    "sad",
-                    "angry",
-                    "surprised",
-                    "fearful",
-                    "disgusted",
-                    "laughing",
-                    "whispering",
-                    "neutral"
-                  ],
+                  "type": "unknown",
                   "required": false
                 },
                 "speakerId": {
