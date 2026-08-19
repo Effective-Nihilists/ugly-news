@@ -4,8 +4,18 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>Ugly Press</title>
-    <style>html, body, #root { height: 100%; margin: 0; }</style>
+    <!-- PWA: makes the app installable + detectable as a dock app in ugly-studio.
+         The build-time injector (buildWorkers injectDefaultMeta) overrides
+         theme-color with the per-project value and is idempotent, so these static
+         tags cover new projects + the dev server without duplicating. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#000000" />
+    <link rel="apple-touch-icon" href="/icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <title>App</title>
+    <style>html, body, #root { height: 100%; margin: 0; } html, body { overscroll-behavior: none; }</style>
   </head>
   <body>
     <div id="root"></div>

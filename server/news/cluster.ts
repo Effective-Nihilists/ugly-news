@@ -27,7 +27,6 @@ const CLUSTER_WINDOW_MS = 72 * 60 * 60 * 1000;
 // nearest-neighbor scan showed lowering 0.78→0.74 recovers ~50% more same-event
 // merges before the 0.68-0.72 "same topic, different event" muddy zone. Default
 // 0.74; raise if unrelated stories merge, lower if sides stay split.
-// eslint-disable-next-line @typescript-eslint/dot-notation
 const SIMILARITY_THRESHOLD = Number(
   process.env.CLUSTER_SIM_THRESHOLD ?? '0.74',
 );
