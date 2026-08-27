@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-14T00:15:46.243Z",
+  "generatedAt": "2026-08-27T03:49:33.610Z",
   "source": "shared/collections.ts",
   "collections": {
     "authMagicLink": {
@@ -1324,20 +1324,11 @@
                   "required": false
                 },
                 "cameraEnergy": {
-                  "type": "enum",
-                  "values": [
-                    "fast",
-                    "normal",
-                    "slow"
-                  ],
+                  "type": "unknown",
                   "required": false
                 },
                 "cameraShot": {
-                  "type": "enum",
-                  "values": [
-                    "normal",
-                    "closeup"
-                  ],
+                  "type": "unknown",
                   "required": false
                 },
                 "endTimeMs": {
@@ -1349,26 +1340,12 @@
                   "required": false
                 },
                 "listenerReaction": {
-                  "type": "enum",
-                  "values": [
-                    "nod",
-                    "laugh",
-                    "shocked",
-                    "agree",
-                    "empathize",
-                    "bored"
-                  ],
+                  "type": "unknown",
                   "required": false
                 },
                 "nonVerbalCue": {
-                  "type": "enum",
-                  "values": [
-                    "breathe",
-                    "sigh",
-                    "laugh",
-                    "chuckle"
-                  ],
-                  "required": false
+                  "type": "unknown",
+                  "required": true
                 },
                 "speakerEmotion": {
                   "type": "unknown",
