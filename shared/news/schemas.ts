@@ -315,16 +315,20 @@ export const NewsPodcastSchema = z.object({
       gestureHint: z
         .preprocess(
           (v) => (v === null ? undefined : v),
-          GestureHintSchema.optional(),
+          GestureHintSchema.catch(undefined as never).optional(),
         )
         .optional(),
-      cameraShot: CameraShotSchema.optional(),
-      cameraEnergy: CameraEnergySchema.optional(),
-      listenerReaction: ListenerReactionSchema.optional(),
-      // Script models occasionally invent an emotion outside the supported TTS
-      // set. Read those historical rows safely as neutral.
+      // Script models occasionally invent a stage direction outside the
+      // supported set. `speakerEmotion` was hardened first; segment 7 of the
+      // 2026-08-26 episode proved every other direction has the same exposure
+      // (`db.read:newsPodcast: segments.7.listenerReaction: Invalid option`),
+      // and an unreadable direction made the whole episode unloadable. Read
+      // drifted rows back as the neutral default instead.
+      cameraShot: CameraShotSchema.catch('normal').optional(),
+      cameraEnergy: CameraEnergySchema.catch('normal').optional(),
+      listenerReaction: ListenerReactionSchema.catch('nod').optional(),
       speakerEmotion: SpeakerEmotionSchema.catch('neutral').optional(),
-      nonVerbalCue: NonVerbalCueSchema.optional(),
+      nonVerbalCue: NonVerbalCueSchema.optional().catch(undefined),
     }),
   ),
   audioUri: z.string(),
@@ -405,3 +409,56 @@ export const UserFilePreferenceSchema = z.object({
   dislikeCount: z.number().default(0),
   updatedAt: z.number(),
 });
+
+// ─── Script-model output normalization ─────────────────────────────────────
+
+/**
+ * The shape gpt_4o is asked to emit for a podcast script, with every stage
+ * direction coerced to a value the persisted `newsPodcast` schema accepts.
+ *
+ * The model reliably produces `title`, `segments[].text` and `speaker`, and
+ * reliably drifts on the enums: the 2026-08-26 episode carried
+ * `segments[7].listenerReaction` outside the enum, which failed the write AND
+ * then made the stored row unreadable. Directions are cosmetic, so a drifted
+ * one becomes its neutral default rather than costing the day's episode; the
+ * parts that carry meaning (title, speaker, text) are required and a reply
+ * missing them still fails, so the caller retries.
+ */
+const PodcastScriptSegmentSchema = z.object({
+  speaker: z.enum(['HOST1', 'HOST2']).catch('HOST1'),
+  text: z.string().min(1),
+  articleRef: z.string().nullable().catch(null).default(null),
+  gestureHint: z
+    .preprocess(
+      (v) => (v === null ? undefined : v),
+      GestureHintSchema.optional().catch(undefined),
+    )
+    .optional(),
+  cameraShot: CameraShotSchema.catch('normal').default('normal'),
+  cameraEnergy: CameraEnergySchema.catch('normal').default('normal'),
+  listenerReaction: ListenerReactionSchema.catch('nod').default('nod'),
+  speakerEmotion: SpeakerEmotionSchema.catch('neutral').default('neutral'),
+  nonVerbalCue: z
+    .preprocess(
+      (v) => (v === null ? undefined : v),
+      NonVerbalCueSchema.optional().catch(undefined),
+    )
+    .optional(),
+});
+
+export const PodcastScriptOutputSchema = z.object({
+  title: z.string().min(1),
+  segments: z.array(PodcastScriptSegmentSchema).min(1),
+});
+
+export type NormalizedPodcastScript = z.infer<typeof PodcastScriptOutputSchema>;
+
+/**
+ * Parse a script model's JSON reply into a script that is safe to persist.
+ * Throws when the reply is not a usable script — `generatePodcastScript`
+ * catches that and retries, which is the behavior a malformed reply already
+ * had.
+ */
+export function normalizePodcastScript(raw: unknown): NormalizedPodcastScript {
+  return PodcastScriptOutputSchema.parse(raw);
+}

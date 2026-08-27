@@ -157,6 +157,64 @@ async function fetchFeedItems(url: string): Promise<RSSItem[]> {
   return parsed.rss?.channel?.item ?? parsed.feed?.entry ?? [];
 }
 
+// ─── Transient D1 retry ────────────────────────────────────────────────────
+// Every feed is dispatched at once (`newsRefreshAllFeeds`), and the resulting
+// burst pushed D1 past its queue depth: 22 articles were lost across
+// 2026-08-20..21 to `D1_ERROR: D1 DB is overloaded. Requests queued for too
+// long.`, each one logged by the per-item catch below and then silently
+// dropped. Those messages all describe a QUEUE, not a rejection — the same
+// class of failure `fetchFeedItems` already retries for HTTP.
+
+const D1_TRANSIENT_PATTERNS = [
+  'is overloaded',
+  'queued for too long',
+  'caused object to be reset',
+  'exceeded timeout',
+  'network connection lost',
+];
+
+/**
+ * True when a D1 failure is a capacity/transport blip worth retrying.
+ * Deterministic failures are excluded — `SQLITE_TOOBIG` fails identically on
+ * every attempt, so retrying it only burns the queue worker's budget.
+ */
+export function isTransientD1Error(error: unknown): boolean {
+  const message = (
+    error instanceof Error ? error.message : String(error)
+  ).toLowerCase();
+  if (message.includes('sqlite_toobig')) return false;
+  return D1_TRANSIENT_PATTERNS.some((p) => message.includes(p));
+}
+
+const D1_RETRY_ATTEMPTS = 4;
+const D1_RETRY_BASE_MS = 250;
+
+/**
+ * Run a D1 operation, retrying transient overload with exponential backoff.
+ * Rethrows on exhaustion so the caller's existing log still records the drop —
+ * this makes losses rarer, it does not hide them.
+ */
+export async function withD1Retry<T>(
+  op: () => Promise<T>,
+  deps: { sleep?: (ms: number) => Promise<void> } = {},
+): Promise<T> {
+  const sleep =
+    deps.sleep ??
+    ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+  let lastError: unknown;
+  for (let attempt = 0; attempt < D1_RETRY_ATTEMPTS; attempt++) {
+    try {
+      return await op();
+    } catch (error) {
+      lastError = error;
+      if (!isTransientD1Error(error)) throw error;
+      if (attempt === D1_RETRY_ATTEMPTS - 1) break;
+      await sleep(D1_RETRY_BASE_MS * 2 ** attempt);
+    }
+  }
+  throw lastError;
+}
+
 /** Stable hex hash (FNV-1a, 32-bit) — Workers-safe, no md5 dependency. */
 function stableHash(input: string): string {
   let h = 0x811c9dc5;
@@ -319,7 +377,10 @@ export async function dispatchNewsFeedDownload(
       if (!isDefined(rawGuid)) continue;
       const _id = `${feed.id}_${stableHash(rawGuid)}`;
 
-      if (isDefined(await db.getDoc(collections.newsArticle, _id))) continue;
+      const existing = await withD1Retry(() =>
+        db.getDoc(collections.newsArticle, _id),
+      );
+      if (isDefined(existing)) continue;
 
       const imageUri = extractImageFromRSSItem(item);
       const contentHtml =
@@ -375,7 +436,7 @@ export async function dispatchNewsFeedDownload(
         ...dbDefaults(),
         created: new Date(createdMs),
       };
-      await db.setDoc(collections.newsArticle, article);
+      await withD1Retry(() => db.setDoc(collections.newsArticle, article));
 
       if (uri) await enqueueTask('articleScrape', { articleId: _id });
     } catch (error) {

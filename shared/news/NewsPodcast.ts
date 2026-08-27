@@ -167,12 +167,15 @@ export interface PodcastScriptOutput {
     speaker: 'HOST1' | 'HOST2';
     text: string;
     articleRef: string | null;
-    gestureHint?: PodcastGestureHint;
-    cameraShot?: PodcastCameraShot;
-    cameraEnergy?: PodcastCameraEnergy;
-    listenerReaction?: PodcastListenerReaction;
-    speakerEmotion?: PodcastSpeakerEmotion;
-    nonVerbalCue?: PodcastNonVerbalCue;
+    // Explicit `| undefined` under `exactOptionalPropertyTypes`: the script
+    // now arrives from `normalizePodcastScript`, whose zod `.optional()`
+    // fields are `T | undefined` rather than merely absent.
+    gestureHint?: PodcastGestureHint | undefined;
+    cameraShot?: PodcastCameraShot | undefined;
+    cameraEnergy?: PodcastCameraEnergy | undefined;
+    listenerReaction?: PodcastListenerReaction | undefined;
+    speakerEmotion?: PodcastSpeakerEmotion | undefined;
+    nonVerbalCue?: PodcastNonVerbalCue | undefined;
   }[];
 }
 

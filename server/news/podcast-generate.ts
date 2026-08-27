@@ -7,6 +7,7 @@ import type {
   NewsPodcast,
 } from '../../shared/collections';
 import type { BiasBreakdown } from '../../shared/news/schemas';
+import { normalizePodcastScript } from '../../shared/news/schemas';
 import { newsPush, type NewsDb } from './db';
 import { uglyBotId } from '../../shared/news/Bot';
 import {
@@ -227,32 +228,16 @@ async function generatePodcastScript(
       if (!responseText) throw new Error('No response from script model');
       const jsonMatch = /\{[\s\S]*\}/.exec(responseText);
       if (!jsonMatch) throw new Error('Failed to parse script JSON');
-      const script = JSON.parse(jsonMatch[0]) as PodcastScriptOutput;
-      if (!script.title || !script.segments || script.segments.length === 0) {
-        throw new Error('Invalid script format');
-      }
-      const emotions = new Set([
-        'happy',
-        'sad',
-        'angry',
-        'surprised',
-        'fearful',
-        'disgusted',
-        'laughing',
-        'whispering',
-        'neutral',
-      ]);
-      script.segments = script.segments.map((segment) => {
-        const { gestureHint, speakerEmotion, ...rest } = segment;
-        const normalizedEmotion = emotions.has(String(speakerEmotion))
-          ? (speakerEmotion ?? 'neutral')
-          : 'neutral';
-        return {
-          ...rest,
-          ...(gestureHint ? { gestureHint } : {}),
-          speakerEmotion: normalizedEmotion,
-        };
-      });
+      // Zod, not a cast: the script model invents stage directions outside the
+      // enums, and until 2026-08-26 only `speakerEmotion` was screened. A
+      // drifted `listenerReaction` was written to `newsPodcast` and then made
+      // the row unreadable (`[schema-drift] db.write/db.read: segments.7`).
+      // `normalizePodcastScript` coerces every direction to its neutral default
+      // and still throws on a reply that isn't a script, so a malformed answer
+      // retries exactly as it did before.
+      const script: PodcastScriptOutput = normalizePodcastScript(
+        JSON.parse(jsonMatch[0]),
+      );
       return script;
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error);
