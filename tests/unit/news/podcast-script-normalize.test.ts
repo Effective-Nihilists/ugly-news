@@ -93,7 +93,9 @@ describe('normalizePodcastScript — the write side', () => {
 
   it('rejects a reply that is not a script at all', () => {
     expect(() => normalizePodcastScript({ nope: true })).toThrow();
-    expect(() => normalizePodcastScript({ title: 'x', segments: [] })).toThrow();
+    expect(() =>
+      normalizePodcastScript({ title: 'x', segments: [] }),
+    ).toThrow();
   });
 
   it('defaults an unknown speaker rather than losing the segment', () => {

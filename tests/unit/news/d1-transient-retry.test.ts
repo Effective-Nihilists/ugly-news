@@ -42,7 +42,9 @@ describe('isTransientD1Error', () => {
         ),
       ),
     ).toBe(true);
-    expect(isTransientD1Error(new Error('Network connection lost.'))).toBe(true);
+    expect(isTransientD1Error(new Error('Network connection lost.'))).toBe(
+      true,
+    );
   });
 
   it('does NOT retry a row that will never fit', () => {
@@ -64,7 +66,9 @@ describe('isTransientD1Error', () => {
 describe('withD1Retry', () => {
   it('returns the value when the first attempt succeeds', async () => {
     const op = vi.fn().mockResolvedValue('ok');
-    await expect(withD1Retry(op, { sleep: async () => {} })).resolves.toBe('ok');
+    await expect(withD1Retry(op, { sleep: async () => {} })).resolves.toBe(
+      'ok',
+    );
     expect(op).toHaveBeenCalledTimes(1);
   });
 
@@ -72,7 +76,9 @@ describe('withD1Retry', () => {
     const op = vi
       .fn()
       .mockRejectedValueOnce(
-        new Error('D1_ERROR: D1 DB is overloaded. Requests queued for too long.'),
+        new Error(
+          'D1_ERROR: D1 DB is overloaded. Requests queued for too long.',
+        ),
       )
       .mockResolvedValue('stored');
     await expect(withD1Retry(op, { sleep: async () => {} })).resolves.toBe(
@@ -110,7 +116,9 @@ describe('withD1Retry', () => {
   it('does not retry a non-transient failure', async () => {
     const op = vi
       .fn()
-      .mockRejectedValue(new Error('D1_ERROR: string or blob too big: SQLITE_TOOBIG'));
+      .mockRejectedValue(
+        new Error('D1_ERROR: string or blob too big: SQLITE_TOOBIG'),
+      );
     await expect(withD1Retry(op, { sleep: async () => {} })).rejects.toThrow(
       'SQLITE_TOOBIG',
     );
