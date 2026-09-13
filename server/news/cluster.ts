@@ -260,6 +260,10 @@ export async function assignFileToCluster(
     framingSummary: null,
     uglyTakeFileId: null,
     topImageUri: file.thumbnail?.uri ?? null,
+    // Never asked for generated art yet. A cluster that inherits the member
+    // article's RSS thumbnail above never will — requestClusterArt skips any
+    // cluster that already has an image.
+    topImageRequestedAt: null,
     synthesizedAt: null,
     satirizedAt: null,
     firstSeenAt: now,

@@ -14,6 +14,7 @@ import { dispatchPodcastGenerate } from './podcast-generate';
 import { dispatchUserPrivateNewsEmail, userEmailHourly } from './email';
 import { runNewsRetention } from './retention';
 import {
+  dispatchClusterImageBackfill,
   dispatchClusterSatirize,
   dispatchClusterSweep,
   dispatchClusterSweepStep,
@@ -73,6 +74,9 @@ export function createCronHandlers(
     },
     clusterSatirize: async ({ clusterId }) => {
       await dispatchClusterSatirize(getDb(), clusterId);
+    },
+    clusterImageBackfill: async ({ clusterId }) => {
+      await dispatchClusterImageBackfill(getDb(), clusterId);
     },
     articleScrape: async ({ articleId }) => {
       await dispatchArticleScrape(getDb(), articleId);

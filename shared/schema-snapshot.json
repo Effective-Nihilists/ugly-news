@@ -1,0 +1,1491 @@
+{
+  "authMagicLink": {
+    "fields": {
+      "consumedAt": {
+        "type": "number",
+        "required": true,
+        "nullable": true
+      },
+      "email": {
+        "type": "string",
+        "required": true
+      },
+      "expiresAt": {
+        "type": "number",
+        "required": true
+      },
+      "requestIp": {
+        "type": "string",
+        "required": true,
+        "nullable": true
+      },
+      "requestedAt": {
+        "type": "number",
+        "required": true
+      },
+      "tokenHash": {
+        "type": "string",
+        "required": true
+      }
+    },
+    "indexes": [
+      {
+        "fields": {
+          "email": 1
+        }
+      },
+      {
+        "fields": {
+          "expiresAt": 1
+        },
+        "ttl": 86400
+      }
+    ]
+  },
+  "authIdentity": {
+    "fields": {
+      "createdAt": {
+        "type": "number",
+        "required": true
+      },
+      "email": {
+        "type": "string",
+        "required": true,
+        "nullable": true
+      },
+      "lastLoginAt": {
+        "type": "number",
+        "required": true
+      },
+      "name": {
+        "type": "string",
+        "required": true,
+        "nullable": true
+      },
+      "provider": {
+        "type": "enum",
+        "values": [
+          "magic-link",
+          "google",
+          "uglybot"
+        ],
+        "required": true
+      },
+      "providerKey": {
+        "type": "string",
+        "required": true
+      },
+      "userId": {
+        "type": "string",
+        "required": true
+      }
+    },
+    "indexes": [
+      {
+        "fields": {
+          "providerKey": 1
+        }
+      },
+      {
+        "fields": {
+          "userId": 1
+        }
+      }
+    ]
+  },
+  "emailSuppression": {
+    "fields": {
+      "category": {
+        "type": "string",
+        "required": true,
+        "nullable": true
+      },
+      "email": {
+        "type": "string",
+        "required": true
+      },
+      "reason": {
+        "type": "enum",
+        "values": [
+          "unsubscribed",
+          "bounced",
+          "complained"
+        ],
+        "required": true
+      }
+    },
+    "indexes": [
+      {
+        "fields": {
+          "email": 1
+        }
+      }
+    ]
+  },
+  "debugLogSession": {
+    "fields": {
+      "active": {
+        "type": "boolean",
+        "required": true,
+        "default": false
+      },
+      "expiresAt": {
+        "type": "number",
+        "required": true,
+        "default": 0
+      },
+      "grep": {
+        "type": "string",
+        "required": true,
+        "nullable": true,
+        "default": null
+      },
+      "level": {
+        "type": "enum",
+        "values": [
+          "log",
+          "info",
+          "warn",
+          "error",
+          "debug"
+        ],
+        "required": true,
+        "nullable": true,
+        "default": null
+      },
+      "operatorId": {
+        "type": "string",
+        "required": true,
+        "default": ""
+      },
+      "projectId": {
+        "type": "string",
+        "required": true,
+        "default": ""
+      },
+      "source": {
+        "type": "enum",
+        "values": [
+          "browser",
+          "server",
+          "both"
+        ],
+        "required": true,
+        "default": "browser"
+      },
+      "startedAt": {
+        "type": "number",
+        "required": true,
+        "default": 0
+      },
+      "updatedAt": {
+        "type": "number",
+        "required": true,
+        "default": 0
+      },
+      "userId": {
+        "type": "string",
+        "required": true
+      }
+    },
+    "indexes": [
+      {
+        "fields": {
+          "userId": 1
+        }
+      },
+      {
+        "fields": {
+          "expiresAt": 1
+        },
+        "ttl": 3600
+      }
+    ]
+  },
+  "debugLogStream": {
+    "fields": {
+      "userId": {
+        "type": "string",
+        "required": true
+      }
+    },
+    "indexes": [
+      {
+        "fields": {
+          "userId": 1
+        }
+      }
+    ]
+  },
+  "todo": {
+    "fields": {
+      "done": {
+        "type": "boolean",
+        "required": true
+      },
+      "text": {
+        "type": "string",
+        "required": true
+      },
+      "userId": {
+        "type": "string",
+        "required": true
+      }
+    },
+    "indexes": [
+      {
+        "fields": {
+          "userId": 1
+        }
+      }
+    ]
+  },
+  "conversation": {
+    "fields": {
+      "title": {
+        "type": "string",
+        "required": true,
+        "default": ""
+      },
+      "type": {
+        "type": "string",
+        "required": true,
+        "default": "ai-chat"
+      }
+    }
+  },
+  "message": {
+    "fields": {
+      "conversationId": {
+        "type": "string",
+        "required": true
+      },
+      "text": {
+        "type": "string",
+        "required": true
+      },
+      "userId": {
+        "type": "string",
+        "required": true
+      }
+    },
+    "indexes": [
+      {
+        "fields": {
+          "conversationId": 1
+        }
+      }
+    ]
+  },
+  "collabDoc": {
+    "fields": {
+      "lastSyncedAt": {
+        "type": "number",
+        "required": true
+      },
+      "serialized": {
+        "type": "string",
+        "required": true,
+        "nullable": true
+      },
+      "yjsState": {
+        "type": "string",
+        "required": true
+      }
+    }
+  },
+  "newsFeed": {
+    "fields": {
+      "category": {
+        "type": "enum",
+        "values": [
+          "politics",
+          "world",
+          "business",
+          "tech",
+          "science",
+          "events"
+        ],
+        "required": true
+      },
+      "imageStyle": {
+        "type": "object",
+        "fields": {
+          "additionalKeywords": {
+            "type": "string",
+            "required": false
+          },
+          "colorPalette": {
+            "type": "string",
+            "required": false
+          },
+          "mood": {
+            "type": "string",
+            "required": false
+          },
+          "negativePrompt": {
+            "type": "string",
+            "required": false
+          },
+          "photographyStyle": {
+            "type": "string",
+            "required": false
+          },
+          "style": {
+            "type": "string",
+            "required": true
+          }
+        },
+        "required": false
+      },
+      "name": {
+        "type": "string",
+        "required": true
+      },
+      "url": {
+        "type": "string",
+        "required": true
+      }
+    }
+  },
+  "newsArticle": {
+    "fields": {
+      "categories": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "required": true
+        },
+        "required": true
+      },
+      "contentHtml": {
+        "type": "string",
+        "required": true
+      },
+      "contentMarkdown": {
+        "type": "string",
+        "required": true
+      },
+      "feedId": {
+        "type": "string",
+        "required": true
+      },
+      "fileId": {
+        "type": "string",
+        "required": true,
+        "nullable": true
+      },
+      "imageUri": {
+        "type": "string",
+        "required": true,
+        "nullable": true
+      },
+      "scrapeError": {
+        "type": "string",
+        "required": true,
+        "nullable": true
+      },
+      "scrapeStatus": {
+        "type": "enum",
+        "values": [
+          "pending",
+          "success",
+          "failed",
+          "skipped",
+          "ad"
+        ],
+        "required": true,
+        "nullable": true
+      },
+      "scrapedAt": {
+        "type": "number",
+        "required": true,
+        "nullable": true
+      },
+      "summary": {
+        "type": "string",
+        "required": true,
+        "nullable": true
+      },
+      "summaryGeneratedAt": {
+        "type": "number",
+        "required": true,
+        "nullable": true
+      },
+      "title": {
+        "type": "string",
+        "required": true
+      },
+      "uri": {
+        "type": "string",
+        "required": true,
+        "nullable": true
+      }
+    },
+    "indexes": [
+      {
+        "fields": {
+          "feedId": 1
+        }
+      },
+      {
+        "fields": {
+          "scrapedAt": -1
+        }
+      },
+      {
+        "fields": {
+          "created": -1
+        }
+      }
+    ]
+  },
+  "newsSource": {
+    "fields": {
+      "bias": {
+        "type": "enum",
+        "values": [
+          "far-left",
+          "left",
+          "lean-left",
+          "center",
+          "lean-right",
+          "right",
+          "far-right"
+        ],
+        "required": true
+      },
+      "biasScore": {
+        "type": "number",
+        "required": true
+      },
+      "country": {
+        "type": "string",
+        "required": true,
+        "nullable": true,
+        "default": null
+      },
+      "domains": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "required": true
+        },
+        "required": true,
+        "default": []
+      },
+      "factuality": {
+        "type": "enum",
+        "values": [
+          "very-low",
+          "low",
+          "mixed",
+          "high",
+          "very-high"
+        ],
+        "required": true
+      },
+      "feedIds": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "required": true
+        },
+        "required": true,
+        "default": []
+      },
+      "homepage": {
+        "type": "string",
+        "required": true,
+        "nullable": true,
+        "default": null
+      },
+      "name": {
+        "type": "string",
+        "required": true
+      },
+      "owner": {
+        "type": "string",
+        "required": true,
+        "nullable": true,
+        "default": null
+      }
+    }
+  },
+  "newsCluster": {
+    "fields": {
+      "articleCount": {
+        "type": "number",
+        "required": true,
+        "default": 0
+      },
+      "biasBreakdown": {
+        "type": "object",
+        "fields": {
+          "center": {
+            "type": "number",
+            "required": true,
+            "default": 0
+          },
+          "centerPct": {
+            "type": "number",
+            "required": true,
+            "default": 0
+          },
+          "left": {
+            "type": "number",
+            "required": true,
+            "default": 0
+          },
+          "leftPct": {
+            "type": "number",
+            "required": true,
+            "default": 0
+          },
+          "right": {
+            "type": "number",
+            "required": true,
+            "default": 0
+          },
+          "rightPct": {
+            "type": "number",
+            "required": true,
+            "default": 0
+          },
+          "total": {
+            "type": "number",
+            "required": true,
+            "default": 0
+          },
+          "unrated": {
+            "type": "number",
+            "required": true,
+            "default": 0
+          }
+        },
+        "required": true
+      },
+      "blindspotSide": {
+        "type": "enum",
+        "values": [
+          "left",
+          "center",
+          "right"
+        ],
+        "required": true,
+        "nullable": true,
+        "default": null
+      },
+      "category": {
+        "type": "enum",
+        "values": [
+          "politics",
+          "world",
+          "business",
+          "tech",
+          "science",
+          "events"
+        ],
+        "required": true
+      },
+      "centroid": {
+        "type": "array",
+        "items": {
+          "type": "number",
+          "required": true
+        },
+        "required": true,
+        "nullable": true,
+        "default": null
+      },
+      "factualityAvg": {
+        "type": "number",
+        "required": true,
+        "nullable": true,
+        "default": null
+      },
+      "feedIds": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "required": true
+        },
+        "required": true,
+        "default": []
+      },
+      "fileIds": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "required": true
+        },
+        "required": true,
+        "default": []
+      },
+      "firstSeenAt": {
+        "type": "number",
+        "required": true
+      },
+      "framingSummary": {
+        "type": "string",
+        "required": true,
+        "nullable": true,
+        "default": null
+      },
+      "lastUpdatedAt": {
+        "type": "number",
+        "required": true
+      },
+      "neutralSummary": {
+        "type": "string",
+        "required": true,
+        "nullable": true,
+        "default": null
+      },
+      "satirizedAt": {
+        "type": "number",
+        "required": true,
+        "nullable": true,
+        "default": null
+      },
+      "score": {
+        "type": "number",
+        "required": true,
+        "default": 0
+      },
+      "sourceIds": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "required": true
+        },
+        "required": true,
+        "default": []
+      },
+      "synthesizedAt": {
+        "type": "number",
+        "required": true,
+        "nullable": true,
+        "default": null
+      },
+      "title": {
+        "type": "string",
+        "required": true
+      },
+      "topImageRequestedAt": {
+        "type": "number",
+        "required": true,
+        "nullable": true,
+        "default": null
+      },
+      "topImageUri": {
+        "type": "string",
+        "required": true,
+        "nullable": true,
+        "default": null
+      },
+      "uglyTakeFileId": {
+        "type": "string",
+        "required": true,
+        "nullable": true,
+        "default": null
+      }
+    },
+    "indexes": [
+      {
+        "fields": {
+          "category": 1
+        }
+      },
+      {
+        "fields": {
+          "lastUpdatedAt": -1
+        }
+      },
+      {
+        "fields": {
+          "blindspotSide": 1
+        }
+      },
+      {
+        "fields": {
+          "score": -1
+        }
+      }
+    ]
+  },
+  "file": {
+    "fields": {
+      "category": {
+        "type": "string",
+        "required": false,
+        "nullable": true
+      },
+      "clusterId": {
+        "type": "string",
+        "required": false,
+        "nullable": true
+      },
+      "conversationId": {
+        "type": "string",
+        "required": false,
+        "nullable": true
+      },
+      "dislikeCount": {
+        "type": "number",
+        "required": true,
+        "default": 0
+      },
+      "embedded": {
+        "type": "boolean",
+        "required": false
+      },
+      "feedId": {
+        "type": "string",
+        "required": false,
+        "nullable": true
+      },
+      "indexable": {
+        "type": "boolean",
+        "required": true,
+        "default": true
+      },
+      "indexed": {
+        "type": "boolean",
+        "required": true,
+        "default": false
+      },
+      "kind": {
+        "type": "enum",
+        "values": [
+          "article",
+          "satire"
+        ],
+        "required": false,
+        "default": "article"
+      },
+      "likeCount": {
+        "type": "number",
+        "required": true,
+        "default": 0
+      },
+      "markdown": {
+        "type": "string",
+        "required": true
+      },
+      "public": {
+        "type": "boolean",
+        "required": true,
+        "default": true
+      },
+      "sourceUri": {
+        "type": "string",
+        "required": false,
+        "nullable": true
+      },
+      "tags": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "required": true
+        },
+        "required": false
+      },
+      "text": {
+        "type": "string",
+        "required": false,
+        "nullable": true
+      },
+      "thumbnail": {
+        "type": "object",
+        "fields": {
+          "blurhash": {
+            "type": "string",
+            "required": false
+          },
+          "description": {
+            "type": "string",
+            "required": false
+          },
+          "height": {
+            "type": "number",
+            "required": true
+          },
+          "sizes": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "required": true
+            },
+            "required": false
+          },
+          "type": {
+            "type": "literal",
+            "values": [
+              "public"
+            ],
+            "required": true
+          },
+          "uri": {
+            "type": "string",
+            "required": true
+          },
+          "width": {
+            "type": "number",
+            "required": true
+          }
+        },
+        "required": false,
+        "nullable": true
+      },
+      "title": {
+        "type": "string",
+        "required": false,
+        "nullable": true
+      },
+      "type": {
+        "type": "literal",
+        "values": [
+          "markdown"
+        ],
+        "required": true
+      },
+      "uris": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "required": true
+        },
+        "required": false
+      },
+      "userId": {
+        "type": "string",
+        "required": true
+      },
+      "viewCount": {
+        "type": "number",
+        "required": true,
+        "default": 0
+      }
+    },
+    "indexes": [
+      {
+        "fields": {
+          "type": 1
+        }
+      },
+      {
+        "fields": {
+          "feedId": 1
+        }
+      },
+      {
+        "fields": {
+          "created": -1
+        }
+      },
+      {
+        "fields": {
+          "public": 1,
+          "userId": 1,
+          "embedded": 1
+        }
+      }
+    ]
+  },
+  "userFilePreference": {
+    "fields": {
+      "clusters": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "fields": {
+            "embedding": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "required": true
+              },
+              "required": true
+            },
+            "id": {
+              "type": "string",
+              "required": true
+            },
+            "lastUsed": {
+              "type": "number",
+              "required": true
+            },
+            "weight": {
+              "type": "number",
+              "required": true
+            }
+          },
+          "required": true
+        },
+        "required": true
+      },
+      "dislikeCount": {
+        "type": "number",
+        "required": true,
+        "default": 0
+      },
+      "embedding": {
+        "type": "array",
+        "items": {
+          "type": "number",
+          "required": true
+        },
+        "required": true,
+        "nullable": true
+      },
+      "likeCount": {
+        "type": "number",
+        "required": true,
+        "default": 0
+      },
+      "updatedAt": {
+        "type": "number",
+        "required": true
+      },
+      "userId": {
+        "type": "string",
+        "required": true
+      }
+    },
+    "indexes": [
+      {
+        "fields": {
+          "userId": 1
+        }
+      }
+    ]
+  },
+  "newsPodcast": {
+    "fields": {
+      "articles": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "fields": {
+            "endTimeMs": {
+              "type": "number",
+              "required": true
+            },
+            "fileId": {
+              "type": "string",
+              "required": true
+            },
+            "image": {
+              "type": "object",
+              "fields": {
+                "blurhash": {
+                  "type": "string",
+                  "required": false
+                },
+                "description": {
+                  "type": "string",
+                  "required": false
+                },
+                "height": {
+                  "type": "number",
+                  "required": true
+                },
+                "sizes": {
+                  "type": "array",
+                  "items": {
+                    "type": "number",
+                    "required": true
+                  },
+                  "required": false
+                },
+                "type": {
+                  "type": "literal",
+                  "values": [
+                    "public"
+                  ],
+                  "required": true
+                },
+                "uri": {
+                  "type": "string",
+                  "required": true
+                },
+                "width": {
+                  "type": "number",
+                  "required": true
+                }
+              },
+              "required": true,
+              "nullable": true
+            },
+            "imageUri": {
+              "type": "string",
+              "required": true,
+              "nullable": true
+            },
+            "startTimeMs": {
+              "type": "number",
+              "required": true
+            },
+            "title": {
+              "type": "string",
+              "required": true
+            }
+          },
+          "required": true
+        },
+        "required": true
+      },
+      "audioUri": {
+        "type": "string",
+        "required": true
+      },
+      "backgroundUri": {
+        "type": "string",
+        "required": false,
+        "nullable": true
+      },
+      "beatOffsetMs": {
+        "type": "number",
+        "required": false
+      },
+      "danceGroup": {
+        "type": "enum",
+        "values": [
+          "chill",
+          "groove",
+          "hype",
+          "silly"
+        ],
+        "required": false
+      },
+      "date": {
+        "type": "string",
+        "required": true
+      },
+      "description": {
+        "type": "string",
+        "required": true
+      },
+      "durationMs": {
+        "type": "number",
+        "required": true
+      },
+      "generatedAt": {
+        "type": "number",
+        "required": true
+      },
+      "generationError": {
+        "type": "string",
+        "required": true,
+        "nullable": true
+      },
+      "generationStatus": {
+        "type": "enum",
+        "values": [
+          "pending",
+          "generating",
+          "complete",
+          "failed"
+        ],
+        "required": true
+      },
+      "host1BotId": {
+        "type": "string",
+        "required": true
+      },
+      "host2BotId": {
+        "type": "string",
+        "required": true
+      },
+      "pushedAt": {
+        "type": "number",
+        "required": false,
+        "nullable": true
+      },
+      "segments": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "fields": {
+            "articleRef": {
+              "type": "string",
+              "required": false
+            },
+            "cameraEnergy": {
+              "type": "unknown",
+              "required": false
+            },
+            "cameraShot": {
+              "type": "unknown",
+              "required": false
+            },
+            "endTimeMs": {
+              "type": "number",
+              "required": true
+            },
+            "gestureHint": {
+              "type": "unknown",
+              "required": false
+            },
+            "listenerReaction": {
+              "type": "unknown",
+              "required": false
+            },
+            "nonVerbalCue": {
+              "type": "unknown",
+              "required": true
+            },
+            "speakerEmotion": {
+              "type": "unknown",
+              "required": false
+            },
+            "speakerId": {
+              "type": "string",
+              "required": true
+            },
+            "speakerName": {
+              "type": "string",
+              "required": true
+            },
+            "startTimeMs": {
+              "type": "number",
+              "required": true
+            },
+            "text": {
+              "type": "string",
+              "required": true
+            }
+          },
+          "required": true
+        },
+        "required": true
+      },
+      "songBpm": {
+        "type": "number",
+        "required": false
+      },
+      "songMode": {
+        "type": "boolean",
+        "required": false
+      },
+      "subtitles": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "fields": {
+            "endTimeMs": {
+              "type": "number",
+              "required": true
+            },
+            "speakerId": {
+              "type": "string",
+              "required": true
+            },
+            "startTimeMs": {
+              "type": "number",
+              "required": true
+            },
+            "text": {
+              "type": "string",
+              "required": true
+            },
+            "words": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "fields": {
+                  "endTimeMs": {
+                    "type": "number",
+                    "required": true
+                  },
+                  "startTimeMs": {
+                    "type": "number",
+                    "required": true
+                  },
+                  "text": {
+                    "type": "string",
+                    "required": true
+                  }
+                },
+                "required": true
+              },
+              "required": false
+            }
+          },
+          "required": true
+        },
+        "required": true
+      },
+      "title": {
+        "type": "string",
+        "required": true
+      },
+      "userId": {
+        "type": "string",
+        "required": true,
+        "nullable": true
+      },
+      "visemes": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "fields": {
+            "arkit": {
+              "type": "object",
+              "fields": {
+                "jawForward": {
+                  "type": "number",
+                  "required": true
+                },
+                "jawOpen": {
+                  "type": "number",
+                  "required": true
+                },
+                "mouthClose": {
+                  "type": "number",
+                  "required": true
+                },
+                "mouthFunnel": {
+                  "type": "number",
+                  "required": true
+                },
+                "mouthPressLeft": {
+                  "type": "number",
+                  "required": true
+                },
+                "mouthPressRight": {
+                  "type": "number",
+                  "required": true
+                },
+                "mouthPucker": {
+                  "type": "number",
+                  "required": true
+                },
+                "mouthStretchLeft": {
+                  "type": "number",
+                  "required": true
+                },
+                "mouthStretchRight": {
+                  "type": "number",
+                  "required": true
+                }
+              },
+              "required": false
+            },
+            "durationMs": {
+              "type": "number",
+              "required": true
+            },
+            "intensity": {
+              "type": "number",
+              "required": true
+            },
+            "name": {
+              "type": "enum",
+              "values": [
+                "aei",
+                "o",
+                "bmp",
+                "fv",
+                "l",
+                "r",
+                "th",
+                "qw",
+                "ee",
+                "chjsh",
+                "cdgknstxyz",
+                "sil"
+              ],
+              "required": true
+            },
+            "speakerId": {
+              "type": "string",
+              "required": true
+            },
+            "startMs": {
+              "type": "number",
+              "required": true
+            }
+          },
+          "required": true
+        },
+        "required": true
+      }
+    },
+    "indexes": [
+      {
+        "fields": {
+          "date": -1
+        }
+      }
+    ]
+  },
+  "userNewsRead": {
+    "fields": {
+      "fileId": {
+        "type": "string",
+        "required": true
+      },
+      "readAt": {
+        "type": "number",
+        "required": true
+      },
+      "userId": {
+        "type": "string",
+        "required": true
+      }
+    },
+    "indexes": [
+      {
+        "fields": {
+          "userId": 1
+        }
+      }
+    ]
+  },
+  "userNewsSaved": {
+    "fields": {
+      "fileId": {
+        "type": "string",
+        "required": true
+      },
+      "savedAt": {
+        "type": "number",
+        "required": true
+      },
+      "userId": {
+        "type": "string",
+        "required": true
+      }
+    },
+    "indexes": [
+      {
+        "fields": {
+          "userId": 1,
+          "savedAt": -1
+        }
+      }
+    ]
+  },
+  "userNewsReaction": {
+    "fields": {
+      "articleId": {
+        "type": "string",
+        "required": true
+      },
+      "reactedAt": {
+        "type": "number",
+        "required": true
+      },
+      "reaction": {
+        "type": "enum",
+        "values": [
+          "like",
+          "dislike"
+        ],
+        "required": true
+      },
+      "userId": {
+        "type": "string",
+        "required": true
+      }
+    },
+    "indexes": [
+      {
+        "fields": {
+          "userId": 1
+        }
+      }
+    ]
+  },
+  "userNewsSourceFollow": {
+    "fields": {
+      "followedAt": {
+        "type": "number",
+        "required": true
+      },
+      "sourceId": {
+        "type": "string",
+        "required": true
+      },
+      "userId": {
+        "type": "string",
+        "required": true
+      }
+    },
+    "indexes": [
+      {
+        "fields": {
+          "userId": 1
+        }
+      }
+    ]
+  },
+  "userNewsPreference": {
+    "fields": {
+      "embedding": {
+        "type": "array",
+        "items": {
+          "type": "number",
+          "required": true
+        },
+        "required": true,
+        "nullable": true
+      },
+      "likeCount": {
+        "type": "number",
+        "required": true
+      },
+      "updatedAt": {
+        "type": "number",
+        "required": true
+      },
+      "userId": {
+        "type": "string",
+        "required": true
+      }
+    },
+    "indexes": [
+      {
+        "fields": {
+          "userId": 1
+        }
+      }
+    ]
+  },
+  "userNewsEmailPref": {
+    "fields": {
+      "emailAllowed": {
+        "type": "boolean",
+        "required": true
+      },
+      "lang": {
+        "type": "string",
+        "required": true,
+        "default": "en"
+      },
+      "timezone": {
+        "type": "string",
+        "required": true
+      },
+      "userId": {
+        "type": "string",
+        "required": true
+      }
+    },
+    "indexes": [
+      {
+        "fields": {
+          "timezone": 1,
+          "emailAllowed": 1
+        }
+      },
+      {
+        "fields": {
+          "userId": 1
+        }
+      }
+    ]
+  }
+}

@@ -9,11 +9,34 @@ import { assignFileToCluster } from './cluster';
 import type { NewsDb } from './db';
 import { htmlToMarkdown } from './download';
 
-// Classification does not benefit from DeepSeek's mandatory reasoning output.
-// Keep long-form rewriting on DeepSeek, but use the substantially cheaper
-// non-reasoning model for this two-label gate.
+// Both jobs run on gpt-oss-120b (via ugly.bot's `gpt_oss_120b` clean name,
+// which routes to DeepInfra at $0.04/$0.19 per 1M).
+//
+// The summary moved OFF `deepseek_v4_flash` on 2026-09-13. DeepSeek's
+// Anthropic-format gateway force-enables thinking with no way to disable it,
+// and on a pure paraphrase task that reasoning is pure waste: a measured call
+// spent 1,691 output tokens producing 6,700 chars of thinking and 784 chars of
+// article. Worse, the thinking crowded out the answer — production summaries
+// averaged ~270 chars against a prompt asking for 3-5 paragraphs, which is the
+// same failure mode as the logged "non-substantive summary (0c)" family.
 const AD_DETECTION_MODEL = 'gpt_oss_120b';
-const SUMMARY_MODEL = 'deepseek_v4_flash';
+const SUMMARY_MODEL = 'gpt_oss_120b';
+
+/** Output budget for the ad gate.
+ *
+ *  MUST stay well above zero even though the answer is one word. gpt-oss-120b
+ *  emits a reasoning preamble before its visible text and `maxTokens` is the
+ *  TOTAL budget, so the original `10` was consumed entirely by reasoning:
+ *  every call returned `finish_reason: "length"` with empty content, genText
+ *  returned null, and the gate read `''` and answered "not an ad" — for every
+ *  article it ever saw. Verified live 2026-09-13 against blatant sponsored
+ *  copy at reasoning_effort default/low/medium: false in all three. */
+const AD_DETECTION_MAX_TOKENS = 300;
+
+/** How much of the article the ad gate reads. Sponsored content announces
+ *  itself in the headline and opening lines; feeding it 1,500 tokens of body
+ *  made this gate cost almost as much as the summary that follows it. */
+const AD_DETECTION_INPUT_TOKENS = 400;
 
 const AD_DETECTION_PROMPT = `Analyze this content and determine if it is primarily an ADVERTISEMENT or SPONSORED CONTENT rather than genuine journalism. Respond with ONLY one word: "AD" or "ARTICLE".`;
 
@@ -136,13 +159,20 @@ export async function detectIfAdvertisement(
   title: string,
   content: string,
 ): Promise<boolean> {
-  const truncated = truncateToApproximateTokens(content, 1500);
+  const truncated = truncateToApproximateTokens(
+    content,
+    AD_DETECTION_INPUT_TOKENS,
+  );
   const out = await genText(
     [
       { role: 'system', content: AD_DETECTION_PROMPT },
       { role: 'user', content: `Title: ${title}\n\nContent:\n${truncated}` },
     ],
-    { model: AD_DETECTION_MODEL, temperature: 0.1, maxTokens: 10 },
+    {
+      model: AD_DETECTION_MODEL,
+      temperature: 0.1,
+      maxTokens: AD_DETECTION_MAX_TOKENS,
+    },
   );
   return (
     (out ?? '').trim().toUpperCase().includes('AD') &&
@@ -305,24 +335,14 @@ export async function dispatchArticleScrape(
     }
   }
 
-  // newsBot opening comment → conversation thread (id === fileId), best-effort.
-  try {
-    const comment = await generateBotComment(article.title, summary);
-    if (comment) {
-      await db.setDoc(
-        collections.conversation,
-        { _id: fileId, type: 'news', title: article.title, ...dbDefaults() },
-        { skipIfExists: true },
-      );
-      await db.setDoc(collections.message, {
-        _id: `msg_${fileId}_0`,
-        conversationId: fileId,
-        userId: uglyBotId,
-        text: comment,
-        ...dbDefaults(),
-      });
-    }
-  } catch (error) {
-    console.warn('[scrape] bot comment failed', error);
-  }
+  // NO newsBot opening comment here — deliberately.
+  //
+  // This used to generate one per article (llama_4_scout) and write it to a
+  // `message` doc on a conversation keyed by fileId. Nothing renders it: no
+  // page in client/pages/ displays an article thread, so every one of those
+  // 16,158 calls a week ($2.44) produced a row no human ever saw.
+  //
+  // `generateBotComment` is still exported. When a thread UI ships, call it
+  // from the read path on first open of a conversation that has no messages —
+  // then the cost is paid only for threads someone actually opens.
 }

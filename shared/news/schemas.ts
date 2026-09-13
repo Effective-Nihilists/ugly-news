@@ -152,6 +152,16 @@ export const NewsClusterSchema = z.object({
   // The labeled Onion-style companion (a `file` with kind:'satire').
   uglyTakeFileId: z.string().nullable().default(null),
   topImageUri: z.string().nullable().default(null),
+  /** When a read path last asked for generated art for this cluster.
+   *
+   *  Art is minted lazily (a story nobody opens costs no flux call), so the
+   *  request comes from a page render — and a hot rail renders constantly.
+   *  This marker is stamped BEFORE the queue job is enqueued so concurrent
+   *  reads collapse to one generation. It is deliberately a timestamp rather
+   *  than a boolean: a generation that fails leaves the marker set, and
+   *  `ART_RETRY_MS` is what lets the next read try again instead of the
+   *  cluster being stuck image-less forever. */
+  topImageRequestedAt: z.number().nullable().default(null),
   // Ranking signal for Top Stories (coverage breadth + recency + engagement).
   score: z.number().default(0),
   synthesizedAt: z.number().nullable().default(null),

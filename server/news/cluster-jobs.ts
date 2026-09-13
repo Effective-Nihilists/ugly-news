@@ -232,17 +232,12 @@ export async function dispatchClusterSynthesize(
     );
   }
 
-  // Backfill ONE generated "Ugly Press" image for the story, only when no member
-  // article supplied an RSS image. This is the single place a generated news
-  // image is actually shown (the top-stories rail's topImageUri), so we spend
-  // one generation per qualifying story instead of one per scraped article. The
-  // synthesized-guard (early-return above) keeps this once-per-cluster.
-  let topImageUri = c.topImageUri;
-  if (!topImageUri) {
-    topImageUri = await generateUglyPressImage(c.title, c.category);
-    if (topImageUri)
-      console.log(`[cluster-synth] generated top image for ${clusterId}`);
-  }
+  // NO image generation here. Art used to be minted for every synthesized
+  // cluster that lacked an RSS image — 272 flux calls / $4.25 a week — whether
+  // or not the story was ever surfaced. It is now generated lazily off the
+  // read path (see `dispatchClusterImageBackfill`), so a cluster nobody sees
+  // costs nothing.
+  const topImageUri = c.topImageUri;
 
   await db.setDoc(collections.newsCluster, {
     ...c,
@@ -255,6 +250,99 @@ export async function dispatchClusterSynthesize(
     ...dbDefaults(),
     created: (c as { created?: Date }).created ?? new Date(),
   });
+}
+
+/** How many generations one page render may ask for. A rail serves up to 40
+ *  cards; without a cap, a single cold read could fan out 40 flux calls. */
+const ART_MAX_PER_READ = 3;
+
+/** How long a stamped art request suppresses further requests. Long enough
+ *  that a hot rail asks once, short enough that a failed generation retries
+ *  the same day. */
+const ART_RETRY_MS = 6 * 60 * 60 * 1000;
+
+interface ArtCandidate {
+  _id: string;
+  topImageUri: string | null;
+  topImageRequestedAt?: number | null;
+}
+
+/**
+ * Read-path trigger: ask for generated art for any cluster about to be served
+ * without an image. Stamps `topImageRequestedAt` BEFORE enqueuing so parallel
+ * readers collapse to one generation, and caps the fan-out per render.
+ *
+ * Best-effort by contract — art is cosmetic, and a queue or DB hiccup must
+ * never turn a page load into an error.
+ */
+export async function requestClusterArt(
+  db: NewsDb,
+  clusters: ArtCandidate[],
+  now: number = Date.now(),
+): Promise<void> {
+  try {
+    const wanted = clusters
+      .filter(
+        (c) =>
+          !c.topImageUri &&
+          (c.topImageRequestedAt == null ||
+            now - c.topImageRequestedAt > ART_RETRY_MS),
+      )
+      .slice(0, ART_MAX_PER_READ);
+
+    for (const c of wanted) {
+      const doc = await db.getDoc(collections.newsCluster, c._id);
+      if (!doc) continue;
+      const full = doc as NewsCluster & { _id: string };
+      // Re-check against the stored doc: another reader may have stamped it
+      // between our list query and here.
+      if (
+        full.topImageUri ||
+        (full.topImageRequestedAt != null &&
+          now - full.topImageRequestedAt <= ART_RETRY_MS)
+      ) {
+        continue;
+      }
+      await db.setDoc(collections.newsCluster, {
+        ...full,
+        topImageRequestedAt: now,
+        ...dbDefaults(),
+        created: (full as { created?: Date }).created ?? new Date(),
+      });
+      await enqueueTask('clusterImageBackfill', { clusterId: c._id });
+    }
+  } catch (error) {
+    console.warn('[cluster-art] request failed', error);
+  }
+}
+
+/**
+ * Queue worker: mint the "Ugly Press" image for one cluster.
+ *
+ * Re-checks `topImageUri` first — two readers can both enqueue before either
+ * write lands, so this is the last guard against paying twice for one story.
+ */
+export async function dispatchClusterImageBackfill(
+  db: NewsDb,
+  clusterId: string,
+): Promise<void> {
+  const doc = await db.getDoc(collections.newsCluster, clusterId);
+  if (!doc) return;
+  const c = doc as NewsCluster & { _id: string };
+  if (c.topImageUri) return;
+
+  const topImageUri = await generateUglyPressImage(c.title, c.category);
+  if (!topImageUri) {
+    console.warn(`[cluster-art] generation returned nothing for ${clusterId}`);
+    return;
+  }
+  await db.setDoc(collections.newsCluster, {
+    ...c,
+    topImageUri,
+    ...dbDefaults(),
+    created: (c as { created?: Date }).created ?? new Date(),
+  });
+  console.log(`[cluster-art] generated top image for ${clusterId}`);
 }
 
 /**
@@ -275,7 +363,12 @@ async function genSummary(
         { role: 'user', content: `Story: ${title}\n\n${context}` },
       ],
       {
-        model: 'deepseek_v4_flash',
+        // gpt-oss-120b, not deepseek_v4_flash: DeepSeek's Anthropic gateway
+        // force-enables thinking with no way to bound it, so a summarization
+        // call spent ~90% of its output budget reasoning and routinely
+        // returned a stub — the "non-substantive summary (0c)" family this
+        // very function retries around.
+        model: 'gpt_oss_120b',
         temperature: opts.temperature,
         maxTokens: opts.maxTokens,
       },
@@ -345,7 +438,9 @@ export async function dispatchClusterSatirize(
         content: `Real story: ${c.title}\n\nWhat actually happened:\n${truncateToApproximateTokens(basis, 800)}`,
       },
     ],
-    { model: 'gpt_4o', temperature: 0.95, maxTokens: 700 },
+    // Was gpt_4o ($2.50/$10 per 1M). 741 calls a week at $3.32 for files
+    // stored public:false and reachable only from a cluster page.
+    { model: 'gpt_oss_120b', temperature: 0.95, maxTokens: 700 },
   );
   if (!markdown) {
     console.error(
@@ -361,7 +456,7 @@ export async function dispatchClusterSatirize(
   // qualifying clusters) rather than minting a second one. Only generate here if
   // it's still missing — satire can fire before synthesis for some clusters.
   const image =
-    c.topImageUri ?? (await generateUglyPressImage(title, category));
+    c.topImageUri;
 
   const satireFileId = `satire_${c._id}`;
   const file: FileMarkdown & { _id: string } = {

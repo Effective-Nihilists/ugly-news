@@ -15,6 +15,7 @@ import type {
 } from '../../shared/news/requests';
 import type { z } from 'ugly-app/shared';
 import { decodeHtmlEntities } from './download';
+import { requestClusterArt } from './cluster-jobs';
 
 type Db = TypedDB<Record<string, DBObject>>;
 type ClusterCard = z.infer<typeof ClusterCardSchema>;
@@ -63,6 +64,7 @@ export async function newsTopStories(
     [{ $match: match }, { $sort: { score: -1 } }],
     { limit },
   );
+  await requestClusterArt(db, rows);
   return { items: rows.map(toCard) };
 }
 
@@ -80,6 +82,7 @@ export async function newsBlindspot(
     ],
     { limit },
   );
+  await requestClusterArt(db, rows);
   return { items: rows.map(toCard) };
 }
 
@@ -138,7 +141,9 @@ export async function newsClusterArchive(
     { limit: limit + 1, skip },
   );
   const hasMore = rows.length > limit;
-  return { items: rows.slice(0, limit).map(toCard), hasMore };
+  const served = rows.slice(0, limit);
+  await requestClusterArt(db, served);
+  return { items: served.map(toCard), hasMore };
 }
 
 /** Full "three ways" cluster: coverage by side, sources, framing + Ugly Take. */
@@ -152,6 +157,7 @@ export async function newsClusterGet(
     return { cluster: null };
   }
   const c = doc as NewsCluster & { _id: string };
+  await requestClusterArt(db, [c]);
 
   const files = await db.getQuery<FileMarkdown & { _id: string }>('file', [
     { $match: { _id: { $in: c.fileIds.slice(0, 80) } } },

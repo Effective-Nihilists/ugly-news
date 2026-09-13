@@ -78,6 +78,16 @@ export const cronTasks = defineWorkers({
     input: z.object({ clusterId: z.string() }),
     timeout: 60_000,
   }),
+  // Lazy cluster art. Enqueued from the READ path (requestClusterArt) the
+  // first time a card list or cluster page serves a story with no image,
+  // rather than minted for every synthesized cluster whether or not anyone
+  // ever sees it. The worker re-checks `topImageUri` before spending, so
+  // concurrent readers cost one generation, not several.
+  clusterImageBackfill: defineWorker({
+    description: 'Generate the Ugly Press top image for one cluster, on demand',
+    input: z.object({ clusterId: z.string() }),
+    timeout: 60_000,
+  }),
   newsFeedDownload: defineWorker({
     description:
       'Download + parse one RSS feed, create articles, enqueue scrapes',
