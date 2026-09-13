@@ -97,11 +97,7 @@ describe('requestClusterArt — the read-path trigger', () => {
     await jobs.requestClusterArt(fakeDb(), list as never, NOW);
     enqueued.length = 0;
     // Same docs, re-read a moment later — the marker is now persisted.
-    await jobs.requestClusterArt(
-      fakeDb(),
-      [store['a']] as never,
-      NOW + 60_000,
-    );
+    await jobs.requestClusterArt(fakeDb(), [store['a']] as never, NOW + 60_000);
     expect(
       enqueued,
       'a hot rail would mint the same image on every render without this guard',

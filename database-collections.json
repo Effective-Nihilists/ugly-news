@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-27T03:49:33.610Z",
+  "generatedAt": "2026-09-13T19:29:23.829Z",
   "source": "shared/collections.ts",
   "collections": {
     "authMagicLink": {
@@ -832,6 +832,12 @@
           "title": {
             "type": "string",
             "required": true
+          },
+          "topImageRequestedAt": {
+            "type": "number",
+            "required": true,
+            "nullable": true,
+            "default": null
           },
           "topImageUri": {
             "type": "string",

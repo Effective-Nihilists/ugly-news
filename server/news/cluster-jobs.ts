@@ -452,11 +452,14 @@ export async function dispatchClusterSatirize(
   const now = Date.now();
   const title = satireTitle(markdown);
   const category: NewsCategory = c.category;
-  // Reuse the cluster's top image (guaranteed by dispatchClusterSynthesize for
-  // qualifying clusters) rather than minting a second one. Only generate here if
-  // it's still missing — satire can fire before synthesis for some clusters.
-  const image =
-    c.topImageUri;
+  // Reuse whatever image the cluster already has, or ship the satire without
+  // one. This deliberately does NOT generate: art is minted lazily off the read
+  // path now (requestClusterArt / dispatchClusterImageBackfill), and an Ugly
+  // Take is stored `public: false` and reachable only from its cluster page —
+  // so a generation here would be paid for an illustration almost nobody sees.
+  // If the cluster gets art later, this file keeps rendering without it; that
+  // is the intended trade.
+  const image = c.topImageUri;
 
   const satireFileId = `satire_${c._id}`;
   const file: FileMarkdown & { _id: string } = {
