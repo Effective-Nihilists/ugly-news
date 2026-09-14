@@ -150,37 +150,230 @@ async function postAi(
   return lastRes;
 }
 
+// ── Response-shape parsing ─────────────────────────────────────────────────
+//
+// The proxy's envelope is `{ message, raw, usage }`: `message.content` is its
+// NORMALIZED answer — a plain string for chat models, an array of parts for
+// reasoning models (`[{type:'thinking'}, {type:'text'}]`) — and `raw` is the
+// provider's untouched payload.
+//
+// We used to read `message.content` and nothing else, so every response whose
+// normalization came back empty was indistinguishable from a dead provider.
+// Prod showed two such families, both on `gpt_oss_120b`:
+//
+//   * `keys=message,raw,usage reason=none content=string(0)` (2026-09-13) —
+//     the normalized field is an empty STRING while `raw` still carries the
+//     provider payload we never looked at.
+//   * `parts[1] types=thinking thinkingChars=1515` (2026-08-14) — a lone
+//     reasoning part: the model spent its whole output budget thinking.
+//
+// Both surfaced downstream as `[cluster-*] genText returned null … AI proxy
+// down/rate-limited`, an assertion nothing in the 200 response supported. So:
+// look in every field an answer can legitimately arrive in (including `raw`,
+// in each upstream API's shape), and when there genuinely is no answer, say
+// WHICH of the three causes it was.
+
 interface ContentPart {
-  type: string;
+  type?: string;
   text?: string;
   thinking?: string;
+  reasoning?: string;
+  content?: unknown;
 }
-/** The proxy returns `message.content` as a string OR an array of parts
- *  (gpt → string; reasoning models → [{type:'thinking'}, {type:'text'}]). */
-function extractContent(data: unknown): string {
-  const msg = (data as { message?: { content?: unknown }; content?: unknown })
-    .message;
-  const content = msg?.content ?? (data as { content?: unknown }).content;
-  if (typeof content === 'string') return content.trim();
-  if (Array.isArray(content)) {
-    const text = (content as ContentPart[])
-      .filter((p) => p.type === 'text' && typeof p.text === 'string')
-      .map((p) => p.text)
-      .join('')
-      .trim();
-    return text;
+
+/** The proxy envelope, plus the fields sibling clients have been seen to use. */
+interface ProxyEnvelope {
+  message?: { content?: unknown };
+  content?: unknown;
+  response?: unknown;
+  text?: unknown;
+  output_text?: unknown;
+  raw?: unknown;
+  finish_reason?: string;
+  stop_reason?: string;
+}
+
+/** The provider payload under `raw`, in the shapes the upstream APIs use. */
+interface RawPayload {
+  choices?: {
+    message?: { content?: unknown };
+    delta?: { content?: unknown };
+    text?: unknown;
+  }[];
+  content?: unknown;
+  output?: { content?: unknown }[];
+  output_text?: unknown;
+  candidates?: { content?: { parts?: unknown } }[];
+  message?: { content?: unknown };
+  response?: unknown;
+}
+
+/**
+ * Part types that carry a model's REASONING, never its answer. Their text is
+ * counted (so the diagnostics can say "it thought but never answered") and
+ * never returned: a chain of thought is not publishable copy, and handing it
+ * back would print raw reasoning on the story page.
+ */
+const REASONING_PART_TYPES = new Set([
+  'thinking',
+  'reasoning',
+  'redacted_thinking',
+  'reasoning_content',
+  'thought',
+]);
+
+type ExtractCause =
+  /** Real text was found. */
+  | 'ok'
+  /** 200 carrying reasoning but no answer — the model ran out of output budget
+   *  inside its thinking block. Worth retrying with a bigger budget. */
+  | 'thinking-only'
+  /** 200 whose answer field is present and genuinely empty (content filter,
+   *  refusal, zero-token completion). Worth one retry; may just repeat. */
+  | 'provider-empty'
+  /** 200 with no field we recognise as an answer. NOT worth retrying — the
+   *  same shape comes back — and a signal the proxy's envelope changed. */
+  | 'unrecognized-shape';
+
+interface Extracted {
+  text: string;
+  /** Which field the text came from — a breadcrumb when it wasn't the usual
+   *  one, so a proxy-side normalization regression is visible in telemetry. */
+  source: string;
+  cause: ExtractCause;
+  thinkingChars: number;
+}
+
+interface Harvest {
+  text: string;
+  thinking: number;
+}
+
+const EMPTY_HARVEST: Harvest = { text: '', thinking: 0 };
+
+/**
+ * Pull answer text (and count reasoning characters) out of one `content`
+ * value, which may be a string, an array of parts, a single part object, or a
+ * part whose own `content` nests another of those.
+ */
+function harvest(value: unknown, depth = 0): Harvest {
+  if (depth > 4) return EMPTY_HARVEST;
+  if (typeof value === 'string') return { text: value, thinking: 0 };
+  if (Array.isArray(value)) {
+    let text = '';
+    let thinking = 0;
+    for (const entry of value) {
+      const got = harvest(entry, depth + 1);
+      text += got.text;
+      thinking += got.thinking;
+    }
+    return { text, thinking };
   }
-  return '';
+  if (typeof value === 'object' && value !== null) {
+    const part = value as ContentPart;
+    if (part.type !== undefined && REASONING_PART_TYPES.has(part.type)) {
+      // Providers spell the trace differently: `thinking` (Anthropic format),
+      // `reasoning` (OpenAI-compatible gateways), or plain `text`/`content`
+      // carried under a reasoning type. Count it; never return it.
+      const trace =
+        part.thinking ??
+        part.reasoning ??
+        part.text ??
+        (typeof part.content === 'string' ? part.content : undefined);
+      return {
+        text: '',
+        thinking: typeof trace === 'string' ? trace.length : 0,
+      };
+    }
+    if (typeof part.text === 'string') return { text: part.text, thinking: 0 };
+    if (part.content !== undefined) return harvest(part.content, depth + 1);
+  }
+  return EMPTY_HARVEST;
+}
+
+/** Answer-bearing fields of the provider payload, in each upstream API's shape.
+ *  Only consulted once the proxy's own normalized fields come back empty. */
+function rawCandidates(raw: unknown): [string, unknown][] {
+  let value = raw;
+  if (typeof value === 'string') {
+    try {
+      value = JSON.parse(value);
+    } catch {
+      return [];
+    }
+  }
+  if (typeof value !== 'object' || value === null) return [];
+  const payload = value as RawPayload;
+  const out: [string, unknown][] = [];
+  // OpenAI chat completions — and every OpenAI-compatible gateway, which is
+  // how `gpt_oss_120b` is reached.
+  for (const [i, choice] of (payload.choices ?? []).entries()) {
+    if (typeof choice !== 'object' || choice === null) continue;
+    out.push([`raw.choices[${String(i)}].message.content`, choice.message?.content]);
+    out.push([`raw.choices[${String(i)}].delta.content`, choice.delta?.content]);
+    out.push([`raw.choices[${String(i)}].text`, choice.text]);
+  }
+  // Anthropic messages: a top-level parts array.
+  out.push(['raw.content', payload.content]);
+  // OpenAI Responses API.
+  out.push(['raw.output_text', payload.output_text]);
+  for (const [i, item] of (payload.output ?? []).entries()) {
+    if (typeof item !== 'object' || item === null) continue;
+    out.push([`raw.output[${String(i)}].content`, item.content]);
+  }
+  // Google generateContent.
+  for (const [i, candidate] of (payload.candidates ?? []).entries()) {
+    if (typeof candidate !== 'object' || candidate === null) continue;
+    out.push([
+      `raw.candidates[${String(i)}].content.parts`,
+      candidate.content?.parts,
+    ]);
+  }
+  out.push(['raw.message.content', payload.message?.content]);
+  out.push(['raw.response', payload.response]);
+  return out;
+}
+
+/**
+ * Find the model's answer anywhere it can legitimately be, and when there is
+ * none, classify WHY. Never throws; never returns reasoning as the answer.
+ */
+export function extractText(data: unknown): Extracted {
+  const envelope: ProxyEnvelope =
+    typeof data === 'object' && data !== null ? data : {};
+  const candidates: [string, unknown][] = [
+    ['message.content', envelope.message?.content],
+    ['content', envelope.content],
+    ['response', envelope.response],
+    ['text', envelope.text],
+    ['output_text', envelope.output_text],
+    ...rawCandidates(envelope.raw),
+  ];
+  let thinkingChars = 0;
+  let sawAnswerField = false;
+  for (const [source, value] of candidates) {
+    if (value === undefined || value === null) continue;
+    sawAnswerField = true;
+    const got = harvest(value);
+    thinkingChars += got.thinking;
+    const text = got.text.trim();
+    if (text) return { text, source, cause: 'ok', thinkingChars };
+  }
+  const cause: ExtractCause =
+    thinkingChars > 0
+      ? 'thinking-only'
+      : sawAnswerField
+        ? 'provider-empty'
+        : 'unrecognized-shape';
+  return { text: '', source: 'none', cause, thinkingChars };
 }
 
 /**
  * One-line description of a 200 response that yielded no usable text, for the
  * telemetry message. Reports the top-level keys, the stop/finish reason, the
  * shape of `content`, and — when it is a parts array — which part types came
- * back and how much `thinking` there was. That distinguishes the three causes
- * we cannot currently tell apart: a filtered/empty completion, a response that
- * spent its whole token budget on `thinking`, and a body shape `extractContent`
- * no longer recognises. Never throws and never logs message text.
+ * back and how much `thinking` there was, plus the keys of the provider
+ * payload we fell through to. Never throws and never logs message text.
  */
 function describeEmptyBody(data: unknown): string {
   try {
@@ -188,17 +381,12 @@ function describeEmptyBody(data: unknown): string {
     const keys = Object.keys(d ?? {})
       .slice(0, 8)
       .join(',');
-    const body = d as {
-      message?: { content?: unknown };
-      content?: unknown;
-      finish_reason?: string;
-      stop_reason?: string;
-    };
-    const content = body?.message?.content ?? body?.content;
-    const reason = body?.finish_reason ?? body?.stop_reason ?? 'none';
+    const body = (d ?? {}) as ProxyEnvelope;
+    const content = body.message?.content ?? body.content;
+    const reason = body.finish_reason ?? body.stop_reason ?? 'none';
     let shape: string;
     if (typeof content === 'string') {
-      shape = `string(${content.length})`;
+      shape = `string(${String(content.length)})`;
     } else if (Array.isArray(content)) {
       const parts = content as ContentPart[];
       const types = [...new Set(parts.map((p) => p?.type ?? '?'))].join('|');
@@ -206,18 +394,31 @@ function describeEmptyBody(data: unknown): string {
         (n, p) => n + (typeof p?.thinking === 'string' ? p.thinking.length : 0),
         0,
       );
-      shape = `parts[${parts.length}] types=${types} thinkingChars=${thinking}`;
+      shape = `parts[${String(parts.length)}] types=${types} thinkingChars=${String(thinking)}`;
     } else {
       shape = content === undefined ? 'missing' : typeof content;
     }
-    return `keys=${keys} reason=${reason} content=${shape}`;
+    // `raw` is where a real answer hid while `message.content` was empty, so
+    // name its keys: that is what tells a proxy-normalization bug apart from a
+    // provider that genuinely returned nothing.
+    const raw = body.raw;
+    const rawShape =
+      raw === undefined
+        ? ''
+        : ` raw=${
+            typeof raw === 'object' && raw !== null
+              ? `keys(${Object.keys(raw).slice(0, 6).join('|')})`
+              : typeof raw
+          }`;
+    return `keys=${keys} reason=${reason} content=${shape}${rawShape}`;
   } catch {
     return 'undescribable';
   }
 }
 
 /**
- * Models that ALWAYS emit `thinking` blocks, and what that costs us.
+ * Models that emit `thinking` blocks out of a SHARED output budget, and what
+ * that costs us.
  *
  * `deepseek_v4_flash` reaches DeepSeek's Anthropic-format gateway
  * (`api.deepseek.com/anthropic/v1/messages`). Two facts combine badly there:
@@ -229,24 +430,45 @@ function describeEmptyBody(data: unknown): string {
  *      DeepSeek entry, and the gateway silently ignores `budget_tokens`, so
  *      there is no way to bound the thinking half from the request.
  *
- * So a small `maxTokens` is spent entirely inside the thinking block and the
- * model is cut off before it emits a single `text` part. `extractContent` then
- * correctly finds no text and genText returns null. That is the whole of the
- * "200 OK but no text content … types=thinking" family — 3,835 events in one
- * day on v0.1.57 — plus its downstream "[cluster-synth] non-substantive
- * summary (0c)" (6,241 events). The worst case was silent rather than noisy:
- * `detectIfAdvertisement` asked for `maxTokens: 10`, which can NEVER fit
- * thinking + an answer, so it returned null on every call and every article
- * was classified "not an ad".
+ * `gpt_oss_120b` is the same trap by a different route: gpt-oss emits a
+ * harmony reasoning preamble before its visible text, out of the same
+ * `maxTokens` budget. That is already documented at the ad-gate call site
+ * (`AD_DETECTION_MAX_TOKENS`, where a budget of 10 returned empty content on
+ * EVERY call) and it is what produced `types=thinking thinkingChars=1515`
+ * here. It is missing `thinkingSupport` in the model catalog, so there is no
+ * effort knob to turn — only headroom.
  *
- * The caller's `maxTokens` means "how much TEXT I want". Add the thinking
+ * So a small `maxTokens` is spent entirely inside the reasoning block and the
+ * model is cut off before it emits a single `text` part. `extractText` then
+ * correctly finds no answer and reports `cause=thinking-only`.
+ *
+ * The caller's `maxTokens` means "how much TEXT I want". Add the reasoning
  * allowance on top of it rather than making every call site remember this, and
- * hold effort at `low` — headroom alone still overflows if the default effort
- * drifts up. Unused budget is not billed (output tokens are charged as
- * generated), so a generous reserve is free.
+ * hold effort at `low` where the model HAS an effort knob — headroom alone
+ * still overflows if the default effort drifts up. Unused budget is not billed
+ * (output tokens are charged as generated), so a generous reserve is free.
  */
-const THINKING_MODELS = new Set(['deepseek_v4_flash', 'deepseek_v4_pro']);
+const THINKING_RESERVE_MODELS = new Set([
+  'deepseek_v4_flash',
+  'deepseek_v4_pro',
+  'gpt_oss_120b',
+]);
+/** Subset of the above that accepts `reasoningEffort` (has `thinkingSupport`
+ *  in the framework's model catalog). gpt-oss does not, so it gets headroom
+ *  only — sending an effort it cannot honour buys nothing. */
+const LOW_EFFORT_MODELS = new Set(['deepseek_v4_flash', 'deepseek_v4_pro']);
 const THINKING_TOKEN_RESERVE = 2048;
+
+/**
+ * Attempts allowed for a 200 that parsed but carried no answer. This is NOT
+ * the transport retry (`postAi` handles 429/5xx/network); it is the "provider
+ * answered, with nothing" case, which used to be a hard drop. The retry buys
+ * another `THINKING_TOKEN_RESERVE` of output budget, so a response truncated
+ * inside its reasoning block gets room to actually answer the second time
+ * instead of re-rolling the same dice. `pace()` already spaces consecutive
+ * proxy calls by MIN_CALL_GAP_MS, which is the backoff between them.
+ */
+const EMPTY_COMPLETION_ATTEMPTS = 2;
 
 /** Owner-billed text generation via the ugly.bot AI proxy. */
 export async function genText(
@@ -258,58 +480,67 @@ export async function genText(
     console.warn('[news/ai] genText: AI_PROXY_TOKEN not set');
     return null;
   }
-  const thinks = THINKING_MODELS.has(opts.model);
-  const maxTokens =
-    opts.maxTokens !== undefined && thinks
-      ? opts.maxTokens + THINKING_TOKEN_RESERVE
-      : opts.maxTokens;
-  const res = await postAi(baseUrl, '/text', token, {
-    model: opts.model,
-    messages,
-    userId: 'uglyBot',
-    options: {
-      ...(opts.temperature !== undefined
-        ? { temperature: opts.temperature }
-        : {}),
-      ...(maxTokens !== undefined ? { maxTokens } : {}),
-      ...(thinks ? { reasoningEffort: 'low' as const } : {}),
-    },
-  });
-  if (!res) {
-    console.warn('[news/ai] genText: no response after retries');
-    return null;
-  }
-  if (!res.ok) {
-    console.warn(
-      `[news/ai] genText ${res.status}: ${(await res.text().catch(() => '')).slice(0, 200)}`,
-    );
-    return null;
-  }
-  try {
-    const data: unknown = await res.json();
-    const content = extractContent(data);
-    if (!content) {
-      // A 200 with no usable text (content filter, all-thinking response, or an
-      // unrecognised body shape) used to return null with NO log at all — the
-      // one failure branch here that left no trace, so callers reported
-      // "genText returned null" with nothing upstream to explain it.
-      //
-      // Naming the model still wasn't enough: 1,111 of these landed in one day
-      // (2026-07-26) and every row looked identical, so there was no way to tell
-      // a content filter from an all-`thinking` response from a body shape we
-      // stopped recognising. Describe the BODY here — interpolated into the
-      // message, because telemetry keeps only the message string and drops any
-      // object argument.
+  const reserves = THINKING_RESERVE_MODELS.has(opts.model);
+  const lowEffort = LOW_EFFORT_MODELS.has(opts.model);
+  for (let attempt = 1; attempt <= EMPTY_COMPLETION_ATTEMPTS; attempt++) {
+    // Base reserve for models that think, plus one more reserve per retry —
+    // an empty completion is most often a budget that never reached the text.
+    const boost =
+      (reserves ? THINKING_TOKEN_RESERVE : 0) +
+      (attempt - 1) * THINKING_TOKEN_RESERVE;
+    const maxTokens =
+      opts.maxTokens !== undefined ? opts.maxTokens + boost : undefined;
+    const res = await postAi(baseUrl, '/text', token, {
+      model: opts.model,
+      messages,
+      userId: 'uglyBot',
+      options: {
+        ...(opts.temperature !== undefined
+          ? { temperature: opts.temperature }
+          : {}),
+        ...(maxTokens !== undefined ? { maxTokens } : {}),
+        ...(lowEffort ? { reasoningEffort: 'low' as const } : {}),
+      },
+    });
+    if (!res) {
+      console.warn('[news/ai] genText: no response after retries');
+      return null;
+    }
+    if (!res.ok) {
       console.warn(
-        `[news/ai] genText: ${res.status} OK but no text content (model=${opts.model}) shape=${describeEmptyBody(data)}`,
+        `[news/ai] genText ${res.status}: ${(await res.text().catch(() => '')).slice(0, 200)}`,
       );
       return null;
     }
-    return content;
-  } catch (error) {
-    console.warn('[news/ai] genText: failed to parse response', error);
-    return null;
+    let data: unknown;
+    try {
+      data = await res.json();
+    } catch (error) {
+      console.warn('[news/ai] genText: failed to parse response body', error);
+      return null;
+    }
+    const got = extractText(data);
+    if (got.text) {
+      if (got.source !== 'message.content') {
+        // The proxy's normalized field was empty and the answer was elsewhere.
+        // Worth one line: it means the envelope moved, not that anything broke.
+        console.warn(
+          `[news/ai] genText: answer recovered from ${got.source} (model=${opts.model}) — message.content held no text`,
+        );
+      }
+      return got.text;
+    }
+    // A 200 with no usable text used to return null with no log at all, then
+    // (from 2026-07) with a shape descriptor but no verdict. Say which of the
+    // three causes it was, so nobody has to guess "AI proxy down" again.
+    console.warn(
+      `[news/ai] genText: ${res.status} OK but no text content (model=${opts.model}) cause=${got.cause} attempt=${String(attempt)}/${String(EMPTY_COMPLETION_ATTEMPTS)} shape=${describeEmptyBody(data)}`,
+    );
+    // An unrecognised envelope will be unrecognised again — retrying it only
+    // spends money. Empty/thinking-only responses get the bigger budget.
+    if (got.cause === 'unrecognized-shape') return null;
   }
+  return null;
 }
 
 /** Owner-billed image generation (returns a URL or data URI), or null. */

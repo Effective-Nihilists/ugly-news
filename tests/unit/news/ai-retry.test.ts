@@ -260,12 +260,16 @@ describe('empty-completion diagnostics', () => {
           ),
       ),
     );
+    // An empty 200 is now retried once (with a bigger output budget) before
+    // genText gives up, and the pacing gate spaces the two calls — so drive
+    // this on fake timers rather than waiting out the real gap.
+    vi.useFakeTimers();
     const { genText } = await import('../../../server/news/ai');
-    expect(
-      await genText([{ role: 'user', content: 'story' }], {
-        model: 'deepseek_v4_flash',
-      }),
-    ).toBeNull();
+    const promise = genText([{ role: 'user', content: 'story' }], {
+      model: 'deepseek_v4_flash',
+    });
+    await vi.runAllTimersAsync();
+    expect(await promise).toBeNull();
 
     const row = warnings.find((w) => w.includes('no text content'))!;
     expect(row).toContain('reason=length');
@@ -288,12 +292,13 @@ describe('empty-completion diagnostics', () => {
           }),
       ),
     );
+    vi.useFakeTimers();
     const { genText } = await import('../../../server/news/ai');
-    expect(
-      await genText([{ role: 'user', content: 'story' }], {
-        model: 'deepseek_v4_flash',
-      }),
-    ).toBeNull();
+    const promise = genText([{ role: 'user', content: 'story' }], {
+      model: 'deepseek_v4_flash',
+    });
+    await vi.runAllTimersAsync();
+    expect(await promise).toBeNull();
 
     const row = warnings.find((w) => w.includes('no text content'))!;
     expect(row).toContain('content=string(3)');

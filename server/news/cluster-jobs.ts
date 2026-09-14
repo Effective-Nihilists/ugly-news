@@ -224,7 +224,7 @@ export async function dispatchClusterSynthesize(
     isSubstantiveSummary(nextNeutral) && isSubstantiveSummary(nextFraming);
   if (!neutral && !framing) {
     console.error(
-      `[cluster-synth] both summaries non-substantive for ${clusterId} after retry — AI proxy down/truncating; leaving for next sweep`,
+      `[cluster-synth] no usable summary for ${clusterId} after retries — see the preceding [news/ai] line for the cause (HTTP status, empty completion, or unparsed response shape); leaving for next sweep`,
     );
   } else {
     console.log(
@@ -374,9 +374,18 @@ async function genSummary(
       },
     );
     if (isSubstantiveSummary(out)) return out;
+    if (out === null) {
+      // genText has ALREADY retried a 200-with-no-answer once, with a larger
+      // output budget, and logged which of the three causes it was. Re-rolling
+      // the identical call here only spends money on the same outcome.
+      console.warn(
+        '[cluster-synth] genText produced no text (cause logged by [news/ai]) — not re-rolling',
+      );
+      return null;
+    }
     if (attempt === 0) {
       console.warn(
-        `[cluster-synth] non-substantive summary (${(out ?? '').length}c) — retrying once`,
+        `[cluster-synth] non-substantive summary (${out.length}c) — retrying once`,
       );
     }
   }
@@ -444,7 +453,7 @@ export async function dispatchClusterSatirize(
   );
   if (!markdown) {
     console.error(
-      `[cluster-satire] genText returned null for ${clusterId} — AI proxy down/rate-limited; no Ugly Take generated`,
+      `[cluster-satire] no Ugly Take for ${clusterId}: genText produced no usable text after retries — see the preceding [news/ai] line for the cause (HTTP status, empty completion, or unparsed response shape)`,
     );
     return;
   }
