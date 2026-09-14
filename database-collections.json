@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-13T19:29:23.829Z",
+  "generatedAt": "2026-09-14T00:15:04.531Z",
   "source": "shared/collections.ts",
   "collections": {
     "authMagicLink": {
@@ -39,6 +39,50 @@
               "email": 1
             }
           },
+          {
+            "fields": {
+              "expiresAt": 1
+            },
+            "ttl": 86400
+          }
+        ]
+      },
+      "meta": {
+        "cache": false,
+        "trackable": false,
+        "public": false,
+        "cascadeFrom": null,
+        "db": {
+          "kind": "d1"
+        }
+      }
+    },
+    "authEmailCode": {
+      "name": "authEmailCode",
+      "schema": {
+        "fields": {
+          "attempts": {
+            "type": "number",
+            "required": true
+          },
+          "codeHash": {
+            "type": "string",
+            "required": true
+          },
+          "createdAt": {
+            "type": "number",
+            "required": true
+          },
+          "email": {
+            "type": "string",
+            "required": true
+          },
+          "expiresAt": {
+            "type": "number",
+            "required": true
+          }
+        },
+        "indexes": [
           {
             "fields": {
               "expiresAt": 1

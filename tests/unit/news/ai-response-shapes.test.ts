@@ -132,7 +132,9 @@ describe('extractText: response shapes the proxy returns', () => {
   it('reads the Google generateContent raw payload', () => {
     const got = extractText({
       message: { content: [] },
-      raw: { candidates: [{ content: { parts: [{ text: 'Gemini answer.' }] } }] },
+      raw: {
+        candidates: [{ content: { parts: [{ text: 'Gemini answer.' }] } }],
+      },
     });
     expect(got.text).toBe('Gemini answer.');
     expect(got.source).toBe('raw.candidates[0].content.parts');
@@ -165,7 +167,9 @@ describe('extractText: response shapes the proxy returns', () => {
 
   it('unwraps a part whose own `content` nests the text', () => {
     const got = extractText({
-      message: { content: [{ type: 'message', content: [{ text: 'nested' }] }] },
+      message: {
+        content: [{ type: 'message', content: [{ text: 'nested' }] }],
+      },
     });
     expect(got.text).toBe('nested');
   });
@@ -253,7 +257,11 @@ describe('genText: empty-completion retry and honest diagnostics', () => {
     // second attempt must ASK FOR MORE ROOM, not re-roll the same request.
     const { out, sent } = await run(
       [
-        { message: { content: [{ type: 'thinking', thinking: 'x'.repeat(1515) }] } },
+        {
+          message: {
+            content: [{ type: 'thinking', thinking: 'x'.repeat(1515) }],
+          },
+        },
         { message: { content: [{ type: 'text', text: 'The real summary.' }] } },
       ],
       { model: 'gpt_oss_120b', maxTokens: 500 },

@@ -309,8 +309,14 @@ function rawCandidates(raw: unknown): [string, unknown][] {
   // how `gpt_oss_120b` is reached.
   for (const [i, choice] of (payload.choices ?? []).entries()) {
     if (typeof choice !== 'object' || choice === null) continue;
-    out.push([`raw.choices[${String(i)}].message.content`, choice.message?.content]);
-    out.push([`raw.choices[${String(i)}].delta.content`, choice.delta?.content]);
+    out.push([
+      `raw.choices[${String(i)}].message.content`,
+      choice.message?.content,
+    ]);
+    out.push([
+      `raw.choices[${String(i)}].delta.content`,
+      choice.delta?.content,
+    ]);
     out.push([`raw.choices[${String(i)}].text`, choice.text]);
   }
   // Anthropic messages: a top-level parts array.
