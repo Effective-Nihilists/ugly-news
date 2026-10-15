@@ -27,6 +27,36 @@ const PUBLIC_URL = (envVar('PUBLIC_URL') || 'https://ugly.press').replace(
  * Auth uses any non-revoked app token (Mode A mints no owner AI token, so
  * AI_PROXY_TOKEN may be empty — prefer the email/search token).
  */
+// ─── Share-link minting, spread out ────────────────────────────────────────
+// One daily email mints ~15 links (hero, trending, picks, spotlight, top
+// stories, blindspots, Ugly Take, podcast, home), and every call used to fire
+// at once through nested Promise.alls. On 2026-10-13 that burst landed while
+// ugly.bot's D1 was shedding load and linkCreate 500'd ("D1 DB is overloaded").
+// The framework already degrades a failed mint to the bare target URL — the
+// email still sends with working links — so this only caps how many mints are
+// in flight per isolate, turning the spike into a short queue.
+const LINK_MINT_CONCURRENCY = 3;
+let linkMintsInFlight = 0;
+const linkMintWaiters: (() => void)[] = [];
+
+export async function mintShareLink(
+  opts: Parameters<typeof shareLink>[0],
+): Promise<string> {
+  if (linkMintsInFlight >= LINK_MINT_CONCURRENCY) {
+    // The finishing mint hands its slot straight to us (count unchanged).
+    await new Promise<void>((resolve) => linkMintWaiters.push(resolve));
+  } else {
+    linkMintsInFlight++;
+  }
+  try {
+    return await shareLink(opts);
+  } finally {
+    const next = linkMintWaiters.shift();
+    if (next) next();
+    else linkMintsInFlight--;
+  }
+}
+
 export async function resolveUserEmail(userId: string): Promise<string | null> {
   const base = (envVar('AI_PROXY_URL') || 'https://ugly.bot/v1/ai').replace(
     /\/ai\/?$/,
@@ -80,7 +110,7 @@ async function fileToEmailArticle(
     title,
     summary,
     thumbnailUri,
-    uri: await shareLink({
+    uri: await mintShareLink({
       // Prefer the article's cluster ("three ways") page over the standalone
       // article when it belongs to one.
       target: `${PUBLIC_URL}/${file.clusterId ? `story/${encodeURIComponent(file.clusterId)}` : `article/${encodeURIComponent(file._id)}`}`,
@@ -228,7 +258,7 @@ async function clusterToEmail(
     blindspotSide: c.blindspotSide,
     sourceCount: c.sourceIds.length,
     factuality: factLabel(c.factualityAvg),
-    uri: await shareLink({
+    uri: await mintShareLink({
       target: `${PUBLIC_URL}/story/${encodeURIComponent(c._id)}`,
       og: {
         title: c.title,
@@ -311,7 +341,7 @@ export async function selectEmailUglyTake(
     category: c.category,
     snippet,
     imageUri,
-    uri: await shareLink({
+    uri: await mintShareLink({
       target: `${PUBLIC_URL}/ugly-take/${encodeURIComponent(c._id)}`,
       og: {
         title,
@@ -493,7 +523,7 @@ export async function dispatchUserPrivateNewsEmail(
       ? {
           title: podcast.title,
           duration: `${Math.round(podcast.durationMs / 60000)} min`,
-          uri: await shareLink({
+          uri: await mintShareLink({
             target: `${PUBLIC_URL}/podcast`,
             og: { title: podcast.title },
           }),
@@ -507,7 +537,7 @@ export async function dispatchUserPrivateNewsEmail(
     return;
   }
 
-  const homeUrl = await shareLink({
+  const homeUrl = await mintShareLink({
     target: `${PUBLIC_URL}/`,
     og: { title: DEFAULT_STRINGS.greeting },
   });

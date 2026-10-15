@@ -12,6 +12,7 @@ import type { NewsCategory } from '../../shared/news/types';
 import {
   generateUglyPressImage,
   genText,
+  type GenTextFailure,
   truncateToApproximateTokens,
 } from './ai';
 import type { NewsDb } from './db';
@@ -171,6 +172,11 @@ function buildCoverageContext(
     .join('\n\n');
 }
 
+/** `kind: detail` — one line for a log message. */
+function describeGenTextFailure(f: GenTextFailure | undefined): string {
+  return f ? `${f.kind}: ${f.detail}` : 'unknown (genText reported no cause)';
+}
+
 /** Generate the neutral + framing summaries for a multi-side cluster. */
 export async function dispatchClusterSynthesize(
   db: NewsDb,
@@ -205,14 +211,17 @@ export async function dispatchClusterSynthesize(
   );
   const context = buildCoverageContext(files);
 
+  const failures: GenTextFailure[] = [];
   const [neutral, framing] = await Promise.all([
     genSummary(NEUTRAL_PROMPT, c.title, context, {
       temperature: 0.3,
       maxTokens: 500,
+      onFailure: (f) => failures.push(f),
     }),
     genSummary(FRAMING_PROMPT, c.title, context, {
       temperature: 0.4,
       maxTokens: 320,
+      onFailure: (f) => failures.push(f),
     }),
   ]);
 
@@ -223,8 +232,13 @@ export async function dispatchClusterSynthesize(
   const bothGood =
     isSubstantiveSummary(nextNeutral) && isSubstantiveSummary(nextFraming);
   if (!neutral && !framing) {
-    console.error(
-      `[cluster-synth] no usable summary for ${clusterId} after retries — see the preceding [news/ai] line for the cause (HTTP status, empty completion, or unparsed response shape); leaving for next sweep`,
+    // The cause rides in THIS message (see genText's onFailure). An upstream
+    // proxy/provider failure is a warn — the sweep re-picks the cluster and
+    // nothing here can fix it; a 200 with no usable answer stays an error.
+    const upstream =
+      failures.length > 0 && failures.every((f) => f.kind === 'transport');
+    (upstream ? console.warn : console.error)(
+      `[cluster-synth] no usable summary for ${clusterId} after retries — cause: ${describeGenTextFailure(failures[0])}; leaving for next sweep`,
     );
   } else {
     console.log(
@@ -354,7 +368,11 @@ async function genSummary(
   system: string,
   title: string,
   context: string,
-  opts: { temperature: number; maxTokens: number },
+  opts: {
+    temperature: number;
+    maxTokens: number;
+    onFailure: (f: GenTextFailure) => void;
+  },
 ): Promise<string | null> {
   for (let attempt = 0; attempt < 2; attempt++) {
     const out = await genText(
@@ -371,16 +389,15 @@ async function genSummary(
         model: 'gpt_oss_120b',
         temperature: opts.temperature,
         maxTokens: opts.maxTokens,
+        onFailure: opts.onFailure,
       },
     );
     if (isSubstantiveSummary(out)) return out;
     if (out === null) {
       // genText has ALREADY retried a 200-with-no-answer once, with a larger
-      // output budget, and logged which of the three causes it was. Re-rolling
-      // the identical call here only spends money on the same outcome.
-      console.warn(
-        '[cluster-synth] genText produced no text (cause logged by [news/ai]) — not re-rolling',
-      );
+      // output budget, and reported the cause via onFailure (the caller logs
+      // it). Re-rolling the identical call here only spends money on the
+      // same outcome.
       return null;
     }
     if (attempt === 0) {
@@ -439,6 +456,7 @@ export async function dispatchClusterSatirize(
     `[cluster-satire] generating Ugly Take for ${clusterId} "${c.title.slice(0, 60)}"`,
   );
   const basis = c.neutralSummary ?? c.title;
+  let satireFailure: GenTextFailure | undefined;
   const markdown = await genText(
     [
       { role: 'system', content: SATIRE_PROMPT },
@@ -449,11 +467,18 @@ export async function dispatchClusterSatirize(
     ],
     // Was gpt_4o ($2.50/$10 per 1M). 741 calls a week at $3.32 for files
     // stored public:false and reachable only from a cluster page.
-    { model: 'gpt_oss_120b', temperature: 0.95, maxTokens: 700 },
+    {
+      model: 'gpt_oss_120b',
+      temperature: 0.95,
+      maxTokens: 700,
+      onFailure: (f) => {
+        satireFailure = f;
+      },
+    },
   );
   if (!markdown) {
-    console.error(
-      `[cluster-satire] no Ugly Take for ${clusterId}: genText produced no usable text after retries — see the preceding [news/ai] line for the cause (HTTP status, empty completion, or unparsed response shape)`,
+    (satireFailure?.kind === 'transport' ? console.warn : console.error)(
+      `[cluster-satire] no Ugly Take for ${clusterId} — cause: ${describeGenTextFailure(satireFailure)}`,
     );
     return;
   }

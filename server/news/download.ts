@@ -133,15 +133,44 @@ function retryAfterMs(res: Response, fallbackMs: number): number {
 
 const FEED_FETCH_RETRIES = 2;
 
+/**
+ * The same URL with a cache-key-busting query param. Cloudflare's cache key
+ * ignores the scheme, so a cached http→https redirect on a Cloudflare-fronted
+ * feed is served to https callers too and loops ("Too many redirects.
+ * https://techcrunch.com/feed/, https://techcrunch.com/feed/, …" — the feed is
+ * fine from anywhere else). A distinct query string misses that poisoned entry.
+ */
+export function cacheBustedFeedUrl(url: string, now = Date.now()): string {
+  const u = new URL(url);
+  u.searchParams.set('_ugly', String(Math.floor(now / 3_600_000)));
+  return u.toString();
+}
+
+function isRedirectLoop(error: unknown): boolean {
+  return /too many redirects/i.test(
+    error instanceof Error ? error.message : String(error),
+  );
+}
+
+async function fetchFeed(url: string): Promise<Response> {
+  const init = {
+    headers: {
+      'user-agent':
+        'Mozilla/5.0 (compatible; UglyNews/1.0; +https://ugly.press)',
+    },
+  };
+  try {
+    return await fetch(url, init);
+  } catch (error) {
+    if (!isRedirectLoop(error)) throw error;
+    return fetch(cacheBustedFeedUrl(url), init);
+  }
+}
+
 async function fetchFeedItems(url: string): Promise<RSSItem[]> {
   let res!: Response;
   for (let attempt = 0; ; attempt++) {
-    res = await fetch(url, {
-      headers: {
-        'user-agent':
-          'Mozilla/5.0 (compatible; UglyNews/1.0; +https://ugly.press)',
-      },
-    });
+    res = await fetchFeed(url);
     if (res.ok) break;
     if (attempt >= FEED_FETCH_RETRIES || !isTransientStatus(res.status)) {
       throw new Error(`HTTP ${res.status}`);

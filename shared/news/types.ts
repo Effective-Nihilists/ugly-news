@@ -542,7 +542,8 @@ export const newsFeeds: NewsFeed[] = [
   {
     id: 'avclub',
     name: 'The A.V. Club',
-    url: 'https://www.avclub.com/rss',
+    // /rss 301s here (and 500'd on 2026-10-10 mid-redirect).
+    url: 'https://www.avclub.com/rss.xml',
     category: 'events',
   },
   {
@@ -638,7 +639,8 @@ export const newsFeeds: NewsFeed[] = [
   {
     id: 'ft',
     name: 'Financial Times',
-    url: 'https://www.ft.com/rss/home',
+    // /rss/home 301s here; follow it at the source instead of every fetch.
+    url: 'https://www.ft.com/rss/home/international',
     category: 'business',
   },
   // Tech

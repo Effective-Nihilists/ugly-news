@@ -476,18 +476,46 @@ const THINKING_TOKEN_RESERVE = 2048;
  */
 const EMPTY_COMPLETION_ATTEMPTS = 2;
 
+/**
+ * Why genText returned null. `transport` is the proxy/provider failing (HTTP
+ * status or network) — an upstream condition the next sweep retries; `empty`
+ * and `parse` are a 200 that carried no usable answer.
+ */
+export interface GenTextFailure {
+  kind: 'config' | 'transport' | 'parse' | 'empty';
+  detail: string;
+}
+
 /** Owner-billed text generation via the ugly.bot AI proxy. */
 export async function genText(
   messages: ChatMessage[],
-  opts: { model: string; temperature?: number; maxTokens?: number },
+  opts: {
+    model: string;
+    temperature?: number;
+    maxTokens?: number;
+    /**
+     * Called once, with a one-line cause, whenever genText returns null. The
+     * `[news/ai]` warn it also emits is a SEPARATE errorLog row and does not
+     * reliably land: on 2026-10-13 three `[cluster-*] … see the preceding
+     * [news/ai] line` errors were persisted with no [news/ai] row anywhere
+     * (coalesced by fingerprint or lost in the same D1-overload window). The
+     * caller folds this into its own message so the cause can't go missing.
+     */
+    onFailure?: (cause: GenTextFailure) => void;
+  },
 ): Promise<string | null> {
+  const fail = (cause: GenTextFailure): null => {
+    opts.onFailure?.(cause);
+    return null;
+  };
   const { baseUrl, token } = aiProxy();
   if (!token) {
     console.warn('[news/ai] genText: AI_PROXY_TOKEN not set');
-    return null;
+    return fail({ kind: 'config', detail: 'AI_PROXY_TOKEN not set' });
   }
   const reserves = THINKING_RESERVE_MODELS.has(opts.model);
   const lowEffort = LOW_EFFORT_MODELS.has(opts.model);
+  let lastEmpty = '';
   for (let attempt = 1; attempt <= EMPTY_COMPLETION_ATTEMPTS; attempt++) {
     // Base reserve for models that think, plus one more reserve per retry —
     // an empty completion is most often a budget that never reached the text.
@@ -510,20 +538,22 @@ export async function genText(
     });
     if (!res) {
       console.warn('[news/ai] genText: no response after retries');
-      return null;
+      return fail({ kind: 'transport', detail: 'network error after retries' });
     }
     if (!res.ok) {
-      console.warn(
-        `[news/ai] genText ${res.status}: ${(await res.text().catch(() => '')).slice(0, 200)}`,
-      );
-      return null;
+      const body = (await res.text().catch(() => '')).slice(0, 200);
+      console.warn(`[news/ai] genText ${res.status}: ${body}`);
+      return fail({
+        kind: 'transport',
+        detail: `HTTP ${String(res.status)} ${body.slice(0, 120)}`,
+      });
     }
     let data: unknown;
     try {
       data = await res.json();
     } catch (error) {
       console.warn('[news/ai] genText: failed to parse response body', error);
-      return null;
+      return fail({ kind: 'parse', detail: 'response body was not JSON' });
     }
     const got = extractText(data);
     if (got.text) {
@@ -544,9 +574,12 @@ export async function genText(
     );
     // An unrecognised envelope will be unrecognised again — retrying it only
     // spends money. Empty/thinking-only responses get the bigger budget.
-    if (got.cause === 'unrecognized-shape') return null;
+    lastEmpty = `${got.cause} model=${opts.model} shape=${describeEmptyBody(data)}`;
+    if (got.cause === 'unrecognized-shape') {
+      return fail({ kind: 'parse', detail: lastEmpty });
+    }
   }
-  return null;
+  return fail({ kind: 'empty', detail: lastEmpty });
 }
 
 /** Owner-billed image generation (returns a URL or data URI), or null. */
