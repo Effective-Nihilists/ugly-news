@@ -3,6 +3,7 @@ import { startUglyBotLogin, useAppOptional } from 'ugly-app/client';
 import { useRouter } from '../router';
 import { navClick } from '../nav';
 import { PlayIcon } from '../components/Icon';
+import { SafeImg } from '../components/SafeImg';
 import { requestPushPermission } from '../push';
 import {
   BlindspotStrip,
@@ -136,6 +137,34 @@ async function rpc<T>(name: string, input: unknown): Promise<T> {
 }
 
 /** Live front page — the real, clickable headlines pulled from newsLatest. */
+/** The lead slot's house pattern when the story has no usable image: none in
+ *  the RSS item, or the publisher's URL no longer loads. */
+function LeadPlaceholder(): React.ReactElement {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        display: 'grid',
+        placeItems: 'center',
+        background: `repeating-linear-gradient(45deg, ${C.ink}, ${C.ink} 11px, #241f1b 11px, #241f1b 22px)`,
+      }}
+    >
+      <span
+        style={{
+          fontFamily: 'Anton, sans-serif',
+          fontSize: 'clamp(36px,6vw,76px)',
+          color: 'rgba(241,236,224,0.16)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.04em',
+        }}
+      >
+        Ugly Press
+      </span>
+    </div>
+  );
+}
+
 function FrontPage(): React.ReactElement | null {
   const router = useRouter();
   const [items, setItems] = React.useState<NewsCard[] | null>(null);
@@ -255,7 +284,7 @@ function FrontPage(): React.ReactElement | null {
               }}
             >
               {lead.thumbnailUri ? (
-                <img
+                <SafeImg
                   src={lead.thumbnailUri}
                   alt=""
                   className="un-card-img"
@@ -267,29 +296,10 @@ function FrontPage(): React.ReactElement | null {
                     objectFit: 'cover',
                     display: 'block',
                   }}
+                  fallback={<LeadPlaceholder />}
                 />
               ) : (
-                <div
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    display: 'grid',
-                    placeItems: 'center',
-                    background: `repeating-linear-gradient(45deg, ${C.ink}, ${C.ink} 11px, #241f1b 11px, #241f1b 22px)`,
-                  }}
-                >
-                  <span
-                    style={{
-                      fontFamily: 'Anton, sans-serif',
-                      fontSize: 'clamp(36px,6vw,76px)',
-                      color: 'rgba(241,236,224,0.16)',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.04em',
-                    }}
-                  >
-                    Ugly Press
-                  </span>
-                </div>
+                <LeadPlaceholder />
               )}
             </div>
             {lead.category && (
@@ -406,25 +416,22 @@ function FrontPage(): React.ReactElement | null {
                   </div>
                 </div>
                 {a.thumbnailUri && (
-                  <div
-                    style={{
+                  <SafeImg
+                    frame={{
                       overflow: 'hidden',
                       border: `1px solid rgba(26,23,20,0.18)`,
                       alignSelf: 'start',
                     }}
-                  >
-                    <img
-                      src={a.thumbnailUri}
-                      alt=""
-                      className="un-card-img"
-                      style={{
-                        width: 84,
-                        height: 64,
-                        objectFit: 'cover',
-                        display: 'block',
-                      }}
-                    />
-                  </div>
+                    src={a.thumbnailUri}
+                    alt=""
+                    className="un-card-img"
+                    style={{
+                      width: 84,
+                      height: 64,
+                      objectFit: 'cover',
+                      display: 'block',
+                    }}
+                  />
                 )}
               </a>
             ))}
@@ -626,7 +633,7 @@ function PodcastSpotlight(): React.ReactElement {
             {thumbs.length > 0 && (
               <div style={{ display: 'flex', alignItems: 'center' }}>
                 {thumbs.map((a, i) => (
-                  <img
+                  <SafeImg
                     key={i}
                     src={a.imageUri!}
                     alt=""

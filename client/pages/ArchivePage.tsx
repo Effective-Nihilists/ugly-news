@@ -2,6 +2,7 @@ import React from 'react';
 import { useRouter } from '../router';
 import { navClick } from '../nav';
 import { PlayIcon } from '../components/Icon';
+import { SafeImg } from '../components/SafeImg';
 
 /**
  * The Archive (`archive` route) — browse every past story and podcast, with a
@@ -328,27 +329,24 @@ export default function ArchivePage(): React.ReactElement {
         </div>
       </div>
       {a.thumbnailUri && (
-        <div
-          style={{
+        <SafeImg
+          frame={{
             overflow: 'hidden',
             border: `1px solid rgba(26,23,20,0.18)`,
             alignSelf: 'stretch',
             minHeight: 84,
           }}
-        >
-          <img
-            src={a.thumbnailUri}
-            alt=""
-            className="ar-img"
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              display: 'block',
-              aspectRatio: '4/3',
-            }}
-          />
-        </div>
+          src={a.thumbnailUri}
+          alt=""
+          className="ar-img"
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            display: 'block',
+            aspectRatio: '4/3',
+          }}
+        />
       )}
     </a>
   );

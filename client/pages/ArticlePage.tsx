@@ -2,6 +2,7 @@ import React from 'react';
 import { useRouter } from '../router';
 import { navClick } from '../nav';
 import { PressHeader } from '../newsUi';
+import { SafeImg } from '../components/SafeImg';
 
 /** Ugly News article view (route `article/:id`). Newsprint editorial style,
  *  matching the home landing. Fetches the public newsArticleGet endpoint. */
@@ -289,7 +290,7 @@ export default function ArticlePage({
               </a>
             )}
             {article.thumbnailUri && (
-              <img
+              <SafeImg
                 src={article.thumbnailUri}
                 alt=""
                 style={{

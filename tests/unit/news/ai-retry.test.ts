@@ -192,7 +192,11 @@ describe('AI proxy burst pacing', () => {
     expect(firedAt[2]! - firedAt[1]!).toBeGreaterThanOrEqual(2400);
   });
 
-  it('backs off harder for 429 than for a 5xx blip', async () => {
+  it('spreads 5xx retries over tens of seconds, like a 429', async () => {
+    // 2026-10-13 03:39-03:43 UTC: ugly.bot's D1 shed load for four minutes and
+    // every /text call returned 500 ("D1 DB is overloaded"). The old 0.5/1/2s
+    // schedule put all four attempts inside the first ~4s of the outage, so
+    // the hourly sweep gave up on three clusters.
     const spanFor = async (status: number): Promise<number[]> => {
       vi.resetModules();
       vi.useFakeTimers();
@@ -218,9 +222,12 @@ describe('AI proxy burst pacing', () => {
 
     expect(rateLimited).toHaveLength(4);
     expect(serverBlip).toHaveLength(4);
-    // Third gap: 429 waits base 8s; a 5xx caps at base 2s (+jitter, +pacing).
+    // Three waits of base 2/4/8s (+ jitter, + pacing) for BOTH: at least 14s
+    // end to end, so a short overload has time to clear.
+    expect(rateLimited[3]! - rateLimited[0]!).toBeGreaterThanOrEqual(14_000);
+    expect(serverBlip[3]! - serverBlip[0]!).toBeGreaterThanOrEqual(14_000);
     expect(rateLimited[3]! - rateLimited[2]!).toBeGreaterThanOrEqual(8000);
-    expect(serverBlip[3]! - serverBlip[2]!).toBeLessThan(8000);
+    expect(serverBlip[3]! - serverBlip[2]!).toBeGreaterThanOrEqual(8000);
   });
 });
 

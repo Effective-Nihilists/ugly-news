@@ -47,6 +47,19 @@ describe('isTransientD1Error', () => {
     );
   });
 
+  it('recognizes a one-off internal D1 fault', () => {
+    // articleScrape, 2026-10-14 21:32 UTC: a fault inside D1 that carries a
+    // support reference, not a verdict on the statement. The queue consumer
+    // already re-delivers the message; this lets the in-process sites retry too.
+    expect(
+      isTransientD1Error(
+        new Error(
+          'D1_ERROR: internal error; reference = e_Gz3hrU_963c7afd73914adda0443a6e7fbce15f',
+        ),
+      ),
+    ).toBe(true);
+  });
+
   it('does NOT retry a row that will never fit', () => {
     // SQLITE_TOOBIG is deterministic — retrying just burns the queue budget.
     expect(

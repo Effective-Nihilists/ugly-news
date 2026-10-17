@@ -454,6 +454,12 @@ export const newsFeeds: NewsFeed[] = [
   {
     id: 'france24',
     name: 'France 24',
+    // Verified 2026-10-17: this URL serves RSS 2.0 (~31 KB) at 200 with any
+    // User-Agent, and it is where France 24's section feeds redirect
+    // (/en/top-stories/rss 301s here). The "[NEWS] RSS feed download failed
+    // [france24]: HTTP 404" row of 2026-10-14 09:26 UTC is the only one in 30
+    // days across every build: a CDN edge blip, not a moved feed. A 404 is
+    // retried like a 5xx now (isTransientStatus in server/news/download.ts).
     url: 'https://www.france24.com/en/rss',
     category: 'world',
   },

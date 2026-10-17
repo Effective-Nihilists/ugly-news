@@ -4,6 +4,7 @@ import { PodcastStage } from '../podcast/PodcastStage';
 import { useRouter } from '../router';
 import { navClick } from '../nav';
 import { PlayIcon, PauseIcon } from '../components/Icon';
+import { SafeImg } from '../components/SafeImg';
 
 /**
  * The Ugly Press — Daily Podcast (route `podcast`).
@@ -554,7 +555,7 @@ export default function PodcastPage(): React.ReactElement {
                           data-id="a"
                         >
                           {a.imageUri && (
-                            <img
+                            <SafeImg
                               src={a.imageUri}
                               alt=""
                               style={{

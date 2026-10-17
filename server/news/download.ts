@@ -7,6 +7,7 @@ import { isDefined, isStringEmpty } from '../../shared/news/Bot';
 import type { NewsFeed } from '../../shared/news/types';
 import { newsFeeds } from '../../shared/news/types';
 import type { NewsDb } from './db';
+import { withD1Retry } from './d1-retry';
 import { enqueueTask } from './queue';
 
 // Workers-safe RSS/Atom parsing: global fetch() + fast-xml-parser (pure JS).
@@ -107,15 +108,20 @@ function linkOf(item: RSSItem): string | null {
   return null;
 }
 
-/** Fetch a feed URL and normalize RSS 2.0 / Atom into a flat item list. */
 /**
  * Statuses worth another go: 429 (we're being rate-limited) and any 5xx —
  * notably Cloudflare's 522 origin-timeout, which is what `freebeacon` returned
  * while `time` returned 429. A single attempt dropped the whole feed for that
  * sweep ("[NEWS] RSS feed download failed [time]: HTTP 429").
+ *
+ * 404 is on the list from evidence, not theory: France 24's CDN edge served a
+ * single 404 for a feed URL that returned 200 before and after it (2026-10-14
+ * 09:26 UTC, the only such row in 30 days across every build; the URL is the
+ * one France 24's own section feeds redirect to). A feed that has really gone
+ * costs two extra fetches an hour; a blip no longer costs a sweep.
  */
-function isTransientStatus(status: number): boolean {
-  return status === 429 || status >= 500;
+export function isTransientStatus(status: number): boolean {
+  return status === 404 || status === 429 || status >= 500;
 }
 
 /** `Retry-After` in seconds or as an HTTP date; capped so one rude feed cannot
@@ -186,63 +192,10 @@ async function fetchFeedItems(url: string): Promise<RSSItem[]> {
   return parsed.rss?.channel?.item ?? parsed.feed?.entry ?? [];
 }
 
-// ─── Transient D1 retry ────────────────────────────────────────────────────
-// Every feed is dispatched at once (`newsRefreshAllFeeds`), and the resulting
-// burst pushed D1 past its queue depth: 22 articles were lost across
-// 2026-08-20..21 to `D1_ERROR: D1 DB is overloaded. Requests queued for too
-// long.`, each one logged by the per-item catch below and then silently
-// dropped. Those messages all describe a QUEUE, not a rejection — the same
-// class of failure `fetchFeedItems` already retries for HTTP.
-
-const D1_TRANSIENT_PATTERNS = [
-  'is overloaded',
-  'queued for too long',
-  'caused object to be reset',
-  'exceeded timeout',
-  'network connection lost',
-];
-
-/**
- * True when a D1 failure is a capacity/transport blip worth retrying.
- * Deterministic failures are excluded — `SQLITE_TOOBIG` fails identically on
- * every attempt, so retrying it only burns the queue worker's budget.
- */
-export function isTransientD1Error(error: unknown): boolean {
-  const message = (
-    error instanceof Error ? error.message : String(error)
-  ).toLowerCase();
-  if (message.includes('sqlite_toobig')) return false;
-  return D1_TRANSIENT_PATTERNS.some((p) => message.includes(p));
-}
-
-const D1_RETRY_ATTEMPTS = 4;
-const D1_RETRY_BASE_MS = 250;
-
-/**
- * Run a D1 operation, retrying transient overload with exponential backoff.
- * Rethrows on exhaustion so the caller's existing log still records the drop —
- * this makes losses rarer, it does not hide them.
- */
-export async function withD1Retry<T>(
-  op: () => Promise<T>,
-  deps: { sleep?: (ms: number) => Promise<void> } = {},
-): Promise<T> {
-  const sleep =
-    deps.sleep ??
-    ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
-  let lastError: unknown;
-  for (let attempt = 0; attempt < D1_RETRY_ATTEMPTS; attempt++) {
-    try {
-      return await op();
-    } catch (error) {
-      lastError = error;
-      if (!isTransientD1Error(error)) throw error;
-      if (attempt === D1_RETRY_ATTEMPTS - 1) break;
-      await sleep(D1_RETRY_BASE_MS * 2 ** attempt);
-    }
-  }
-  throw lastError;
-}
+// The transient D1 retry (`withD1Retry`) lives in ./d1-retry now, shared with
+// the daily retention cron. Re-exported here because this is where it was born
+// and where its tests import it from.
+export { isTransientD1Error, withD1Retry } from './d1-retry';
 
 /** Stable hex hash (FNV-1a, 32-bit) — Workers-safe, no md5 dependency. */
 function stableHash(input: string): string {

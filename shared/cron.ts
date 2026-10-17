@@ -6,11 +6,23 @@ import { defineWorker, defineWorkers, z } from 'ugly-app/shared';
 // tick in dev). Workers WITHOUT a schedule are queue-only jobs, invoked via
 // `getAdapter().schedule.enqueueWorker(name, input)` — used for per-feed /
 // per-article / per-user fan-out.
+// The one hourly Cloudflare trigger, shared by every hourly worker below.
+//
+// It used to be `0 * * * *`. The top of the hour is when every app's hourly
+// crons, ugly.bot's own, and the framework's */15 error alert all fire, and it
+// is when ugly.bot's D1 sheds load: on 2026-10-13 the daily email's share-link
+// mints got "D1 DB is overloaded" 500s from linkCreate. Seven minutes past
+// keeps the three hourly workers on ONE shared schedule string (the Worker's
+// cron trigger count is unchanged; Cloudflare caps triggers per account) while
+// moving them off the contended minute. The 8am-local email gate reads the
+// local HOUR, so a seven-minute offset selects the same timezones.
+const HOURLY = '7 * * * *';
+
 export const cronTasks = defineWorkers({
   // ── Scheduled (cron) ───────────────────────────────────────────────────
   // Hourly: refresh all RSS feeds (enqueues one newsFeedDownload per feed).
   newsHourly: defineWorker({
-    schedule: '0 * * * *',
+    schedule: HOURLY,
     description: 'Hourly RSS refresh — enqueue a download job per feed',
   }),
   // Daily 10:00 UTC: generate the default daily news podcast.
@@ -21,16 +33,16 @@ export const cronTasks = defineWorkers({
   }),
   // Hourly: enqueue the daily email for users whose local time is 8am now.
   userEmailHourly: defineWorker({
-    schedule: '0 * * * *',
+    schedule: HOURLY,
     description: 'Enqueue daily news email for users at 8am local time',
   }),
   // Hourly: gate + fan out cluster synthesis (neutral + framing) and the Ugly
   // Take satire for clusters that crossed the thresholds. Folded onto the same
-  // 0 * * * * trigger as newsHourly/userEmailHourly so it adds ZERO extra Neon
+  // HOURLY trigger as newsHourly/userEmailHourly so it adds ZERO extra Neon
   // wakes (was */30 → 48 wakes/day). The once-per-cluster synthesizedAt guard
   // makes the extra ≤30 min of latency harmless.
   clusterSweep: defineWorker({
-    schedule: '0 * * * *',
+    schedule: HOURLY,
     description: 'Enqueue synthesis + satire for qualifying story clusters',
     timeout: 30_000,
   }),

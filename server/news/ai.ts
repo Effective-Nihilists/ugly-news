@@ -47,8 +47,9 @@ function aiProxy(): { baseUrl: string; token: string } {
 // limiter → HTTP 429 ("Rate limit exceeded"), and we used to give up on the
 // first 429. Retry transient failures with exponential backoff + FULL jitter so
 // the retries de-correlate and land after the limit window instead of hammering
-// it again immediately. 4 attempts / ~≤7s worst case fits the 60s queue-job
-// budget (even doubled by genSummary's substantive-retry loop).
+// it again immediately. 4 attempts with 14-28s of backoff worst case fits the
+// 60s queue-job budget (genSummary re-rolls only a 200 that came back thin,
+// never a transport failure, so the schedule is not doubled).
 const AI_MAX_ATTEMPTS = 4;
 
 /** Transient statuses worth retrying (rate limit / timeout / server blip). A
@@ -60,19 +61,26 @@ function isRetryableStatus(status: number): boolean {
 /**
  * Sleep for exponential backoff with full jitter. `attempt` is 1-based.
  *
- * 429 gets a much longer schedule than a 5xx blip because it is not a blip: the
- * proxy's limiter is a SLIDING 30-calls-per-60-SECONDS window per token
- * (PER_TOKEN_BURST.ai in ugly-bot/server/proxy/tokens.ts). Retrying a rate-limit
- * rejection ~7s later — the old ceiling for every status — lands inside the same
- * window and is rejected again, which is exactly how ~200 calls/hour burned all
- * four attempts and gave up. 2/4/8/16s (plus jitter, ~30s worst case) actually
- * outlives a meaningful slice of the window while staying inside the job budget.
+ * One schedule for every transient failure, 2/4/8s base (16s cap), so the
+ * three waits of a four-attempt call spread over 14-28s with jitter.
+ *
+ * 429: the proxy's limiter is a SLIDING 30-calls-per-60-SECONDS window per
+ * token (PER_TOKEN_BURST.ai in ugly-bot/server/proxy/tokens.ts). Retrying a
+ * rate-limit rejection ~7s later (the old ceiling for every status) lands
+ * inside the same window and is rejected again, which is exactly how ~200
+ * calls/hour burned all four attempts and gave up.
+ *
+ * 5xx and network errors used to get a 0.5/1/2s schedule on the theory that
+ * a server error is a blip. It is not: on 2026-10-13 03:39-03:43 UTC ugly.bot's
+ * D1 shed load for four minutes and every /text call came back 500 ("D1 DB is
+ * overloaded"), so the ~3.5s of retries all landed inside the outage and the
+ * hourly sweep gave up on three clusters ("no usable summary ... after
+ * retries; leaving for next sweep"). Tens of seconds gives a short overload
+ * room to clear and still fits the 60s queue-job budget: the synth job runs
+ * its two calls in parallel and a transport failure is never re-rolled.
  */
-async function backoffDelay(attempt: number, status?: number): Promise<void> {
-  const base =
-    status === 429
-      ? Math.min(2000 * 2 ** (attempt - 1), 16_000) // 2s, 4s, 8s, 16s
-      : Math.min(500 * 2 ** (attempt - 1), 4000); // 500, 1000, 2000, 4000…
+async function backoffDelay(attempt: number): Promise<void> {
+  const base = Math.min(2000 * 2 ** (attempt - 1), 16_000); // 2s, 4s, 8s, 16s
   const delay = base + Math.random() * base; // full jitter → [base, 2·base)
   await new Promise((resolve) => setTimeout(resolve, delay));
 }
@@ -144,7 +152,7 @@ async function postAi(
       );
     }
     if (attempt < AI_MAX_ATTEMPTS) {
-      await backoffDelay(attempt, lastRes?.status);
+      await backoffDelay(attempt);
     }
   }
   return lastRes;

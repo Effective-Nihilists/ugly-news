@@ -13,6 +13,7 @@
 
 import { collections } from '../../shared/collections';
 import type { NewsDb } from './db';
+import { withD1Retry } from './d1-retry';
 
 /** Rolling retention window. Content older than this is pruned by the daily cron. */
 export const RETENTION_DAYS = 90;
@@ -38,12 +39,52 @@ export const RETENTION_MS = RETENTION_DAYS * 24 * 60 * 60 * 1000;
  *  - newsPodcast                     — the daily podcast archive (kept).
  *  - userNews* / userFilePreference  — per-user bookmarks, reads, reactions,
  *                                      follows, prefs, email prefs.
+ *
+ * Each sweep runs under `withD1Retry`: a cron task gets no platform retry (the
+ * scheduled() dispatcher logs a failure once and the next chance is tomorrow),
+ * and the 2026-10-10 10:04 UTC run died on its first statement with
+ * "D1_ERROR: Network connection lost", a transport blip the next attempt
+ * survives. The three sweeps are independent, so one collection's failure no
+ * longer skips the others; the run still throws at the end so the worker-run
+ * record and the errorLog show what was left behind.
  */
-export async function runNewsRetention(db: NewsDb, now: number): Promise<void> {
+export async function runNewsRetention(
+  db: NewsDb,
+  now: number,
+  deps: { sleep?: (ms: number) => Promise<void> } = {},
+): Promise<void> {
   const cutoff = now - RETENTION_MS;
-  await db.deleteQuery(collections.newsArticle, { created: { $lt: cutoff } });
-  await db.deleteQuery(collections.file, { created: { $lt: cutoff } });
-  await db.deleteQuery(collections.newsCluster, {
-    lastUpdatedAt: { $lt: cutoff },
-  });
+  const sweeps: [string, () => Promise<unknown>][] = [
+    [
+      'newsArticle',
+      () =>
+        db.deleteQuery(collections.newsArticle, { created: { $lt: cutoff } }),
+    ],
+    [
+      'file',
+      () => db.deleteQuery(collections.file, { created: { $lt: cutoff } }),
+    ],
+    [
+      'newsCluster',
+      () =>
+        db.deleteQuery(collections.newsCluster, {
+          lastUpdatedAt: { $lt: cutoff },
+        }),
+    ],
+  ];
+  const failures: string[] = [];
+  for (const [name, sweep] of sweeps) {
+    try {
+      await withD1Retry(sweep, deps);
+    } catch (error) {
+      failures.push(
+        `${name}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+  if (failures.length > 0) {
+    throw new Error(
+      `[retention] ${failures.length}/${sweeps.length} prune sweeps failed after retries: ${failures.join('; ')}`,
+    );
+  }
 }

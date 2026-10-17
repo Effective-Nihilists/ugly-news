@@ -1,6 +1,7 @@
 import React from 'react';
 import { useRouter } from '../router';
 import { navClick } from '../nav';
+import { SafeImg } from '../components/SafeImg';
 import { isSubstantiveSummary } from '../../shared/news/cluster-logic';
 import {
   BiasBar,
@@ -404,7 +405,7 @@ export default function ClusterPage({
                   ⌖ Satire — Not A Real Story
                 </span>
                 {cluster.uglyTake.imageUri && (
-                  <img
+                  <SafeImg
                     src={cluster.uglyTake.imageUri}
                     alt=""
                     style={{

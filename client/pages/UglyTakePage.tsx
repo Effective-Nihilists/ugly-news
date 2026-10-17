@@ -1,6 +1,7 @@
 import React from 'react';
 import { useRouter } from '../router';
 import { navClick } from '../nav';
+import { SafeImg } from '../components/SafeImg';
 import {
   C,
   FONT_IMPORT,
@@ -121,7 +122,7 @@ export default function UglyTakePage({
               {cluster.category.toUpperCase()} · THE UGLY PRESS SATIRE DESK
             </div>
             {take.imageUri && (
-              <img
+              <SafeImg
                 src={take.imageUri}
                 alt=""
                 style={{
