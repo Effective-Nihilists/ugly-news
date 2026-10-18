@@ -12,7 +12,7 @@
 // 2026-10-14 10:01 UTC run died after 364 s with "D1_ERROR: Network connection
 // lost" and nothing was pruned. Here every statement touches at most
 // `batchSize` rows, selected by an indexed or rowid-ordered predicate, and the
-// whole run stops at a time budget. The caller re-enqueues a continuation
+// whole run stops at a time and batch budget. The caller re-enqueues a continuation
 // (`pruneOldNewsStep`) while `done` is false, so a backlog drains across
 // several bounded invocations instead of one unbounded one.
 //
@@ -51,7 +51,15 @@ export const CLUSTER_RETENTION_MS = RETENTION_MS;
 export const SINGLETON_CLUSTER_RETENTION_MS = 7 * DAY_MS;
 
 export const DEFAULT_BATCH_SIZE = 200;
-export const DEFAULT_BUDGET_MS = 120_000;
+export const DEFAULT_BUDGET_MS = 60_000;
+/**
+ * Batches per invocation, independent of the clock. The first backlog drain
+ * (deploy 1792287906020) deleted ~400k rows in ~2,000 statements inside ONE
+ * queue invocation that never logged a finish: the 30 s CPU limit, not the
+ * wall-clock budget, is what ends a long run, and a killed run records
+ * nothing. 60 batches (12k rows) keeps a step far inside it.
+ */
+export const DEFAULT_MAX_BATCHES = 60;
 
 interface VectorDeleter {
   deleteByIds(name: string, ids: string[]): Promise<void>;
@@ -64,6 +72,8 @@ export interface RetentionDeps {
   now: number;
   batchSize?: number;
   budgetMs?: number;
+  /** Hard cap on select+delete batches per run (CPU bound, see above). */
+  maxBatches?: number;
   /** Monotonic-enough clock for the budget (injectable for tests). */
   clock?: () => number;
   sleep?: (ms: number) => Promise<void>;
@@ -263,6 +273,8 @@ export async function runNewsRetention(
 ): Promise<RetentionResult> {
   const batchSize = deps.batchSize ?? DEFAULT_BATCH_SIZE;
   const budgetMs = deps.budgetMs ?? DEFAULT_BUDGET_MS;
+  const maxBatches = deps.maxBatches ?? DEFAULT_MAX_BATCHES;
+  let batches = 0;
   const clock = deps.clock ?? Date.now;
   const started = clock();
   const run = <T>(op: () => Promise<T>) =>
@@ -276,12 +288,13 @@ export async function runNewsRetention(
     let count = 0;
     try {
       for (;;) {
-        if (clock() - started >= budgetMs) {
+        if (clock() - started >= budgetMs || batches >= maxBatches) {
           done = false;
           break;
         }
         const ids = await sweep.select(batchSize);
         if (ids.length > 0) {
+          batches += 1;
           await sweep.remove(ids);
           count += ids.length;
         }

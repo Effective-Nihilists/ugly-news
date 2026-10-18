@@ -239,6 +239,28 @@ describe('runNewsRetention', () => {
     expect(t.ids('message')).toHaveLength(20);
   });
 
+  it('caps batches per run regardless of the clock (CPU-bound queue step)', async () => {
+    const t = makeDb();
+    for (let i = 0; i < 50; i++) {
+      t.insert(
+        'newsArticle',
+        `a${String(i).padStart(2, '0')}`,
+        {},
+        NOW - ARTICLE_RETENTION_MS - DAY,
+      );
+    }
+    const result = await runNewsRetention({
+      exec: t.exec,
+      now: NOW,
+      batchSize: 10,
+      maxBatches: 3,
+      clock: () => 0,
+    });
+    expect(result.done).toBe(false);
+    expect(result.deleted.newsArticle).toBe(30);
+    expect(t.ids('newsArticle')).toHaveLength(20);
+  });
+
   it('retries a lost connection, keeps going on a failing sweep, then reports it', async () => {
     const t = makeDb();
     t.insert('newsArticle', 'a_old', {}, NOW - ARTICLE_RETENTION_MS - DAY);
