@@ -23,6 +23,8 @@ type ClusterFull = z.infer<typeof ClusterFullSchema>;
 type UglyTakeCard = z.infer<typeof UglyTakeCardSchema>;
 
 const RECENT_MS = 4 * 24 * 60 * 60 * 1000; // Top Stories window
+// Ugly Takes rail: ~100 new takes a day, so two weeks always fills the rail.
+const UGLY_TAKE_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
 
 function snippet(s: string, n = 220): string {
   const t = s
@@ -74,14 +76,23 @@ export async function newsBlindspot(
   input: { limit?: number | undefined },
 ): Promise<{ items: ClusterCard[] }> {
   const limit = Math.min(Math.max(input.limit ?? 12, 1), 40);
-  const rows = await db.getQuery<NewsCluster & { _id: string }>(
-    'newsCluster',
-    [
-      { $match: { blindspotSide: { $in: ['left', 'right'] } } },
-      { $sort: { lastUpdatedAt: -1 } },
-    ],
-    { limit },
+  // One equality read per side, merged here. A `$in` compiles to
+  // `(f IN json_each(?) OR EXISTS(json_each(data,'$.f') ...))` on D1, and the OR
+  // arm defeats idx_newsCluster_blindspotSide: every call scanned all ~240k
+  // clusters (prod, 2026-10). `blindspotSide = ?` is an index seek.
+  const sides = await Promise.all(
+    (['left', 'right'] as const).map((side) =>
+      db.getQuery<NewsCluster & { _id: string }>(
+        'newsCluster',
+        [{ $match: { blindspotSide: side } }, { $sort: { lastUpdatedAt: -1 } }],
+        { limit },
+      ),
+    ),
   );
+  const rows = sides
+    .flat()
+    .sort((a, b) => b.lastUpdatedAt - a.lastUpdatedAt)
+    .slice(0, limit);
   await requestClusterArt(db, rows);
   return { items: rows.map(toCard) };
 }
@@ -97,7 +108,14 @@ export async function newsUglyTakes(
   const rows = await db.getQuery<NewsCluster & { _id: string }>(
     'newsCluster',
     [
-      { $match: { uglyTakeFileId: { $ne: null } } },
+      // Bounded by satirizedAt (idx_newsCluster_satirizedAt): unbounded, the
+      // `$ne: null` filter can use no index and read every cluster per call.
+      {
+        $match: {
+          uglyTakeFileId: { $ne: null },
+          satirizedAt: { $gte: Date.now() - UGLY_TAKE_WINDOW_MS },
+        },
+      },
       { $sort: { satirizedAt: -1 } },
     ],
     { limit },

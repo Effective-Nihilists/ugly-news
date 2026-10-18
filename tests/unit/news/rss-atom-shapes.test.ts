@@ -12,14 +12,14 @@ import type { NewsFeed } from '../../../shared/news/types';
 // a function` — INSIDE the per-item try/catch, so every cnet item was dropped
 // silently. Nothing was ever persisted, so the next hourly sweep re-processed
 // and re-threw the same items forever: 3,401 logged failures in six days.
-function atomFeedXml(): string {
+function atomFeedXml(published = new Date().toISOString()): string {
   return `<?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
   <entry>
     <title type="html">Chipmakers Post Record Quarter</title>
     <guid isPermaLink="false">tag:example.com,2026:1</guid>
     <link href="https://example.com/a" />
-    <published>2026-07-25T10:00:00Z</published>
+    <published>${published}</published>
     <summary type="html">&lt;p&gt;An extended plain-English account of the quarter's results, with enough words to clear the language detector's minimum length.&lt;/p&gt;</summary>
   </entry>
 </feed>`;
@@ -97,5 +97,31 @@ describe('Atom feeds whose fields carry attributes', () => {
     expect(errors[0]).toContain('https://example.com/a');
     expect(errors[0]).toContain('D1_ERROR: string or blob too big');
     expect(errors[0]).toContain('Error:');
+  });
+
+  it('skips items published before the newsArticle retention horizon', async () => {
+    // Retention prunes the dedupe row after 30 days; an outlet re-serving a
+    // 2006 item (seen in prod) must not be re-ingested and re-scraped hourly.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(atomFeedXml('2006-05-01T10:00:00Z'))),
+    );
+    let reads = 0;
+    const saved: Record<string, unknown>[] = [];
+    const db = {
+      getDoc: async () => {
+        reads += 1;
+        return undefined;
+      },
+      setDoc: async (_c: unknown, doc: Record<string, unknown>) => {
+        saved.push(doc);
+      },
+      getQuery: async () => [],
+    } as never;
+    await dispatchNewsFeedDownload(db, feed);
+    vi.unstubAllGlobals();
+
+    expect(saved).toEqual([]);
+    expect(reads).toBe(0);
   });
 });

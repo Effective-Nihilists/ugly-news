@@ -24,6 +24,7 @@ import * as feed from './news/feed';
 import * as podcast from './news/podcast';
 import * as pub from './news/public';
 import { createCronHandlers } from './news/workers';
+import { d1Migrations } from './migrations-d1';
 
 function wdb(): NewsDb {
   const db = getAppContext().typedDb;
@@ -81,6 +82,7 @@ const app = createWorkersApp(
   collections,
   (cfg) => {
     cfg.setWorkers(cronTasks, createCronHandlers(wdb));
+    cfg.setD1Migrations(d1Migrations);
   },
 );
 

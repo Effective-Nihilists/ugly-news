@@ -57,8 +57,16 @@ export const cronTasks = defineWorkers({
   pruneOldNews: defineWorker({
     schedule: '0 10 * * *',
     description:
-      'Prune news content older than the rolling retention window (90d)',
-    timeout: 60_000,
+      'Prune news content past its retention horizon (bounded batches)',
+    timeout: 180_000,
+  }),
+  // Continuation of pruneOldNews. Each run stops at a time budget; while rows
+  // past their horizon remain it re-enqueues itself with `round + 1`, so a
+  // backlog drains over several bounded invocations (capped, see workers.ts).
+  pruneOldNewsStep: defineWorker({
+    description: 'Continue a retention prune that ran out of budget',
+    input: z.object({ round: z.number().int().min(1) }),
+    timeout: 180_000,
   }),
 
   // ── Queue-only jobs (fan-out) ────────────────────────────────────────────

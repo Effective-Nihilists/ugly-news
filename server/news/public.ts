@@ -325,12 +325,18 @@ export async function newsArticleGet(
   if (file) {
     const f = file as FileMarkdown & { _id: string; created?: unknown };
     const card = fileToCard(f);
+    // Retention prunes single-article clusters after a week while the file
+    // stays for 90 days; only link "full coverage" when the cluster is there.
+    const clusterId =
+      f.clusterId && (await db.getDoc(collections.newsCluster, f.clusterId))
+        ? f.clusterId
+        : null;
     return {
       article: {
         ...card,
         markdown: decodeHtmlEntities(f.markdown ?? ''),
         sourceUri: f.sourceUri ?? null,
-        clusterId: f.clusterId ?? null,
+        clusterId,
       },
     };
   }

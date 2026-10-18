@@ -12,6 +12,7 @@ import { todayDateString } from './podcast';
 import { dispatchArticleScrape } from './scraper';
 import { dispatchPodcastGenerate } from './podcast-generate';
 import { dispatchUserPrivateNewsEmail, userEmailHourly } from './email';
+import { getAdapter } from 'ugly-app/server/adapter/workers';
 import { runNewsRetention } from './retention';
 import {
   dispatchClusterImageBackfill,
@@ -20,6 +21,35 @@ import {
   dispatchClusterSweepStep,
   dispatchClusterSynthesize,
 } from './cluster-jobs';
+
+/** Hard cap on continuation steps per daily run (each step is budgeted). */
+export const MAX_PRUNE_ROUNDS = 60;
+
+/**
+ * One budgeted retention pass; enqueue the next step while rows past their
+ * horizon remain. `nextRound` is the round number the continuation would get.
+ */
+async function pruneAndContinue(nextRound: number): Promise<void> {
+  const adapter = getAdapter();
+  const exec = adapter.sqlite;
+  if (!exec) {
+    console.warn('[retention] no D1 binding; prune skipped');
+    return;
+  }
+  const { done } = await runNewsRetention({
+    exec,
+    vectors: adapter.vectorize ?? null,
+    now: Date.now(),
+  });
+  if (done) return;
+  if (nextRound > MAX_PRUNE_ROUNDS) {
+    console.warn(
+      `[retention] stopped after ${MAX_PRUNE_ROUNDS} rounds with rows left; tomorrow's run continues`,
+    );
+    return;
+  }
+  await enqueueTask('pruneOldNewsStep', { round: nextRound });
+}
 
 // Build the worker handler map. Shared by the Node entry (server/index.ts) and
 // the Cloudflare Workers entry (server/workers.ts) so cron + queue behavior is
@@ -58,7 +88,10 @@ export function createCronHandlers(
       await dispatchClusterSweep(getDb());
     },
     pruneOldNews: async () => {
-      await runNewsRetention(getDb(), Date.now());
+      await pruneAndContinue(1);
+    },
+    pruneOldNewsStep: async ({ round }) => {
+      await pruneAndContinue(round + 1);
     },
 
     // ── Queue-only jobs ──────────────────────────────────────────────────

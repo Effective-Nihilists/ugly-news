@@ -181,7 +181,6 @@ export async function newsFeedGet(
   userId: string,
   input: NewsFeedGetInput,
 ): Promise<NewsFeedGetOutput> {
-  const botIds = [uglyBotId];
   const now = Date.now();
 
   interface CandidateFile {
@@ -203,7 +202,9 @@ export async function newsFeedGet(
       collections.file,
       {
         public: true,
-        userId: { $in: botIds },
+        // Equality, not `$in`: D1 compiles `$in` to an OR over json_each that no
+        // index can serve, so the read scanned every public file.
+        userId: uglyBotId,
         created: { $gte: twoWeeksAgo },
         embedded: true,
       },

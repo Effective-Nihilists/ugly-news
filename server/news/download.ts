@@ -9,6 +9,7 @@ import { newsFeeds } from '../../shared/news/types';
 import type { NewsDb } from './db';
 import { withD1Retry } from './d1-retry';
 import { enqueueTask } from './queue';
+import { ARTICLE_RETENTION_MS } from './retention';
 
 // Workers-safe RSS/Atom parsing: global fetch() + fast-xml-parser (pure JS).
 // Replaces rss-parser, which pulls in Node http/https and won't bundle for CF.
@@ -120,6 +121,14 @@ function linkOf(item: RSSItem): string | null {
  * one France 24's own section feeds redirect to). A feed that has really gone
  * costs two extra fetches an hour; a blip no longer costs a sweep.
  */
+/** The item's publish time (epoch ms), or null when it carries no parseable date. */
+function publishedAtMs(item: RSSItem): number | null {
+  const dateStr =
+    item.isoDate ?? item.published ?? item.pubDate ?? item.updated;
+  const parsedMs = dateStr ? Date.parse(dateStr) : NaN;
+  return Number.isNaN(parsedMs) ? null : parsedMs;
+}
+
 export function isTransientStatus(status: number): boolean {
   return status === 404 || status === 429 || status >= 500;
 }
@@ -359,6 +368,18 @@ export async function dispatchNewsFeedDownload(
       if (!isDefined(rawGuid)) continue;
       const _id = `${feed.id}_${stableHash(rawGuid)}`;
 
+      // Items published before the newsArticle retention horizon are skipped
+      // outright: their dedupe row may already be pruned, so letting them
+      // through would re-ingest (and re-scrape) an old story every hour. Some
+      // outlets re-serve items from 2006 (seen in prod 2026-10-17).
+      const publishedMs = publishedAtMs(item);
+      if (
+        publishedMs !== null &&
+        publishedMs < Date.now() - ARTICLE_RETENTION_MS
+      ) {
+        continue;
+      }
+
       const existing = await withD1Retry(() =>
         db.getDoc(collections.newsArticle, _id),
       );
@@ -386,10 +407,7 @@ export async function dispatchNewsFeedDownload(
       }
 
       const uri = linkOf(item);
-      const dateStr =
-        item.isoDate ?? item.published ?? item.pubDate ?? item.updated;
-      const parsedMs = dateStr ? Date.parse(dateStr) : NaN;
-      const createdMs = Number.isNaN(parsedMs) ? Date.now() : parsedMs;
+      const createdMs = publishedMs ?? Date.now();
 
       const article: NewsArticle = {
         _id,
