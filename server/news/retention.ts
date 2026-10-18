@@ -61,6 +61,12 @@ export const DEFAULT_BUDGET_MS = 60_000;
  */
 export const DEFAULT_MAX_BATCHES = 60;
 
+/**
+ * Vectorize rejects a larger delete: "VECTOR_DELETE_ERROR (code = 40007): too
+ * many ids in payload; max id count is 100, got 200" (prod, 2026-10-18).
+ */
+export const VECTORIZE_MAX_DELETE_IDS = 100;
+
 interface VectorDeleter {
   deleteByIds(name: string, ids: string[]): Promise<void>;
 }
@@ -254,7 +260,14 @@ function buildSweeps(
             if (!isMissingTable(error)) throw error;
           }
         });
-        if (vectors) await vectors.deleteByIds('file', ids);
+        if (vectors) {
+          for (let i = 0; i < ids.length; i += VECTORIZE_MAX_DELETE_IDS) {
+            await vectors.deleteByIds(
+              'file',
+              ids.slice(i, i + VECTORIZE_MAX_DELETE_IDS),
+            );
+          }
+        }
         await run(() => deleteByIds(exec, 'file', ids));
       },
     },

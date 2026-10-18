@@ -94,6 +94,9 @@ function vectorSpy() {
     vectors: {
       deleteByIds: async (name: string, ids: string[]) => {
         expect(name).toBe('file');
+        // Cloudflare Vectorize: "max id count is 100" (code 40007).
+        if (ids.length > 100)
+          throw new Error('VECTOR_DELETE_ERROR (code = 40007)');
         deleted.push(...ids);
       },
     },
@@ -237,6 +240,23 @@ describe('runNewsRetention', () => {
     expect(result.done).toBe(false);
     expect(result.deleted.message).toBe(10);
     expect(t.ids('message')).toHaveLength(20);
+  });
+
+  it('deletes file vectors in chunks Vectorize accepts (max 100 ids)', async () => {
+    const t = makeDb();
+    for (let i = 0; i < 250; i++) {
+      t.addFile(`file_${String(i).padStart(3, '0')}`, NOW - RETENTION_MS - DAY);
+    }
+    const v = vectorSpy();
+    const result = await runNewsRetention({
+      exec: t.exec,
+      vectors: v.vectors,
+      now: NOW,
+    });
+    expect(result).toMatchObject({ done: true, deleted: { file: 250 } });
+    expect(v.deleted).toHaveLength(250);
+    expect(t.ids('file')).toEqual([]);
+    expect(t.ids('file_ftsid')).toEqual([]);
   });
 
   it('caps batches per run regardless of the clock (CPU-bound queue step)', async () => {
