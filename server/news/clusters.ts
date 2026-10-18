@@ -108,8 +108,9 @@ export async function newsUglyTakes(
   const rows = await db.getQuery<NewsCluster & { _id: string }>(
     'newsCluster',
     [
-      // Bounded by satirizedAt (idx_newsCluster_satirizedAt): unbounded, the
-      // `$ne: null` filter can use no index and read every cluster per call.
+      // Bounded to the rail's window. No satirizedAt index on purpose: an index
+      // costs a billed row write on every cluster upsert (~60k/month), more
+      // than this rarely-called scan of the retained clusters costs to read.
       {
         $match: {
           uglyTakeFileId: { $ne: null },

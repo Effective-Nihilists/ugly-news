@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
  * the whole newsCluster table (~122k rows, 10 KB each) per call:
  *  - newsBlindspot: `blindspotSide: { $in: [...] }` compiles to an OR over
  *    json_each that no index can serve (210k rows/call).
- *  - newsUglyTakes: `uglyTakeFileId: { $ne: null }` alone has no index (112k).
+ *  - newsUglyTakes: `uglyTakeFileId: { $ne: null }` alone was unbounded (112k).
  */
 
 vi.mock('../../../server/news/cluster-jobs', () => ({

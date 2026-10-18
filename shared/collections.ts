@@ -133,13 +133,12 @@ export const collections = defineCollections({
       public: false,
       cascadeFrom: null,
     },
-    // `created` (system column) index backs the retention prune's `created < cutoff`
-    // filter (see server/news/retention.ts).
-    indexes: [
-      { fields: { feedId: 1 } },
-      { fields: { scrapedAt: -1 } },
-      { fields: { created: -1 } },
-    ],
+    // No `created` or `scrapedAt` index: a declared field index compiles to
+    // json_extract(data,'$.<field>'), and `created` is a top-level column (never
+    // in `data`), so that index was all NULLs; nothing filters on scrapedAt.
+    // Each index costs a billed row write per upsert. Dropped in D1 migration
+    // 002_news_index_cleanup.
+    indexes: [{ fields: { feedId: 1 } }],
   },
   // Outlet bias/factuality/ownership registry (small, read often → cache;
   // publicly readable so the bias bar + source chips can render unauthenticated).
@@ -165,11 +164,17 @@ export const collections = defineCollections({
       public: true,
       cascadeFrom: null,
     },
+    // { category, lastUpdatedAt } serves the per-article cluster assignment
+    // (`category = ? AND lastUpdatedAt >= now-72h`) as one index range. With a
+    // category-only index that read every cluster in the desk: 26.5k rows/call,
+    // 98% of the database's rows read in Sept-Oct 2026. It replaces the
+    // category-only index (a strict prefix); no `score` index, because a D1
+    // sort is `ORDER BY (CAST(...) IS NULL), CAST(...)`, which no index serves.
+    // Both are dropped in D1 migration 002_news_index_cleanup.
     indexes: [
-      { fields: { category: 1 } },
+      { fields: { category: 1, lastUpdatedAt: -1 } },
       { fields: { lastUpdatedAt: -1 } },
       { fields: { blindspotSide: 1 } },
-      { fields: { score: -1 } },
     ],
   },
   // FileMarkdown — the user-facing article (feed ranking + podcast select + email key off this).
@@ -196,11 +201,11 @@ export const collections = defineCollections({
     },
     // Structured (non-ranked) getDocs cover: feed/email candidate reads
     // { public, userId, embedded, created } and podcast selection { type, feedId }.
-    // `created` is a top-level column (retention prune + sort), no index needed.
+    // `created` is a top-level column: a declared `created` index compiled to
+    // json_extract(data,'$.created') (all NULL), so it is not declared.
     indexes: [
       { fields: { type: 1 } },
       { fields: { feedId: 1 } },
-      { fields: { created: -1 } },
       { fields: { public: 1, userId: 1, embedded: 1 } },
     ],
   },
