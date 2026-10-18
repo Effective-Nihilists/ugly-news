@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-14T00:15:04.531Z",
+  "generatedAt": "2026-10-18T02:10:48.298Z",
   "source": "shared/collections.ts",
   "collections": {
     "authMagicLink": {
@@ -608,16 +608,6 @@
             "fields": {
               "feedId": 1
             }
-          },
-          {
-            "fields": {
-              "scrapedAt": -1
-            }
-          },
-          {
-            "fields": {
-              "created": -1
-            }
           }
         ]
       },
@@ -899,7 +889,8 @@
         "indexes": [
           {
             "fields": {
-              "category": 1
+              "category": 1,
+              "lastUpdatedAt": -1
             }
           },
           {
@@ -910,11 +901,6 @@
           {
             "fields": {
               "blindspotSide": 1
-            }
-          },
-          {
-            "fields": {
-              "score": -1
             }
           }
         ]
@@ -1094,11 +1080,6 @@
           {
             "fields": {
               "feedId": 1
-            }
-          },
-          {
-            "fields": {
-              "created": -1
             }
           },
           {
