@@ -9,6 +9,7 @@ bootstrapApp({
   requests,
   // Apex domain (ugly.press) — adopt an existing ugly.bot session silently.
   silentSso: true,
+  installPrompt: true,
   RouterProvider,
   render: () => <RouterView />,
   strings: {
